@@ -20,42 +20,20 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   field.cpp
+/// \file   math.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
-#include <naiades/core/field.h>
+#include <naiades/utils/math.h>
 
-#include <naiades/base/debug.h>
+#include <hermes/math/math.h>
 
-namespace naiades::core {
+namespace naiades::utils {
 
-NaResult FieldSet::addScalarField(const std::string &name, FieldLocation loc) {
-  auto it = scalar_fields_.find(name);
-  if (it != scalar_fields_.end())
-    return NaResult::checkError();
-  Field<float> field;
-  field.setLocation(loc);
-  // TODO check resize error
-  field.resize(field_sizes_[loc]);
-  scalar_fields_[name].setLocation(loc);
-  return NaResult::noError();
+f32 gaussian(f32 sigma2, f32 mu, const hermes::geo::point2 &x) {
+  const f32 d = (x - hermes::geo::point2()).length();
+  return std::exp(-((d - mu) * (d - mu)) / (2 * sigma2)) /
+         (std::sqrt(hermes::math::constants::two_pi * sigma2));
 }
 
-NaResult FieldSet::setLocationCount(FieldLocation loc, h_size count) {
-  for (auto &item : scalar_fields_) {
-    // TODO check resize error
-    if (item.second.location() == loc)
-      item.second.resize(count);
-  }
-  return NaResult::noError();
-}
-
-Field<f32> *FieldSet::scalarField(const std::string &name) {
-  auto it = scalar_fields_.find(name);
-  if (it != scalar_fields_.end())
-    return &(it->second);
-  return nullptr;
-}
-
-} // namespace naiades::core
+} // namespace naiades::utils

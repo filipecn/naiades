@@ -20,42 +20,29 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   field.cpp
+/// \file   stencil.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
+/// \brief  Sampler.
 
-#include <naiades/core/field.h>
+#pragma once
 
-#include <naiades/base/debug.h>
+#include <naiades/sampling/stencil.h>
 
-namespace naiades::core {
+namespace naiades::sampling {
 
-NaResult FieldSet::addScalarField(const std::string &name, FieldLocation loc) {
-  auto it = scalar_fields_.find(name);
-  if (it != scalar_fields_.end())
-    return NaResult::checkError();
-  Field<float> field;
-  field.setLocation(loc);
-  // TODO check resize error
-  field.resize(field_sizes_[loc]);
-  scalar_fields_[name].setLocation(loc);
-  return NaResult::noError();
+template <typename T>
+core::Field<T> sample(const geo::RegularGrid2 &grid,
+                      const core::Field<T> &field,
+                      const std::vector<hermes::geo::point2> &positions) {
+  core::Field<T> samples;
+  samples.resize(positions.size());
+
+  for (h_size i = 0; i < positions.size(); ++i)
+    samples[i] =
+        Stencil::bilinear(grid, field.location(), positions[i]).evaluate(field);
+
+  return samples;
 }
 
-NaResult FieldSet::setLocationCount(FieldLocation loc, h_size count) {
-  for (auto &item : scalar_fields_) {
-    // TODO check resize error
-    if (item.second.location() == loc)
-      item.second.resize(count);
-  }
-  return NaResult::noError();
-}
-
-Field<f32> *FieldSet::scalarField(const std::string &name) {
-  auto it = scalar_fields_.find(name);
-  if (it != scalar_fields_.end())
-    return &(it->second);
-  return nullptr;
-}
-
-} // namespace naiades::core
+}; // namespace naiades::sampling

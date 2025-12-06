@@ -61,6 +61,8 @@ public:
   NaResult addScalarField(const std::string &name, FieldLocation loc);
   NaResult setLocationCount(FieldLocation loc, h_size count);
 
+  Field<f32> *scalarField(const std::string &name);
+
 private:
   h_size field_sizes_[FieldLocation::SIZE]{};
   std::unordered_map<std::string, Field<float>> scalar_fields_;

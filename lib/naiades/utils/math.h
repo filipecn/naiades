@@ -20,42 +20,17 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   field.cpp
+/// \file   math.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
+/// \brief  Math utils
 
-#include <naiades/core/field.h>
+#pragma once
 
-#include <naiades/base/debug.h>
+#include <hermes/geometry/point.h>
 
-namespace naiades::core {
+namespace naiades::utils {
 
-NaResult FieldSet::addScalarField(const std::string &name, FieldLocation loc) {
-  auto it = scalar_fields_.find(name);
-  if (it != scalar_fields_.end())
-    return NaResult::checkError();
-  Field<float> field;
-  field.setLocation(loc);
-  // TODO check resize error
-  field.resize(field_sizes_[loc]);
-  scalar_fields_[name].setLocation(loc);
-  return NaResult::noError();
-}
+f32 gaussian(f32 sigma2, f32 mu, const hermes::geo::point2 &x);
 
-NaResult FieldSet::setLocationCount(FieldLocation loc, h_size count) {
-  for (auto &item : scalar_fields_) {
-    // TODO check resize error
-    if (item.second.location() == loc)
-      item.second.resize(count);
-  }
-  return NaResult::noError();
-}
-
-Field<f32> *FieldSet::scalarField(const std::string &name) {
-  auto it = scalar_fields_.find(name);
-  if (it != scalar_fields_.end())
-    return &(it->second);
-  return nullptr;
-}
-
-} // namespace naiades::core
+} // namespace naiades::utils

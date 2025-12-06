@@ -46,10 +46,15 @@ public:
     Result<RegularGrid2> build() const;
 
   private:
-    hermes::geo::bounds::bbox2 bounds_;
-    hermes::size2 resolution_;
-    hermes::geo::vec2 dx_;
+    hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};
+    hermes::size2 resolution_{100, 100};
+    hermes::geo::vec2 cell_size_{0.01, 0.01};
   };
+
+  ///
+  void setSize(const hermes::size2 &size);
+  ///
+  void setCellSize(f32 dx);
 
   /// Grid cell size
   hermes::geo::vec2 cellSize() const;
@@ -86,9 +91,9 @@ public:
                                const hermes::geo::point2 &grid_position) const;
 
 private:
-  hermes::geo::bounds::bbox2 bounds_;
-  hermes::size2 resolution_;
-  hermes::geo::vec2 cell_size_{};
+  hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};
+  hermes::size2 resolution_{100, 100};
+  hermes::geo::vec2 cell_size_{0.01};
 };
 
 } // namespace naiades::geo

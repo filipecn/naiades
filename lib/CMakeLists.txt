@@ -9,11 +9,13 @@ set(NAIADES_HEADERS
 
   ${NAIADES_SOURCE_DIR}/lib/naiades/geo/grid.h
 
+  ${NAIADES_SOURCE_DIR}/lib/naiades/sampling/sampler.h
   ${NAIADES_SOURCE_DIR}/lib/naiades/sampling/stencil.h
   
   ${NAIADES_SOURCE_DIR}/lib/naiades/solvers/smoke_solver.h
 
   ${NAIADES_SOURCE_DIR}/lib/naiades/utils/fields.h
+  ${NAIADES_SOURCE_DIR}/lib/naiades/utils/math.h
 )
 
 set(NAIADES_SOURCES
@@ -26,7 +28,7 @@ set(NAIADES_SOURCES
   ${NAIADES_SOURCE_DIR}/lib/naiades/solvers/smoke_solver.cpp
   
   ${NAIADES_SOURCE_DIR}/lib/naiades/utils/fields.cpp
-  
+  ${NAIADES_SOURCE_DIR}/lib/naiades/utils/math.cpp
 )
 
 add_library(naiades STATIC ${NAIADES_SOURCES} ${NAIADES_HEADERS})
@@ -48,6 +50,25 @@ endif(NAIADES_INCLUDE_TO_STRING_METHODS)
     CXX_STANDARD_REQUIRED YES
     LINKER_LANGUAGE CXX
   )
+
+ if(CMAKE_COMPILER_IS_GNUCXX)
+    target_compile_options(
+      naiades
+      PUBLIC
+      # cuda
+      "$<IF:$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>,-Xcompiler=-Wextra,>"
+      "$<IF:$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>,-Xcompiler=-Wall,>"
+      "$<IF:$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>,-Xcompiler=-Werror,>"
+      "$<IF:$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>,-Xcompiler=-O0,>"
+      # CXX
+      "$<IF:$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CXX>>,-Wextra,>"
+      "$<IF:$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CXX>>,-Wall,>"
+      "$<IF:$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CXX>>,-Werror,>"
+      "$<IF:$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CXX>>,-O0,>"
+      # common
+      "$<$<CONFIG:Debug>:-g;-pg;-fprofile-arcs;-ftest-coverage;--coverage;-fPIC>"
+      "$<$<CONFIG:Release>:-O3;-fPIC;>")
+  endif(CMAKE_COMPILER_IS_GNUCXX)
 
 # ##############################################################################
 # python                                                                      ##

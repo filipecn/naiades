@@ -39,18 +39,18 @@ RegularGrid2::Config::setDomain(const hermes::geo::bounds::bbox2 &region) {
 }
 
 RegularGrid2::Config &RegularGrid2::Config::setCellSize(float dx) {
-  dx_.x = dx_.y = dx;
+  cell_size_ = {dx, dx};
   return *this;
 }
 
 RegularGrid2::Config &
 RegularGrid2::Config::setCellSize(const hermes::geo::vec2 &d) {
-  dx_ = d;
+  cell_size_ = d;
   return *this;
 }
 
 Result<RegularGrid2> RegularGrid2::Config::build() const {
-  if (((dx_.x == 0 || dx_.y == 0) &&
+  if (((cell_size_.x == 0 || cell_size_.y == 0) &&
        (bounds_.size(0) == 0 || bounds_.size(1) == 0)) ||
       (resolution_.width == 0 || resolution_.height == 0))
     return NaResult::inputError();
@@ -59,24 +59,37 @@ Result<RegularGrid2> RegularGrid2::Config::build() const {
   if (bounds_.size(0) == 0 || bounds_.size(1) == 0) {
     grid.bounds_.lower.x = 0;
     grid.bounds_.lower.y = 0;
-    grid.bounds_.upper.x = resolution_.width * dx_.x;
-    grid.bounds_.upper.y = resolution_.height * dx_.y;
+    grid.bounds_.upper.x = resolution_.width * cell_size_.x;
+    grid.bounds_.upper.y = resolution_.height * cell_size_.y;
   } else
     grid.bounds_ = bounds_;
 
   if (resolution_.width == 0 || resolution_.height == 0) {
-    grid.resolution_.width = bounds_.size(0) / dx_.x;
-    grid.resolution_.height = bounds_.size(1) / dx_.y;
+    grid.resolution_.width = bounds_.size(0) / cell_size_.x;
+    grid.resolution_.height = bounds_.size(1) / cell_size_.y;
   } else
     grid.resolution_ = resolution_;
 
-  if (dx_.x == 0 || dx_.y == 0)
+  if (cell_size_.x == 0 || cell_size_.y == 0)
     grid.cell_size_ = {bounds_.size(0) / resolution_.width,
                        bounds_.size(1) / resolution_.height};
   else
-    grid.cell_size_ = dx_;
+    grid.cell_size_ = cell_size_;
 
   return Result<RegularGrid2>(std::move(grid));
+}
+
+void RegularGrid2::setSize(const hermes::size2 &size) {
+  resolution_ = size;
+  bounds_.upper = bounds_.lower + hermes::geo::vec2(size.width * cell_size_.x,
+                                                    size.height * cell_size_.y);
+}
+
+void RegularGrid2::setCellSize(f32 dx) {
+  cell_size_ = {dx, dx};
+  bounds_.upper =
+      bounds_.lower + hermes::geo::vec2(resolution_.width * cell_size_.x,
+                                        resolution_.height * cell_size_.y);
 }
 
 hermes::geo::vec2 RegularGrid2::cellSize() const { return cell_size_; }
