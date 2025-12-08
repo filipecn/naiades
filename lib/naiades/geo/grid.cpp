@@ -95,18 +95,22 @@ void RegularGrid2::setCellSize(f32 dx) {
 hermes::geo::vec2 RegularGrid2::cellSize() const { return cell_size_; }
 
 hermes::geo::point2 RegularGrid2::origin(core::FieldLocation loc) const {
-  auto io = indexOffset(loc);
+  auto io = gridOffset(loc);
   return {io.x * cell_size_.x, io.y * cell_size_.y};
 }
 
-hermes::geo::vec2 RegularGrid2::indexOffset(core::FieldLocation loc) const {
+hermes::geo::vec2 RegularGrid2::gridOffset(core::FieldLocation loc) const {
   switch (loc) {
   case core::FieldLocation::CELL_CENTER:
     return {0.5f, 0.5f};
   case core::FieldLocation::FACE_CENTER:
     return {0.f, 0.f};
+  case core::FieldLocation::HORIZONTAL_FACE_CENTER:
+  case core::FieldLocation::V_FACE_CENTER:
   case core::FieldLocation::X_FACE_CENTER:
     return {0.5f, 0.f};
+  case core::FieldLocation::VERTICAL_FACE_CENTER:
+  case core::FieldLocation::U_FACE_CENTER:
   case core::FieldLocation::Y_FACE_CENTER:
     return {0.f, 0.5f};
   case core::FieldLocation::VERTEX_CENTER:
@@ -119,13 +123,17 @@ hermes::geo::vec2 RegularGrid2::indexOffset(core::FieldLocation loc) const {
 h_size RegularGrid2::locationCount(core::FieldLocation loc) const {
   switch (loc) {
   case core::FieldLocation::CELL_CENTER:
-    return resolution_.width * resolution_.height;
+    return (resolution_.width + 0) * (resolution_.height + 0);
   case core::FieldLocation::FACE_CENTER:
     return (resolution_.width + 1) * (resolution_.height + 1);
+  case core::FieldLocation::HORIZONTAL_FACE_CENTER:
+  case core::FieldLocation::V_FACE_CENTER:
   case core::FieldLocation::X_FACE_CENTER:
-    return resolution_.width + 1;
+    return (resolution_.width + 1) * (resolution_.height + 0);
+  case core::FieldLocation::VERTICAL_FACE_CENTER:
+  case core::FieldLocation::U_FACE_CENTER:
   case core::FieldLocation::Y_FACE_CENTER:
-    return resolution_.height + 1;
+    return (resolution_.width + 0) * (resolution_.height + 1);
   case core::FieldLocation::VERTEX_CENTER:
     return (resolution_.width + 1) * (resolution_.height + 1);
   default:
@@ -139,8 +147,12 @@ hermes::size2 RegularGrid2::resolution(core::FieldLocation loc) const {
     return resolution_;
   case core::FieldLocation::FACE_CENTER:
     return resolution_ + hermes::size2(1, 1);
+  case core::FieldLocation::HORIZONTAL_FACE_CENTER:
+  case core::FieldLocation::V_FACE_CENTER:
   case core::FieldLocation::X_FACE_CENTER:
     return resolution_ + hermes::size2(1, 0);
+  case core::FieldLocation::VERTICAL_FACE_CENTER:
+  case core::FieldLocation::U_FACE_CENTER:
   case core::FieldLocation::Y_FACE_CENTER:
     return resolution_ + hermes::size2(0, 1);
   case core::FieldLocation::VERTEX_CENTER:
@@ -164,7 +176,7 @@ hermes::index2 RegularGrid2::index(core::FieldLocation loc,
 
 hermes::geo::point2 RegularGrid2::position(core::FieldLocation loc,
                                            const hermes::index2 &index) const {
-  auto io = indexOffset(loc);
+  auto io = gridOffset(loc);
   return {(index.i + io.x) * cell_size_.x, (index.j + io.y) * cell_size_.y};
 }
 

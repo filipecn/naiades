@@ -2,33 +2,33 @@
 # naiades lib                                                                ##
 # ##############################################################################
 set(NAIADES_HEADERS
-  ${NAIADES_SOURCE_DIR}/lib/naiades/base/debug.h
-  ${NAIADES_SOURCE_DIR}/lib/naiades/base/result.h
+  ${NAIADES_SOURCE_DIR}/naiades/base/debug.h
+  ${NAIADES_SOURCE_DIR}/naiades/base/result.h
 
-  ${NAIADES_SOURCE_DIR}/lib/naiades/core/field.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/field.h
 
-  ${NAIADES_SOURCE_DIR}/lib/naiades/geo/grid.h
+  ${NAIADES_SOURCE_DIR}/naiades/geo/grid.h
 
-  ${NAIADES_SOURCE_DIR}/lib/naiades/sampling/sampler.h
-  ${NAIADES_SOURCE_DIR}/lib/naiades/sampling/stencil.h
+  ${NAIADES_SOURCE_DIR}/naiades/sampling/sampler.h
+  ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.h
   
-  ${NAIADES_SOURCE_DIR}/lib/naiades/solvers/smoke_solver.h
+  ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.h
 
-  ${NAIADES_SOURCE_DIR}/lib/naiades/utils/fields.h
-  ${NAIADES_SOURCE_DIR}/lib/naiades/utils/math.h
+  ${NAIADES_SOURCE_DIR}/naiades/utils/fields.h
+  ${NAIADES_SOURCE_DIR}/naiades/utils/math.h
 )
 
 set(NAIADES_SOURCES
-  ${NAIADES_SOURCE_DIR}/lib/naiades/core/field.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp
   
-  ${NAIADES_SOURCE_DIR}/lib/naiades/geo/grid.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
 
-  ${NAIADES_SOURCE_DIR}/lib/naiades/sampling/stencil.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.cpp
 
-  ${NAIADES_SOURCE_DIR}/lib/naiades/solvers/smoke_solver.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.cpp
   
-  ${NAIADES_SOURCE_DIR}/lib/naiades/utils/fields.cpp
-  ${NAIADES_SOURCE_DIR}/lib/naiades/utils/math.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/utils/fields.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/utils/math.cpp
 )
 
 add_library(naiades STATIC ${NAIADES_SOURCES} ${NAIADES_HEADERS})
@@ -36,7 +36,7 @@ add_dependencies(naiades hermes)
 target_include_directories(
   naiades PRIVATE  
   ${DEPS_INCLUDE_DIRS}
-  ${NAIADES_SOURCE_DIR}/lib
+  ${NAIADES_SOURCE_DIR}
 )
 
 if(NAIADES_INCLUDE_TO_STRING_METHODS)
@@ -83,7 +83,7 @@ target_link_libraries(naiades_py PUBLIC
 
 target_include_directories(naiades_py PUBLIC 
   ${DEPS_INCLUDE_DIRS}
-  ${NAIADES_SOURCE_DIR}/lib)
+  ${NAIADES_SOURCE_DIR})
 
 if(NAIADES_INCLUDE_TO_STRING_METHODS)
   target_compile_definitions(naiades_py PUBLIC NAIADES_INCLUDE_TO_STRING)

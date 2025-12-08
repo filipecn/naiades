@@ -9,7 +9,7 @@ project(
   DESCRIPTION "Fluid simulation framework"
   LANGUAGES C CXX)
 
-cmake_path(SET NAIADES_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
+cmake_path(SET NAIADES_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib)
 cmake_path(SET NAIADES_EXAMPLES_DIR ${CMAKE_CURRENT_LIST_DIR}/examples)
 
 # cmake print functions
@@ -44,9 +44,9 @@ add_subdirectory(lib)
 # ##############################################################################
 # TESTS                                                                        #
 # ##############################################################################
-#if (NAIADES_BUILD_TESTS)
-  # add_subdirectory(tests)
-  #endif (NAIADES_BUILD_TESTS)
+if (NAIADES_BUILD_TESTS)
+ add_subdirectory(tests)
+endif (NAIADES_BUILD_TESTS)
 
 # ##############################################################################
 # COMPILATION/RUN SANITY TEST                                                  #

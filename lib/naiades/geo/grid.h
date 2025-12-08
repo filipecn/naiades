@@ -61,7 +61,7 @@ public:
   /// Grid origin in world space.
   hermes::geo::point2 origin(core::FieldLocation loc) const;
   /// Grid offset in index space.
-  hermes::geo::vec2 indexOffset(core::FieldLocation loc) const;
+  hermes::geo::vec2 gridOffset(core::FieldLocation loc) const;
   /// Grid resolution
   hermes::size2 resolution(core::FieldLocation loc) const;
   /// Grid location counts
@@ -80,13 +80,13 @@ public:
   hermes::geo::point2
   gridPosition(core::FieldLocation loc,
                const hermes::geo::point2 &world_position) const;
-  /// Grid location position from flat index
+  /// World position from flat index
   hermes::geo::point2 position(core::FieldLocation loc,
                                h_size flat_index) const;
-  /// Grid location position from index
+  /// World position from index
   hermes::geo::point2 position(core::FieldLocation loc,
                                const hermes::index2 &index) const;
-  /// Grid position in world space from grid position (index space).
+  /// World position from grid position (index space).
   hermes::geo::point2 position(core::FieldLocation loc,
                                const hermes::geo::point2 &grid_position) const;
 

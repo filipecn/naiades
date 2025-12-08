@@ -35,16 +35,31 @@
 
 namespace naiades::core {
 
+///      v --- V ---- v    v - VERTEX_CENTER
+///      |            |    C - CELL_CENTER
+///      U     C      U    V - [V|X|HORIZONTAL]_FACE_CENTER
+///      |            |    U - [U|Y|VERTICAL]_FACE_CENTER
+///      v --- V ---- v
 enum FieldLocation : int {
   CELL_CENTER = 0,
   FACE_CENTER = 1,
-  X_FACE_CENTER = 2,
-  Y_FACE_CENTER = 3,
-  Z_FACE_CENTER = 4,
-  VERTEX_CENTER = 5,
-  POINT = 6,
-  CUSTOM = 7,
-  SIZE = 8
+
+  HORIZONTAL_FACE_CENTER = 2,
+  V_FACE_CENTER = 3,
+  X_FACE_CENTER = 4,
+
+  VERTICAL_FACE_CENTER = 5,
+  U_FACE_CENTER = 6,
+  Y_FACE_CENTER = 7,
+
+  DEPTH_FACE_CENTER = 8,
+  W_FACE_CENTER = 9,
+  Z_FACE_CENTER = 10,
+
+  VERTEX_CENTER = 11,
+  POINT = 12,
+  CUSTOM = 13,
+  SIZE = 14
 };
 
 template <typename DataType> class Field : public std::vector<DataType> {
