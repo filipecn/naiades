@@ -27,7 +27,39 @@
 #include <hermes/numeric/numeric.h>
 #include <naiades/sampling/stencil.h>
 
+namespace naiades {
+
+HERMES_TO_STRING_DEBUG_METHOD_BEGIN(sampling::Stencil)
+HERMES_PUSH_DEBUG_TITLE
+HERMES_PUSH_DEBUG_LINE("size {}\n", object.indices_.size());
+HERMES_PUSH_DEBUG_LINE("indices: {}\n",
+                       hermes::cstr::join(object.indices_, " "));
+HERMES_PUSH_DEBUG_LINE("weights: {}\n",
+                       hermes::cstr::join(object.weights_, " "));
+HERMES_TO_STRING_DEBUG_METHOD_END
+
+} // namespace naiades
+
 namespace naiades::sampling {
+
+Stencil Stencil::nearest(const geo::RegularGrid2 &grid, core::FieldLocation loc,
+                         const hermes::geo::point2 &wp) {
+  // transform wp into index space
+  auto gp = grid.gridPosition(loc, wp);
+  // consider the unit square
+  auto x = hermes::numbers::fract(gp.x);
+  auto y = hermes::numbers::fract(gp.y);
+
+  Stencil stencil;
+
+  stencil.add(
+      grid.safeFlatIndex(
+          loc,
+          hermes::index2(gp.x, gp.y).plus(x > 0.5f ? 1 : 0, y > 0.5f ? 1 : 0)),
+      1.f);
+
+  return stencil;
+}
 
 Stencil Stencil::bilinear(const geo::RegularGrid2 &grid,
                           core::FieldLocation loc,
@@ -58,7 +90,12 @@ Stencil Stencil::bilinear(const geo::RegularGrid2 &grid,
 
   Stencil stencil;
 
-  if (v11 == v12 || v21 == v22) {
+  if (v11 == v12 && v11 == v21 && v11 == v22) {
+    // we are on the corner
+    // v12 v22
+    // v11 v21
+    stencil.add(v11, 1.f);
+  } else if (v11 == v12 || v21 == v22) {
     // we are above/bellow the grid
     //  v12 ___________ v22
     //  v11             v21
@@ -69,13 +106,8 @@ Stencil Stencil::bilinear(const geo::RegularGrid2 &grid,
     // v12 v22
     //    |
     // v11 v21
-    stencil.add(v12, 1.f - y);
     stencil.add(v11, y - 0.f);
-  } else if (v11 == v12 && v11 == v21 && v11 == v22) {
-    // we are on the corner
-    // v12 v22
-    // v11 v21
-    stencil.add(v11, 1.f);
+    stencil.add(v12, 1.f - y);
   } else {
     // all must be different
     HERMES_ASSERT(v11 != v12 && v11 != v21 && v11 != v22);
@@ -109,5 +141,9 @@ void Stencil::add(h_size index, float weight) {
 }
 
 h_size Stencil::size() const { return indices_.size(); }
+
+const std::vector<h_size> Stencil::indices() const { return indices_; }
+
+const std::vector<f32> Stencil::weights() const { return weights_; }
 
 } // namespace naiades::sampling

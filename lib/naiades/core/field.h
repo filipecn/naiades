@@ -27,7 +27,10 @@
 
 #pragma once
 
+#include <naiades/base/debug.h>
 #include <naiades/base/result.h>
+
+#include <hermes/geometry/vector.h>
 
 #include <string>
 #include <unordered_map>
@@ -69,18 +72,39 @@ public:
 
 private:
   FieldLocation location_{FieldLocation::CUSTOM};
+  template <typename FriendDataType>
+  NAIADES_to_string_FRIEND(Field<FriendDataType>);
 };
 
 class FieldSet {
 public:
+  NaResult addScalarFields(FieldLocation loc,
+                           const std::vector<std::string> &field_names);
+  NaResult addVectorFields(FieldLocation loc,
+                           const std::vector<std::string> &field_names);
   NaResult addScalarField(const std::string &name, FieldLocation loc);
+  NaResult addVectorField(const std::string &name, FieldLocation loc);
   NaResult setLocationCount(FieldLocation loc, h_size count);
 
   Field<f32> *scalarField(const std::string &name);
+  Field<hermes::geo::vec2> *vectorField(const std::string &name);
 
 private:
   h_size field_sizes_[FieldLocation::SIZE]{};
-  std::unordered_map<std::string, Field<float>> scalar_fields_;
+  std::unordered_map<std::string, Field<f32>> scalar_fields_;
+  std::unordered_map<std::string, Field<hermes::geo::vec2>> vector_fields_;
+  NAIADES_to_string_FRIEND(FieldSet);
 };
 
 } // namespace naiades::core
+
+namespace naiades {
+
+HERMES_TO_STRING_DEBUG_TEMPLATED_METHOD_BEGIN(core::Field<T>, typename T)
+HERMES_PUSH_DEBUG_TITLE
+HERMES_PUSH_DEBUG_NAIADES_FIELD(location_);
+HERMES_PUSH_DEBUG_LINE("size: {}\n", object.size());
+HERMES_PUSH_DEBUG_LINE("values: {}", hermes::cstr::join(object, ", ", 10));
+HERMES_TO_STRING_DEBUG_METHOD_END
+
+} // namespace naiades

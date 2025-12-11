@@ -20,33 +20,43 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   utils.cpp
+/// \file   sim_mesh.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
+/// \brief  Simulation Mesh.
 
-#include <naiades/utils/fields.h>
+#pragma once
 
-#include <naiades/utils/math.h>
+#include <naiades/core/field.h>
+#include <naiades/geo/grid.h>
 
-namespace naiades::utils {
+namespace naiades::core {
 
-void zalesakVelocityField(const geo::RegularGrid2 &grid,
-                          core::Field<hermes::geo::vec2> &field,
-                          const hermes::geo::point2 &center, f32 omega) {
-  for (auto ij : hermes::range2(grid.resolution(field.location()))) {
-    auto flat_ij = grid.safeFlatIndex(field.location(), ij);
-    auto wp = grid.position(field.location(), ij);
-    field[flat_ij] = zalesak(wp, center, omega);
-  }
-}
+struct Boundary {
+  std::vector<h_size> primitives;
+  /// section name -> [start, end)
+  std::unordered_map<std::string, std::pair<h_size, h_size>> sections;
+};
 
-void enrightVelocityField(const geo::RegularGrid2 &grid,
-                          core::Field<hermes::geo::vec2> &field, f32 t) {
-  for (auto ij : hermes::range2(grid.resolution(field.location()))) {
-    auto flat_ij = grid.safeFlatIndex(field.location(), ij);
-    auto wp = grid.position(field.location(), ij);
-    field[flat_ij] = enright(wp, t);
-  }
-}
+/// A simulation mesh holds the topology of the discretization and other
+/// information required by simulation algorithms.
+class SimMesh {
+public:
+  struct Config {
+    static Config from(const geo::RegularGrid2 &grid);
+    Result<SimMesh> build() const;
 
-} // namespace naiades::utils
+  private:
+    Boundary cell_boundary_;
+    Boundary face_boundary_;
+  };
+
+  const Boundary &faceBoundary() const;
+  const Boundary &cellBoundary() const;
+
+private:
+  Boundary cell_boundary_;
+  Boundary face_boundary_;
+};
+
+} // namespace naiades::core

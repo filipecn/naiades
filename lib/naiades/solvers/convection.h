@@ -29,13 +29,57 @@
 
 #include <naiades/core/field.h>
 #include <naiades/geo/grid.h>
+#include <naiades/sampling/sampler.h>
+
+#include <hermes/math/space_filling.h>
 
 namespace naiades::solvers {
 
 template <typename QuantityType>
+void advect(const geo::RegularGrid2 &grid,
+            const core::Field<hermes::geo::vec2> &velocity,
+            const std::function<
+                QuantityType(const geo::RegularGrid2 &, core::FieldLocation,
+                             const hermes::geo::point2 &)> &sample_func,
+            float dt, const core::Field<QuantityType> &in_field,
+            core::Field<QuantityType> &out_field) {
+  auto field_res = grid.resolution(in_field.location());
+  for (auto z :
+       hermes::math::space_filling::MortonRange(0, field_res.total())) {
+    auto wp = grid.position(in_field.location(), z.coord2());
+    auto flat_index = grid.safeFlatIndex(in_field.location(), z.coord2());
+    // sample velocity components
+    auto v = velocity[flat_index];
+    // compute source position
+    auto sp = wp - v * dt;
+    // sample field at source
+    out_field[flat_index] = sample_func(grid, in_field.location(), sp);
+  }
+}
+
+template <typename QuantityType>
 void advect(const geo::RegularGrid2 &grid, const core::Field<float> &u,
             const core::Field<float> &v,
-            const core::Field<QuantityType> &in_field,
-            core::Field<QuantityType> &out_field) {}
+            const std::function<
+                QuantityType(const geo::RegularGrid2 &, core::FieldLocation,
+                             const hermes::geo::point2 &)> &sample_func,
+            float dt, const core::Field<QuantityType> &in_field,
+            core::Field<QuantityType> &out_field) {
+  auto field_res = grid.resolution(in_field.location());
+  // sample velocities at cell centers
+  auto v_v = sampling::sample(grid, v, in_field.location());
+  auto v_u = sampling::sample(grid, u, in_field.location());
+  for (auto z :
+       hermes::math::space_filling::MortonRange(0, field_res.total())) {
+    auto wp = grid.position(in_field.location(), z.coord2());
+    auto flat_index = grid.safeFlatIndex(in_field.location(), z.coord2());
+    // sample velocity components
+    hermes::geo::vec2 velocity(v_u[flat_index], v_v[flat_index]);
+    // compute source position
+    auto sp = wp - velocity * dt;
+    // sample field at source
+    out_field[flat_index] = sample_func(grid, in_field.location(), sp);
+  }
+}
 
 } // namespace naiades::solvers

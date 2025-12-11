@@ -34,6 +34,8 @@ namespace naiades::sampling {
 
 class Stencil {
 public:
+  static Stencil nearest(const geo::RegularGrid2 &grid, core::FieldLocation loc,
+                         const hermes::geo::point2 &p);
   static Stencil bilinear(const geo::RegularGrid2 &grid,
                           core::FieldLocation loc,
                           const hermes::geo::point2 &p);
@@ -41,17 +43,22 @@ public:
   template <typename T> T evaluate(const core::Field<T> &field) {
     T s = 0.f;
     const h_size n = indices_.size();
-    for (h_size i = 0; i < n; ++i)
+    for (h_size i = 0; i < n; ++i) {
       s += field[indices_[i]] * weights_[i];
+    }
     return s;
   }
 
   void add(h_size index, float weight);
   h_size size() const;
+  const std::vector<h_size> indices() const;
+  const std::vector<f32> weights() const;
 
 private:
   std::vector<h_size> indices_;
   std::vector<float> weights_;
+
+  NAIADES_to_string_FRIEND(Stencil);
 };
 
 } // namespace naiades::sampling

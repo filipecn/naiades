@@ -26,20 +26,35 @@
 
 #include <naiades/geo/grid.h>
 
+namespace naiades {
+HERMES_TO_STRING_DEBUG_METHOD_BEGIN(geo::RegularGrid2)
+HERMES_PUSH_DEBUG_TITLE
+HERMES_PUSH_DEBUG_HERMES_FIELD(bounds_)
+HERMES_PUSH_DEBUG_HERMES_FIELD(resolution_)
+HERMES_PUSH_DEBUG_HERMES_FIELD(cell_size_)
+HERMES_TO_STRING_DEBUG_METHOD_END
+} // namespace naiades
+
 namespace naiades::geo {
 RegularGrid2::Config &RegularGrid2::Config::setSize(const hermes::size2 &size) {
   resolution_ = size;
+  bounds_.upper.x = resolution_.width * cell_size_.x;
+  bounds_.upper.y = resolution_.height * cell_size_.y;
   return *this;
 }
 
 RegularGrid2::Config &
 RegularGrid2::Config::setDomain(const hermes::geo::bounds::bbox2 &region) {
   bounds_ = region;
+  resolution_.width = bounds_.extends().x / cell_size_.x;
+  resolution_.height = bounds_.extends().y / cell_size_.y;
   return *this;
 }
 
 RegularGrid2::Config &RegularGrid2::Config::setCellSize(float dx) {
   cell_size_ = {dx, dx};
+  bounds_.upper.x = resolution_.width * cell_size_.x;
+  bounds_.upper.y = resolution_.height * cell_size_.y;
   return *this;
 }
 
@@ -129,11 +144,11 @@ h_size RegularGrid2::locationCount(core::FieldLocation loc) const {
   case core::FieldLocation::HORIZONTAL_FACE_CENTER:
   case core::FieldLocation::V_FACE_CENTER:
   case core::FieldLocation::X_FACE_CENTER:
-    return (resolution_.width + 1) * (resolution_.height + 0);
+    return (resolution_.width + 0) * (resolution_.height + 1);
   case core::FieldLocation::VERTICAL_FACE_CENTER:
   case core::FieldLocation::U_FACE_CENTER:
   case core::FieldLocation::Y_FACE_CENTER:
-    return (resolution_.width + 0) * (resolution_.height + 1);
+    return (resolution_.width + 1) * (resolution_.height + 0);
   case core::FieldLocation::VERTEX_CENTER:
     return (resolution_.width + 1) * (resolution_.height + 1);
   default:
@@ -150,11 +165,11 @@ hermes::size2 RegularGrid2::resolution(core::FieldLocation loc) const {
   case core::FieldLocation::HORIZONTAL_FACE_CENTER:
   case core::FieldLocation::V_FACE_CENTER:
   case core::FieldLocation::X_FACE_CENTER:
-    return resolution_ + hermes::size2(1, 0);
+    return resolution_ + hermes::size2(0, 1);
   case core::FieldLocation::VERTICAL_FACE_CENTER:
   case core::FieldLocation::U_FACE_CENTER:
   case core::FieldLocation::Y_FACE_CENTER:
-    return resolution_ + hermes::size2(0, 1);
+    return resolution_ + hermes::size2(1, 0);
   case core::FieldLocation::VERTEX_CENTER:
     return resolution_ + hermes::size2(1, 1);
   default:
@@ -183,6 +198,14 @@ hermes::geo::point2 RegularGrid2::position(core::FieldLocation loc,
 hermes::geo::point2 RegularGrid2::position(core::FieldLocation loc,
                                            h_size flat_index) const {
   return position(loc, index(loc, flat_index));
+}
+
+hermes::geo::point2
+RegularGrid2::position(core::FieldLocation loc,
+                       const hermes::geo::point2 &grid_position) const {
+  auto io = gridOffset(loc);
+  return {(grid_position.x + io.x) * cell_size_.x,
+          (grid_position.y + io.y) * cell_size_.y};
 }
 
 hermes::index2 RegularGrid2::safeIndex(core::FieldLocation loc,

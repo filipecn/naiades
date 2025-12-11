@@ -20,6 +20,36 @@ bl_info = {
 }
 
 
+def create_plane(context):
+    # 1. Start a new BMesh object
+    bm = bmesh.new()
+
+    uv_layer = bm.loops.layers.uv.new("UVMap")
+
+    # 2. Add a simple plane to the BMesh
+    bmesh.ops.create_grid(
+        bm, x_segments=15, y_segments=15, size=1.0, calc_uvs=True
+    )
+
+    bmesh.ops.recalc_face_normals(bm)
+
+    # 4. Create a new mesh data block
+    mesh = bpy.data.meshes.new("SubdividedPlaneMesh")
+    bm.to_mesh(mesh)
+    bm.free()  # Clean up the BMesh
+
+    # 5. Create an object and link it to the scene
+    obj = bpy.data.objects.new("SubdividedPlane", mesh)
+    context.collection.objects.link(obj)
+
+    # 6. Set the new object as the active selection
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    context.view_layer.objects.active = obj
+
+    return obj
+
+
 class UVSimSettings(bpy.types.PropertyGroup):
     mesh_resolution: bpy.props.IntProperty(
         name="Resolution",
@@ -31,8 +61,9 @@ class UVSimSettings(bpy.types.PropertyGroup):
     is_simulating: bpy.props.BoolProperty(
         name="Is Simulating",
         default=False,
-        description="Tracks whether the modal operator is currently running."
+        description="Tracks whether the modal operator is currently running.",
     )
+
 
 class OBJECT_OT_uv_sim(bpy.types.Operator):
     bl_idname = "object.uv_sim"
@@ -53,7 +84,7 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
     def setup_object(self, obj):
         mesh = obj.data
         # setup color attribute
-        color_data_name = 'Col'
+        color_data_name = "Col"
         # Check if the desired color layer exists
         if color_data_name in mesh.color_attributes:
             self.color_attribute = mesh.color_attributes[color_data_name]
@@ -106,9 +137,7 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
                     links.remove(principled.inputs["Base Color"].links[0])
 
                 # Create the new link
-                links.new(
-                    attr_node.outputs["Color"], principled.inputs["Base Color"]
-                )
+                links.new(attr_node.outputs["Color"], principled.inputs["Base Color"])
         return True
 
     def load_object(self, obj):
@@ -135,33 +164,43 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
         uv_layer.data.foreach_get("uv", self.flat_uv_array)
         # Convert the flat array into a (N x 2) array where N is num_loops.
         # uv_array = flat_uv_array.reshape(num_loops, 2)
-        
+
         return True
 
-
     def start(self, context):
+        # create plane
+        obj = create_plane(context)
+
         # load object data
-        if not self.load_object(context.active_object):
+        if not self.load_object(obj):
             return False
-        if not self.setup_object(context.active_object):
+        if not self.setup_object(obj):
             return False
-        self.target_object = context.active_object
+        self.target_object = obj
         # setup sim
         self.stable_fluids2 = naiades_py.StableFluids2(True)
         context.scene.uv_sim_settings.is_simulating = True
         return True
 
-
     def step(self):
-        #field = sim.get_float_field("density")
+        # field = sim.get_float_field("density")
         self.stable_fluids2.step(0.1)
-        field = self.stable_fluids2.sample_float_field("density", self.flat_uv_array)
+
+
         if self.color_attribute is not None:
             mesh = self.target_object.data
 
             # Ensure the mesh data is up-to-date (good practice)
             mesh.validate(clean_customdata=True)
             mesh.update()
+
+            field_r = self.stable_fluids2.sample_float_field(
+                "density_r", self.flat_uv_array
+            )
+
+            field_g = self.stable_fluids2.sample_float_field(
+                "density_g", self.flat_uv_array
+            )
 
             # 1. Get a reference to the data array for fast access
             # This array will have a length equal to the total number of loops.
@@ -170,61 +209,68 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
             # 2. Iterate over the loops and assign a color
             for loop_index in range(len(color_data)):
                 # Generate a random color for demonstration (R, G, B, A)
-                R = 1.0
-                G = 0.0
-                B = 1.0
+                #R = self.flat_uv_array[loop_index * 2 + 0]
+                #G = self.flat_uv_array[loop_index * 2 + 1]
+                R = list(field_r)[loop_index]
+                G = list(field_g)[loop_index]
+                B = 0.0
                 A = 1.0  # Fully opaque
 
                 # Set the color for the current loop's corner
                 # The .color attribute is a 4-component vector (RGBA)
-                color_data[loop_index].color = cmaps.ice(field[loop_index])
+                color_data[loop_index].color = cmaps.ice(field_r[loop_index])
+                #color_data[loop_index].color = (R, G, B, A)
 
             # 3. Inform Blender that the data has changed
-            mesh.update()
-
+            #mesh.update()
 
     def invoke(self, context, event):
         if context.scene.uv_sim_settings.is_simulating:
-            self.report({'WARNING'}, "Simulation is already running!")
-            return {'CANCELLED'}
+            self.report({"WARNING"}, "Simulation is already running!")
+            return {"CANCELLED"}
         if context.active_object is None:
-            self.report({'ERROR'}, "No active object selected to run simulation on.")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, "No active object selected to run simulation on.")
+            return {"CANCELLED"}
         # start sim
         if not self.start(context):
-            return {'CANCELLED'}
+            return {"CANCELLED"}
         # Add the operator to the window manager's modal handler
         context.window_manager.modal_handler_add(self)
         # Start the high-frequency timer
-        self._timer = context.window_manager.event_timer_add(self.check_interval, window=context.window)
-        self.report({'INFO'}, "Physics Simulation Started (Initial Kick: 5m/s in X)")
-        return {'RUNNING_MODAL'}
-  
+        self._timer = context.window_manager.event_timer_add(
+            self.check_interval, window=context.window
+        )
+        self.report({"INFO"}, "Physics Simulation Started (Initial Kick: 5m/s in X)")
+        return {"RUNNING_MODAL"}
+
     def modal(self, context, event):
         # Check for exit conditions first
-        if event.type == 'ESC' or not context.scene.uv_sim_settings.is_simulating:
+        if event.type == "ESC" or not context.scene.uv_sim_settings.is_simulating:
             # When exiting, we must clean up the timer!
             self.cancel(context)
-            self.report({'INFO'}, "Real-Time Updates Stopped")
-            return {'FINISHED'}
+            self.report({"INFO"}, "Real-Time Updates Stopped")
+            return {"FINISHED"}
 
         # Check if the timer event occurred
-        if event.type == 'TIMER':
-            if self.target_object is None or self.target_object.name not in bpy.data.objects:
-                self.report({'ERROR'}, "Target object no longer exists!")
+        if event.type == "TIMER":
+            if (
+                self.target_object is None
+                or self.target_object.name not in bpy.data.objects
+            ):
+                self.report({"ERROR"}, "Target object no longer exists!")
                 self.cancel(context)
-                return {'FINISHED'}
+                return {"FINISHED"}
 
             self.step()
 
             # Redraw the 3D viewport to show the changes in real-time
             for area in context.screen.areas:
-                if area.type == 'VIEW_3D':
+                if area.type == "VIEW_3D":
                     area.tag_redraw()
                     break
-            return {'PASS_THROUGH'}
+            return {"PASS_THROUGH"}
 
-        return {'PASS_THROUGH'}
+        return {"PASS_THROUGH"}
 
     def cancel(self, context):
         context.scene.uv_sim_settings.is_simulating = False
@@ -232,6 +278,7 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
         if self._timer:
             context.window_manager.event_timer_remove(self._timer)
             self._timer = None
+
 
 class VIEW3D_PT_uv_sim_panel(bpy.types.Panel):
     bl_label = "UVSim"
@@ -246,13 +293,18 @@ class VIEW3D_PT_uv_sim_panel(bpy.types.Panel):
         layout.prop(settings, "mesh_resolution")
         # Check if the simulator is running by checking if it's the current modal operator
         if not context.scene.uv_sim_settings.is_simulating:
-            layout.label(text="Select an object and press Start.", icon='WORLD')
-            layout.operator(OBJECT_OT_uv_sim.bl_idname, text="Start Simulation", icon='PLAY')
+            layout.label(text="Select an object and press Start.", icon="WORLD")
+            layout.operator(
+                OBJECT_OT_uv_sim.bl_idname, text="Start Simulation", icon="PLAY"
+            )
         else:
-            layout.label(text="Simulation Running...", icon='PREVIEW_RANGE')
-            layout.operator(OBJECT_OT_uv_sim.bl_idname, text="STOP (Press ESC or Click)", icon='PAUSE')
-            layout.label(text="Press ESC to Stop", icon='CANCEL')
-
+            layout.label(text="Simulation Running...", icon="PREVIEW_RANGE")
+            layout.operator(
+                OBJECT_OT_uv_sim.bl_idname,
+                text="STOP (Press ESC or Click)",
+                icon="PAUSE",
+            )
+            layout.label(text="Press ESC to Stop", icon="CANCEL")
 
 
 classes = (
@@ -275,5 +327,15 @@ def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 
+    print(f"{bl_info['name']} unregistered.")
+    print(f"{bl_info['name']} unregistered.")
+
+
+def unregister():
+    """Called by Blender when the add-on is disabled."""
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+
+    print(f"{bl_info['name']} unregistered.")
     print(f"{bl_info['name']} unregistered.")
     print(f"{bl_info['name']} unregistered.")

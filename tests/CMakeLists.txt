@@ -1,4 +1,5 @@
 add_executable(naiades_tests 
+  core_tests.cpp
   geo_tests.cpp
   sampling_tests.cpp
 )

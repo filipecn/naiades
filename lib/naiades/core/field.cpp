@@ -28,7 +28,57 @@
 
 #include <naiades/base/debug.h>
 
+namespace naiades {
+
+HERMES_TO_STRING_DEBUG_METHOD_BEGIN(core::FieldLocation)
+#define LOC_TO_STR(L)                                                          \
+  if (core::FieldLocation::L == object)                                        \
+    HERMES_PUSH_DEBUG_LINE(#L);
+LOC_TO_STR(CELL_CENTER)
+LOC_TO_STR(FACE_CENTER)
+LOC_TO_STR(HORIZONTAL_FACE_CENTER)
+LOC_TO_STR(V_FACE_CENTER)
+LOC_TO_STR(VERTICAL_FACE_CENTER)
+LOC_TO_STR(U_FACE_CENTER)
+LOC_TO_STR(Y_FACE_CENTER)
+LOC_TO_STR(DEPTH_FACE_CENTER)
+LOC_TO_STR(W_FACE_CENTER)
+LOC_TO_STR(Z_FACE_CENTER)
+LOC_TO_STR(VERTEX_CENTER)
+LOC_TO_STR(POINT)
+LOC_TO_STR(CUSTOM)
+LOC_TO_STR(SIZE)
+#undef LOC_TO_STR
+HERMES_TO_STRING_DEBUG_METHOD_END
+
+HERMES_TO_STRING_DEBUG_METHOD_BEGIN(core::FieldSet)
+HERMES_PUSH_DEBUG_TITLE
+HERMES_PUSH_DEBUG_LINE("scalar fields [{}]", object.scalar_fields_.size());
+HERMES_PUSH_DEBUG_MAP_FIELD_BEGIN(scalar_fields_, name, field)
+HERMES_PUSH_DEBUG_LINE("name: {}", name);
+HERMES_PUSH_DEBUG_LINE("{}", to_string(field));
+HERMES_PUSH_DEBUG_MAP_FIELD_END
+HERMES_TO_STRING_DEBUG_METHOD_END
+
+} // namespace naiades
+
 namespace naiades::core {
+
+NaResult
+FieldSet::addScalarFields(FieldLocation loc,
+                          const std::vector<std::string> &field_names) {
+  for (const auto &name : field_names)
+    NAIADES_RETURN_BAD_RESULT(addScalarField(name, loc));
+  return NaResult::noError();
+}
+
+NaResult
+FieldSet::addVectorFields(FieldLocation loc,
+                          const std::vector<std::string> &field_names) {
+  for (const auto &name : field_names)
+    NAIADES_RETURN_BAD_RESULT(addVectorField(name, loc));
+  return NaResult::noError();
+}
 
 NaResult FieldSet::addScalarField(const std::string &name, FieldLocation loc) {
   auto it = scalar_fields_.find(name);
@@ -39,6 +89,18 @@ NaResult FieldSet::addScalarField(const std::string &name, FieldLocation loc) {
   // TODO check resize error
   field.resize(field_sizes_[loc]);
   scalar_fields_[name].setLocation(loc);
+  return NaResult::noError();
+}
+
+NaResult FieldSet::addVectorField(const std::string &name, FieldLocation loc) {
+  auto it = vector_fields_.find(name);
+  if (it != vector_fields_.end())
+    return NaResult::checkError();
+  Field<hermes::geo::vec2> field;
+  field.setLocation(loc);
+  // TODO check resize error
+  field.resize(field_sizes_[loc]);
+  vector_fields_[name].setLocation(loc);
   return NaResult::noError();
 }
 
@@ -54,6 +116,13 @@ NaResult FieldSet::setLocationCount(FieldLocation loc, h_size count) {
 Field<f32> *FieldSet::scalarField(const std::string &name) {
   auto it = scalar_fields_.find(name);
   if (it != scalar_fields_.end())
+    return &(it->second);
+  return nullptr;
+}
+
+Field<hermes::geo::vec2> *FieldSet::vectorField(const std::string &name) {
+  auto it = vector_fields_.find(name);
+  if (it != vector_fields_.end())
     return &(it->second);
   return nullptr;
 }

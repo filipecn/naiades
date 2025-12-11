@@ -94,6 +94,8 @@ private:
   hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};
   hermes::size2 resolution_{100, 100};
   hermes::geo::vec2 cell_size_{0.01};
+
+  NAIADES_to_string_FRIEND(RegularGrid2);
 };
 
 } // namespace naiades::geo

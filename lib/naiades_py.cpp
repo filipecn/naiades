@@ -42,7 +42,7 @@
 #include <igl/cotmatrix.h>
 
 namespace py = pybind11;
-
+/*
 void printCallback(const hermes::cstr &m) {
   py::print(m.str());
   std::cout << std::flush;
@@ -71,13 +71,17 @@ void initHermes(bool verbose = false) {
       HERMES_UNUSED_VARIABLE(o);
     });
   }
-}
+}*/
 
 struct StableFluids2_py {
   StableFluids2_py(bool verbose = false) {
+    grid_.setSize({50, 50});
+    grid_.setCellSize(1.f / 50);
     HERMES_UNUSED_VARIABLE(verbose);
-    fields_.addScalarField("density",
-                           naiades::core::FieldLocation::CELL_CENTER);
+    fields_.addVectorFields(naiades::core::FieldLocation::CELL_CENTER,
+                            {"cell_velocity"});
+    fields_.addScalarFields(naiades::core::FieldLocation::CELL_CENTER,
+                            {"cell_R", "cell_G", "cell_B"});
 
     fields_.setLocationCount(
         naiades::core::FieldLocation::CELL_CENTER,
@@ -86,14 +90,17 @@ struct StableFluids2_py {
 
   void step(f32 timestep) {
     HERMES_UNUSED_VARIABLE(timestep);
-    auto *density = fields_.scalarField("density");
-    HERMES_ASSERT(density);
-
-    naiades::utils::setField<f32>(grid_, *density,
-                                  [&](const hermes::geo::point2 &p) -> f32 {
-                                    HERMES_UNUSED_VARIABLE(p);
-                                    return rng.uniformFloat();
-                                  });
+    if (auto *cell_velocity = fields_.vectorField("cell_velocity")) {
+      naiades::utils::zalesakVelocityField(grid_, *cell_velocity, {0.5f, 0.5f},
+                                           hermes::math::constants::two_pi);
+    }
+    if (auto *cell_velocity = fields_.scalarField("cell_R")) {
+      naiades::utils::setField<f32>(
+          grid_, *cell_velocity, [&](const hermes::geo::point2 &p) -> f32 {
+            return naiades::utils::gaussian(hermes::geo::vec2(0.02),
+                                            hermes::geo::point2(0.5), p);
+          });
+    }
   }
 
   py::array_t<float> getFloatField(const std::string &name) {
@@ -117,7 +124,7 @@ struct StableFluids2_py {
   }
 
   py::array_t<float> sampleFloatField(const std::string &name,
-                                      py::array_t<float> &arr) {
+                                      py::array_t<f32> &arr) {
     auto *field = fields_.scalarField(name);
     if (!field)
       throw std::runtime_error("Field not found!");
@@ -137,21 +144,15 @@ struct StableFluids2_py {
     // sample field
     auto samples_field = naiades::sampling::sample(grid_, *field, samples);
 
-    std::vector<float> data(positions_count);
+    std::vector<f32> data(positions_count);
     std::vector<h_size> shape = {positions_count};
-    std::vector<h_size> strides = {sizeof(float)};
-    for (h_size i = 0; i < positions_count; ++i) {
-      // sample
+    std::vector<h_size> strides = {sizeof(f32)};
+    for (h_size i = 0; i < positions_count; ++i)
       data[i] = samples_field[i];
-    }
 
-    return py::array_t<float>(
-        shape,       // Shape (e.g., {3, 4})
-        strides,     // Strides (e.g., {32, 8} bytes)
-        data.data(), // Pointer to data
-        py::cast(
-            std::move(data)) // Owner object (transfers std::vector ownership)
-    );
+    return py::array_t<f32>(shape,        // Shape (e.g., {3, 4})
+                            strides,      // Strides (e.g., {32, 8} bytes)
+                            data.data()); // Pointer to data
   }
 
   naiades::geo::RegularGrid2 grid_;

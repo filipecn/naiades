@@ -10,11 +10,11 @@ TEST_CASE("regular grid 2", "[geo]") {
     u32 H = 3;  // y
     u32 V = 10; // x
     hermes::geo::vec2 cell_size(20, 10);
-    RegularGrid2 grid = RegularGrid2::Config()
-                            .setCellSize(cell_size)
-                            .setSize({V, H})
-                            .build()
-                            .value();
+    auto grid = RegularGrid2::Config()
+                    .setCellSize(cell_size)
+                    .setSize({V, H})
+                    .build()
+                    .value();
     SECTION("offset") {
       REQUIRE(grid.gridOffset(core::FieldLocation::CELL_CENTER) ==
               hermes::geo::vec2(0.5, 0.5));
@@ -60,10 +60,10 @@ TEST_CASE("regular grid 2", "[geo]") {
               hermes::size2((V + 0), (H + 0)));
       REQUIRE(grid.resolution(core::FieldLocation::VERTEX_CENTER) ==
               hermes::size2((V + 1), (H + 1)));
-      REQUIRE(grid.resolution(core::FieldLocation::X_FACE_CENTER) ==
-              hermes::size2((V + 1), (H + 0)));
-      REQUIRE(grid.resolution(core::FieldLocation::Y_FACE_CENTER) ==
+      REQUIRE(grid.resolution(core::FieldLocation::HORIZONTAL_FACE_CENTER) ==
               hermes::size2((V + 0), (H + 1)));
+      REQUIRE(grid.resolution(core::FieldLocation::VERTICAL_FACE_CENTER) ==
+              hermes::size2((V + 1), (H + 0)));
 
       REQUIRE(grid.resolution(core::FieldLocation::HORIZONTAL_FACE_CENTER) ==
               grid.resolution(core::FieldLocation::V_FACE_CENTER));
@@ -80,10 +80,10 @@ TEST_CASE("regular grid 2", "[geo]") {
               (H + 0) * (V + 0));
       REQUIRE(grid.locationCount(core::FieldLocation::VERTEX_CENTER) ==
               (H + 1) * (V + 1));
-      REQUIRE(grid.locationCount(core::FieldLocation::X_FACE_CENTER) ==
-              (H + 0) * (V + 1));
-      REQUIRE(grid.locationCount(core::FieldLocation::Y_FACE_CENTER) ==
+      REQUIRE(grid.locationCount(core::FieldLocation::HORIZONTAL_FACE_CENTER) ==
               (H + 1) * (V + 0));
+      REQUIRE(grid.locationCount(core::FieldLocation::VERTICAL_FACE_CENTER) ==
+              (H + 0) * (V + 1));
 
       REQUIRE(grid.locationCount(core::FieldLocation::HORIZONTAL_FACE_CENTER) ==
               grid.locationCount(core::FieldLocation::V_FACE_CENTER));
@@ -106,16 +106,17 @@ TEST_CASE("regular grid 2", "[geo]") {
       REQUIRE(i == grid.locationCount(core::FieldLocation::CELL_CENTER));
     }
     SECTION("safe indices") {
-      ///    t6   |           t7            |  t8
-      ///    -----|---------------------------
-      ///       2 |  20   21  ...  28   29  |
-      ///         |                         |
-      ///  t3   1 |  10   11  t4   18   19  |  t5
-      ///         |                         |
-      ///       0 |  0    1   ...   8    9  |
-      ///       -------------------------------
-      ///    t0   |  0    1         8    9  |  t2
-      ///                     t1
+      /*    t6   |           t7            |  t8
+       *    -----|---------------------------
+       *       2 |  20   21  ...  28   29  |
+       *         |                         |
+       *  t3   1 |  10   11  t4   18   19  |  t5
+       *         |                         |
+       *       0 |  0    1   ...   8    9  |
+       *       -------------------------------
+       *    t0   |  0    1         8    9  |  t2
+       *                     t1
+       */
 
       REQUIRE(grid.safeIndex(core::FieldLocation::CELL_CENTER, {-1, -1}) ==
               hermes::index2(0, 0));
@@ -156,10 +157,24 @@ TEST_CASE("regular grid 2", "[geo]") {
               29);
     }
     SECTION("grid position") {
-    // TODO
-      }
+      REQUIRE(grid.gridPosition(core::FieldLocation::CELL_CENTER,
+                                hermes::geo::point2(0, 0)) ==
+              hermes::geo::point2(-0.5, -0.5));
+      REQUIRE(grid.gridPosition(
+                  core::FieldLocation::CELL_CENTER,
+                  hermes::geo::point2(cell_size.x * 0.5, cell_size.y * 0.5)) ==
+              hermes::geo::point2(0, 0));
+    }
     SECTION("position") {
-  // TODO
+      hermes::index2 ij(5, 1);
+      int flat_index = grid.flatIndex(core::FieldLocation::CELL_CENTER, ij);
+      hermes::geo::point2 p = {(0.5f + ij.i) * cell_size.x,
+                               (0.5f + ij.j) * cell_size.y};
+      REQUIRE(grid.position(core::FieldLocation::CELL_CENTER, ij) == p);
+      REQUIRE(grid.position(core::FieldLocation::CELL_CENTER, flat_index) == p);
+      hermes::geo::point2 gp(5.5, 1.5);
+      REQUIRE(grid.position(core::FieldLocation::CELL_CENTER, gp) ==
+              hermes::geo::point2(5.5 * 20 + 10, 1.5 * 10 + 5));
     }
   }
 }

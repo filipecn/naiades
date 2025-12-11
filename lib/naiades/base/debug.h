@@ -64,7 +64,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
 #ifndef NAIADES_CHECK_NA_RESULT
 #define NAIADES_CHECK_NA_RESULT(A)                                             \
   {                                                                            \
-    VeResult _naiades_check_na_error_ = (A);                                   \
+    NaResult _naiades_check_na_error_ = (A);                                   \
     if (!_naiades_check_na_error_) {                                           \
       HERMES_ERROR("Error at: {}", #A);                                        \
       HERMES_ERROR("  w/ err: {}",                                             \
@@ -77,14 +77,14 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
   {                                                                            \
     if (!(A)) {                                                                \
       HERMES_ERROR("Check error: {}", #A);                                     \
-      return VeResult::checkError();                                           \
+      return NaResult::checkError();                                           \
     }                                                                          \
   }
 #endif
 #ifndef NAIADES_RETURN_BAD_RESULT
 #define NAIADES_RETURN_BAD_RESULT(A)                                           \
   {                                                                            \
-    VeResult _naiades_return_na_error_ = (A);                                  \
+    NaResult _naiades_return_na_error_ = (A);                                  \
     if (!_naiades_return_na_error_) {                                          \
       HERMES_ERROR("Error at: {}", #A);                                        \
       HERMES_ERROR("  w/ err: {}",                                             \
@@ -97,7 +97,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
 #ifndef NAIADES_RETURN_ON_BAD_RESULT
 #define NAIADES_RETURN_ON_BAD_RESULT(A, R)                                     \
   {                                                                            \
-    VeResult _naiades_return_na_error_ = (A);                                  \
+    NaResult _naiades_return_na_error_ = (A);                                  \
     if (!_naiades_return_na_error_) {                                          \
       HERMES_ERROR("Error at: {}", #A);                                        \
       HERMES_ERROR("  w/ err: {}",                                             \
@@ -114,7 +114,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
       HERMES_ERROR("Error at: {}", #A);                                        \
       HERMES_ERROR("  w/ err: {}",                                             \
                    hermes::to_string(_naiades_return_na_error_));              \
-      return VeResult::heError(_naiades_return_na_error_);                     \
+      return NaResult::heError(_naiades_return_na_error_);                     \
     }                                                                          \
   }
 #endif

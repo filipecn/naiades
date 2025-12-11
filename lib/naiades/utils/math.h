@@ -31,6 +31,18 @@
 
 namespace naiades::utils {
 
-f32 gaussian(f32 sigma2, f32 mu, const hermes::geo::point2 &x);
+f32 gaussian(f32 sigma2, f32 mu, f32 x);
+
+f32 gaussian(const hermes::geo::vec2 &sigma2, const hermes::geo::point2 &mu,
+             const hermes::geo::point2 &p);
+
+hermes::geo::vec2 enright(const hermes::geo::point2 &p, float t);
+
+/// Constant vorticity velocity field
+/// \param p Evaluation point
+/// \param center Rotation center
+/// \param omega Angular velocity (radians per second)
+hermes::geo::vec2 zalesak(const hermes::geo::point2 &p,
+                          const hermes::geo::point2 &center, float omega);
 
 } // namespace naiades::utils

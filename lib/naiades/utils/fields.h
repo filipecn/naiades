@@ -41,4 +41,19 @@ void setField(const geo::RegularGrid2 &grid, core::Field<FieldType> &field,
   }
 }
 
+/// Constant vorticity velocity field
+/// \param grid
+/// \param field
+/// \param center Center of rotation.
+/// \param omega Angular velocity (in radians per second).
+void zalesakVelocityField(const geo::RegularGrid2 &grid,
+                          core::Field<hermes::geo::vec2> &field,
+                          const hermes::geo::point2 &center, f32 omega);
+
+/// Divergence-free velocity field
+// The Enright velocity field test is commonly used in a [0,2]^2 domain
+// and over t = [0,2].
+void enrightVelocityField(const geo::RegularGrid2 &grid,
+                          core::Field<hermes::geo::vec2> &field, f32 t);
+
 } // namespace naiades::utils
