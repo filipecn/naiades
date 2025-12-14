@@ -20,43 +20,12 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   sim_mesh.h
+/// \file   spatial_discretization.cpp
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
-/// \brief  Simulation Mesh.
 
-#pragma once
+#include <naiades/core/spatial_discretization.h>
 
-#include <naiades/core/field.h>
-#include <naiades/geo/grid.h>
+#include <hermes/math/space_filling.h>
 
-namespace naiades::core {
-
-struct Boundary {
-  std::vector<h_size> primitives;
-  /// section name -> [start, end)
-  std::unordered_map<std::string, std::pair<h_size, h_size>> sections;
-};
-
-/// A simulation mesh holds the topology of the discretization and other
-/// information required by simulation algorithms.
-class SimMesh {
-public:
-  struct Config {
-    static Config from(const geo::RegularGrid2 &grid);
-    Result<SimMesh> build() const;
-
-  private:
-    Boundary cell_boundary_;
-    Boundary face_boundary_;
-  };
-
-  const Boundary &faceBoundary() const;
-  const Boundary &cellBoundary() const;
-
-private:
-  Boundary cell_boundary_;
-  Boundary face_boundary_;
-};
-
-} // namespace naiades::core
+namespace naiades::core {} // namespace naiades::core

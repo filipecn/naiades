@@ -32,32 +32,31 @@
 namespace naiades::sampling {
 
 template <typename T>
-core::Field<T> sample(const geo::RegularGrid2 &grid,
-                      const core::Field<T> &field,
-                      core::FieldLocation sample_location) {
-  core::Field<T> samples(grid.resolution(sample_location).total());
-  if (field.location() == sample_location) {
-    // same location, copy field
+core::Field<T> sample(const geo::Grid2 &grid, const core::Field<T> &field,
+                      core::Element sample_element) {
+  core::Field<T> samples(grid.resolution(sample_element).total());
+  if (field.element() == sample_element) {
+    // same element, copy field
     samples = field;
-  } else if (field.location() == core::FieldLocation::HORIZONTAL_FACE_CENTER &&
-             sample_location == core::FieldLocation::CELL_CENTER) {
-    for (auto ij : hermes::range2(grid.resolution(sample_location)))
+  } else if (field.element() == core::Element::HORIZONTAL_FACE_CENTER &&
+             sample_element == core::Element::CELL_CENTER) {
+    for (auto ij : hermes::range2(grid.resolution(sample_element)))
       // -x-(i,j+1)
       //  s (i,j)
       // -x-(i,j)
-      samples[grid.flatIndex(sample_location, ij)] =
-          (field[grid.safeFlatIndex(field.location(), ij)] +
-           field[grid.safeFlatIndex(field.location(), ij.plus(0, 1))]) *
+      samples[grid.flatIndex(sample_element, ij)] =
+          (field[grid.safeFlatIndex(field.element(), ij)] +
+           field[grid.safeFlatIndex(field.element(), ij.plus(0, 1))]) *
           0.5;
-  } else if (field.location() == core::FieldLocation::VERTICAL_FACE_CENTER &&
-             sample_location == core::FieldLocation::CELL_CENTER) {
-    samples.resize(grid.resolution(sample_location).total());
-    for (auto ij : hermes::range2(grid.resolution(sample_location)))
+  } else if (field.element() == core::Element::VERTICAL_FACE_CENTER &&
+             sample_element == core::Element::CELL_CENTER) {
+    samples.resize(grid.resolution(sample_element).total());
+    for (auto ij : hermes::range2(grid.resolution(sample_element)))
       //   x    s     x
       // (i,j) (i,j) (i+1,j)
-      samples[grid.flatIndex(sample_location, ij)] =
-          (field[grid.safeFlatIndex(field.location(), ij)] +
-           field[grid.safeFlatIndex(field.location(), ij.plus(1, 0))]) *
+      samples[grid.flatIndex(sample_element, ij)] =
+          (field[grid.safeFlatIndex(field.element(), ij)] +
+           field[grid.safeFlatIndex(field.element(), ij.plus(1, 0))]) *
           0.5;
   } else {
     HERMES_NOT_IMPLEMENTED;
@@ -66,16 +65,15 @@ core::Field<T> sample(const geo::RegularGrid2 &grid,
 }
 
 template <typename T>
-core::Field<T> sample(const geo::RegularGrid2 &grid,
-                      const core::Field<T> &field,
+core::Field<T> sample(const geo::Grid2 &grid, const core::Field<T> &field,
                       const std::vector<hermes::geo::point2> &positions) {
   core::Field<T> samples;
-  samples.setLocation(field.location());
+  samples.setElement(field.element());
   samples.resize(positions.size());
 
   for (h_size i = 0; i < positions.size(); ++i) {
     samples[i] =
-        Stencil::bilinear(grid, field.location(), positions[i]).evaluate(field);
+        Stencil::bilinear(grid, field.element(), positions[i]).evaluate(field);
   }
 
   return samples;

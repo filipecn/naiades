@@ -1,13 +1,18 @@
 import bpy
+import gpu
+from gpu_extras.batch import batch_for_shader
 import bmesh
 import numpy as np
 from mathutils import Vector
 import colormaps as cmaps
+import random
 
 import sys
 
 sys.path.insert(0, "/home/filipecn/dev/naiades/build/Release/lib")
 import naiades_py
+
+from . import mesh_utils
 
 bl_info = {
     "name": "UVSim",
@@ -20,35 +25,55 @@ bl_info = {
 }
 
 
-def create_plane(context):
-    # 1. Start a new BMesh object
-    bm = bmesh.new()
+# Global list to store the vectors data (start and end points of lines)
+vectors_data = []
+shader = None
+batch = None
 
-    uv_layer = bm.loops.layers.uv.new("UVMap")
+def generate_vector_field_data(scale=0.5):
+    """Generates the vertices for the vector field display."""
+    global vectors_data
+    vectors_data = []
+    grid_size = 10
+    step = 1.0
+    for x in range(-grid_size, grid_size + 1):
+        for y in range(-grid_size, grid_size + 1):
+            for z in range(-grid_size, grid_size + 1):
+                start = Vector((x * step, y * step, z * step))
+                # Example: simple vector field based on the point's position + some noise
+                end = start + Vector((random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5))).normalized() * scale
+                vectors_data.extend([start, end])
 
-    # 2. Add a simple plane to the BMesh
-    bmesh.ops.create_grid(
-        bm, x_segments=15, y_segments=15, size=1.0, calc_uvs=True
-    )
+def draw_vectors():
+    """Custom draw function added to the viewport handlers."""
+    global shader, batch, vectors_data
+    if not vectors_data:
+        return
 
-    bmesh.ops.recalc_face_normals(bm)
+    # Ensure the shader and batch are created
+    if shader is None or batch is None:
+        shader = gpu.shader.from_builtin('UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": vectors_data})
 
-    # 4. Create a new mesh data block
-    mesh = bpy.data.meshes.new("SubdividedPlaneMesh")
-    bm.to_mesh(mesh)
-    bm.free()  # Clean up the BMesh
+    gpu.state.blend_set("ALPHA")
+    shader.bind()
+    shader.uniform_float("color", (1.0, 0.0, 0.0, 1.0)) # Draw lines in red
+    batch.draw(shader)
+    gpu.state.blend_set("NONE")
 
-    # 5. Create an object and link it to the scene
-    obj = bpy.data.objects.new("SubdividedPlane", mesh)
-    context.collection.objects.link(obj)
+class VECTOR_OT_refresh(bpy.types.Operator):
+    """Operator to refresh the vector field visualization."""
+    bl_idname = "vector_field.refresh"
+    bl_label = "Refresh Vectors"
 
-    # 6. Set the new object as the active selection
-    bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    context.view_layer.objects.active = obj
-
-    return obj
-
+    def execute(self, context):
+        generate_vector_field_data()
+        # Invalidate batch and shader to force recreation with new data
+        global batch, shader
+        batch = None
+        shader = None
+        context.area.tag_redraw()
+        return {'FINISHED'}
 
 class UVSimSettings(bpy.types.PropertyGroup):
     mesh_resolution: bpy.props.IntProperty(
@@ -80,65 +105,7 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
 
     # output
     color_attribute = None
-
-    def setup_object(self, obj):
-        mesh = obj.data
-        # setup color attribute
-        color_data_name = "Col"
-        # Check if the desired color layer exists
-        if color_data_name in mesh.color_attributes:
-            self.color_attribute = mesh.color_attributes[color_data_name]
-        else:
-            # Create a new vertex color layer if it doesn't exist
-            # 'FLOAT_COLOR' is a good type for standard RGBA colors
-            self.color_attribute = mesh.color_attributes.new(
-                name=color_data_name,
-                type="FLOAT_COLOR",
-                domain="CORNER",  # Vertex colors are stored per CORNER (Loop)
-            )
-            print(f"Created new vertex color layer: '{color_data_name}'")
-
-        # setup material
-        if not obj.material_slots:
-            mat = bpy.data.materials.new(name="VertexColorMaterial")
-            obj.data.materials.append(mat)
-            mat.use_nodes = True
-        else:
-            mat = obj.material_slots[0].material
-
-        if mat and mat.use_nodes:
-            # Check if the node setup is correct
-            nodes = mat.node_tree.nodes
-
-            # Find or create the Attribute Node
-            attr_node = nodes.get("Vertex_Color_Attribute")
-            if not attr_node:
-                attr_node = nodes.new(type="ShaderNodeAttribute")
-                attr_node.name = "Vertex_Color_Attribute"
-
-                # Try to position it nicely
-                principled = nodes.get("Principled BSDF")
-                if principled:
-                    attr_node.location = (
-                        principled.location[0] - 300,
-                        principled.location[1],
-                    )
-
-            # Set the name of the attribute node to match the layer name
-            attr_node.attribute_name = color_data_name
-
-            # Link the nodes: Attribute Color output -> Principled Base Color
-            links = mat.node_tree.links
-            principled = nodes.get("Principled BSDF")
-
-            if principled:
-                # Check for existing links to Base Color and remove them if necessary
-                if principled.inputs["Base Color"].links:
-                    links.remove(principled.inputs["Base Color"].links[0])
-
-                # Create the new link
-                links.new(attr_node.outputs["Color"], principled.inputs["Base Color"])
-        return True
+    mesh = None
 
     def load_object(self, obj):
         if obj is None or obj.type != "MESH":
@@ -169,60 +136,32 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
 
     def start(self, context):
         # create plane
-        obj = create_plane(context)
+        obj = mesh_utils.create_plane(context)
 
         # load object data
         if not self.load_object(obj):
-            return False
-        if not self.setup_object(obj):
             return False
         self.target_object = obj
         # setup sim
         self.stable_fluids2 = naiades_py.StableFluids2(True)
         context.scene.uv_sim_settings.is_simulating = True
+
+        element = naiades_py.Element.CELL_CENTER
+        na_mesh = self.stable_fluids2.get_mesh(element)
+        mesh = mesh_utils.create_mesh(context, na_mesh,"test")
+        self.mesh = mesh_utils.MeshObject(context, na_mesh, "test2")
         return True
 
     def step(self):
         # field = sim.get_float_field("density")
         self.stable_fluids2.step(0.1)
 
+        cell_field = self.stable_fluids2.get_float_field("cell_R")
+        self.mesh.set_cell_field(cell_field)
 
-        if self.color_attribute is not None:
-            mesh = self.target_object.data
+        vertex_field = self.stable_fluids2.get_float_field("gaussian")
+        self.mesh.set_vertex_field(vertex_field)
 
-            # Ensure the mesh data is up-to-date (good practice)
-            mesh.validate(clean_customdata=True)
-            mesh.update()
-
-            field_r = self.stable_fluids2.sample_float_field(
-                "density_r", self.flat_uv_array
-            )
-
-            field_g = self.stable_fluids2.sample_float_field(
-                "density_g", self.flat_uv_array
-            )
-
-            # 1. Get a reference to the data array for fast access
-            # This array will have a length equal to the total number of loops.
-            color_data = self.color_attribute.data
-
-            # 2. Iterate over the loops and assign a color
-            for loop_index in range(len(color_data)):
-                # Generate a random color for demonstration (R, G, B, A)
-                #R = self.flat_uv_array[loop_index * 2 + 0]
-                #G = self.flat_uv_array[loop_index * 2 + 1]
-                R = list(field_r)[loop_index]
-                G = list(field_g)[loop_index]
-                B = 0.0
-                A = 1.0  # Fully opaque
-
-                # Set the color for the current loop's corner
-                # The .color attribute is a 4-component vector (RGBA)
-                color_data[loop_index].color = cmaps.ice(field_r[loop_index])
-                #color_data[loop_index].color = (R, G, B, A)
-
-            # 3. Inform Blender that the data has changed
-            #mesh.update()
 
     def invoke(self, context, event):
         if context.scene.uv_sim_settings.is_simulating:
@@ -290,6 +229,9 @@ class VIEW3D_PT_uv_sim_panel(bpy.types.Panel):
     def draw(self, context):
         settings = context.scene.uv_sim_settings
         layout = self.layout
+        row = layout.row()
+        layout.operator("vector_field.refresh", text="Refresh Vectors")
+
         layout.prop(settings, "mesh_resolution")
         # Check if the simulator is running by checking if it's the current modal operator
         if not context.scene.uv_sim_settings.is_simulating:
@@ -311,6 +253,7 @@ classes = (
     UVSimSettings,
     OBJECT_OT_uv_sim,
     VIEW3D_PT_uv_sim_panel,
+    VECTOR_OT_refresh
 )
 
 
@@ -319,6 +262,12 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.Scene.uv_sim_settings = bpy.props.PointerProperty(type=UVSimSettings)
+
+    generate_vector_field_data()
+    bpy.app.handlers.persistent(draw_vectors)
+    bpy.types.SpaceView3D.draw_handler_add(draw_vectors, (), 'WINDOW', 'POST_VIEW')
+
+
     print(f"{bl_info['name']} registered.")
 
 
@@ -326,6 +275,13 @@ def unregister():
     """Called by Blender when the add-on is disabled."""
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+
+    bpy.types.SpaceView3D.draw_handler_remove(draw_vectors, 'WINDOW')
+    if draw_vectors in bpy.app.handlers.persistent:
+        bpy.app.handlers.persistent.remove(draw_vectors)
+    global shader, batch
+    del shader
+    del batch
 
     print(f"{bl_info['name']} unregistered.")
     print(f"{bl_info['name']} unregistered.")

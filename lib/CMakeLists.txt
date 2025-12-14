@@ -5,8 +5,9 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/base/debug.h
   ${NAIADES_SOURCE_DIR}/naiades/base/result.h
 
+  ${NAIADES_SOURCE_DIR}/naiades/core/element.h
   ${NAIADES_SOURCE_DIR}/naiades/core/field.h
-  ${NAIADES_SOURCE_DIR}/naiades/core/sim_mesh.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/spatial_discretization.h
 
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.h
 
@@ -20,8 +21,9 @@ set(NAIADES_HEADERS
 )
 
 set(NAIADES_SOURCES
+  ${NAIADES_SOURCE_DIR}/naiades/core/element.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp
-  ${NAIADES_SOURCE_DIR}/naiades/core/sim_mesh.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/core/spatial_discretization.cpp
   
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
 

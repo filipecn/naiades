@@ -44,7 +44,7 @@ public:
 private:
   h_size current_step_{0};
   core::FieldSet fields_[2];
-  geo::RegularGrid2 grid_;
+  geo::Grid2 grid_;
 };
 
 } // namespace naiades::solvers

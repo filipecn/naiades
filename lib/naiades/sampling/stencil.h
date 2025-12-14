@@ -34,14 +34,13 @@ namespace naiades::sampling {
 
 class Stencil {
 public:
-  static Stencil nearest(const geo::RegularGrid2 &grid, core::FieldLocation loc,
+  static Stencil nearest(const geo::Grid2 &grid, core::Element loc,
                          const hermes::geo::point2 &p);
-  static Stencil bilinear(const geo::RegularGrid2 &grid,
-                          core::FieldLocation loc,
+  static Stencil bilinear(const geo::Grid2 &grid, core::Element loc,
                           const hermes::geo::point2 &p);
 
   template <typename T> T evaluate(const core::Field<T> &field) {
-    T s = 0.f;
+    T s = {};
     const h_size n = indices_.size();
     for (h_size i = 0; i < n; ++i) {
       s += field[indices_[i]] * weights_[i];

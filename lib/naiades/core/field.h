@@ -29,6 +29,7 @@
 
 #include <naiades/base/debug.h>
 #include <naiades/base/result.h>
+#include <naiades/core/element.h>
 
 #include <hermes/geometry/vector.h>
 
@@ -38,59 +39,32 @@
 
 namespace naiades::core {
 
-///      v --- V ---- v    v - VERTEX_CENTER
-///      |            |    C - CELL_CENTER
-///      U     C      U    V - [V|X|HORIZONTAL]_FACE_CENTER
-///      |            |    U - [U|Y|VERTICAL]_FACE_CENTER
-///      v --- V ---- v
-enum FieldLocation : int {
-  CELL_CENTER = 0,
-  FACE_CENTER = 1,
-
-  HORIZONTAL_FACE_CENTER = 2,
-  V_FACE_CENTER = 3,
-  X_FACE_CENTER = 4,
-
-  VERTICAL_FACE_CENTER = 5,
-  U_FACE_CENTER = 6,
-  Y_FACE_CENTER = 7,
-
-  DEPTH_FACE_CENTER = 8,
-  W_FACE_CENTER = 9,
-  Z_FACE_CENTER = 10,
-
-  VERTEX_CENTER = 11,
-  POINT = 12,
-  CUSTOM = 13,
-  SIZE = 14
-};
-
 template <typename DataType> class Field : public std::vector<DataType> {
 public:
-  void setLocation(FieldLocation loc) { location_ = loc; }
-  FieldLocation location() const { return location_; }
+  void setElement(Element element) { element_ = element; }
+  Element element() const { return element_; }
 
 private:
-  FieldLocation location_{FieldLocation::CUSTOM};
+  Element element_{Element::Type::ANY};
   template <typename FriendDataType>
   NAIADES_to_string_FRIEND(Field<FriendDataType>);
 };
 
 class FieldSet {
 public:
-  NaResult addScalarFields(FieldLocation loc,
+  NaResult addScalarFields(Element loc,
                            const std::vector<std::string> &field_names);
-  NaResult addVectorFields(FieldLocation loc,
+  NaResult addVectorFields(Element loc,
                            const std::vector<std::string> &field_names);
-  NaResult addScalarField(const std::string &name, FieldLocation loc);
-  NaResult addVectorField(const std::string &name, FieldLocation loc);
-  NaResult setLocationCount(FieldLocation loc, h_size count);
+  NaResult addScalarField(const std::string &name, Element loc);
+  NaResult addVectorField(const std::string &name, Element loc);
+  NaResult setElementCount(Element loc, h_size count);
 
   Field<f32> *scalarField(const std::string &name);
   Field<hermes::geo::vec2> *vectorField(const std::string &name);
 
 private:
-  h_size field_sizes_[FieldLocation::SIZE]{};
+  std::unordered_map<Element, h_size> field_sizes_;
   std::unordered_map<std::string, Field<f32>> scalar_fields_;
   std::unordered_map<std::string, Field<hermes::geo::vec2>> vector_fields_;
   NAIADES_to_string_FRIEND(FieldSet);
@@ -102,7 +76,7 @@ namespace naiades {
 
 HERMES_TO_STRING_DEBUG_TEMPLATED_METHOD_BEGIN(core::Field<T>, typename T)
 HERMES_PUSH_DEBUG_TITLE
-HERMES_PUSH_DEBUG_NAIADES_FIELD(location_);
+HERMES_PUSH_DEBUG_NAIADES_FIELD(element_);
 HERMES_PUSH_DEBUG_LINE("size: {}\n", object.size());
 HERMES_PUSH_DEBUG_LINE("values: {}", hermes::cstr::join(object, ", ", 10));
 HERMES_TO_STRING_DEBUG_METHOD_END

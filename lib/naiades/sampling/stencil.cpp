@@ -42,7 +42,7 @@ HERMES_TO_STRING_DEBUG_METHOD_END
 
 namespace naiades::sampling {
 
-Stencil Stencil::nearest(const geo::RegularGrid2 &grid, core::FieldLocation loc,
+Stencil Stencil::nearest(const geo::Grid2 &grid, core::Element loc,
                          const hermes::geo::point2 &wp) {
   // transform wp into index space
   auto gp = grid.gridPosition(loc, wp);
@@ -61,8 +61,7 @@ Stencil Stencil::nearest(const geo::RegularGrid2 &grid, core::FieldLocation loc,
   return stencil;
 }
 
-Stencil Stencil::bilinear(const geo::RegularGrid2 &grid,
-                          core::FieldLocation loc,
+Stencil Stencil::bilinear(const geo::Grid2 &grid, core::Element loc,
                           const hermes::geo::point2 &wp) {
   // transform wp into index space
   auto gp = grid.gridPosition(loc, wp);

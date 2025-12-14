@@ -31,10 +31,10 @@ namespace naiades::solvers {
 Result<SmokeSolver2> SmokeSolver2::Config::build() const {
   SmokeSolver2 solver;
   for (int i = 0; i < 2; ++i) {
-    solver.fields_[i].addScalarField("u", core::FieldLocation::X_FACE_CENTER);
-    solver.fields_[i].addScalarField("y", core::FieldLocation::X_FACE_CENTER);
+    solver.fields_[i].addScalarField("u", core::Element::Type::X_FACE_CENTER);
+    solver.fields_[i].addScalarField("y", core::Element::Type::X_FACE_CENTER);
     solver.fields_[i].addScalarField("density",
-                                     core::FieldLocation::CELL_CENTER);
+                                     core::Element::Type::CELL_CENTER);
   }
   return Result<SmokeSolver2>(std::move(solver));
 }
