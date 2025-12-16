@@ -45,6 +45,8 @@
 namespace py = pybind11;
 
 using py_Element = py::native_enum<naiades::core::Element::Type>;
+using py_array_f32 = py::array_t<f32, py::array::c_style>;
+using py_array_u32 = py::array_t<u32, py::array::c_style>;
 
 /*
 void printCallback(const hermes::cstr &m) {
@@ -77,55 +79,57 @@ void initHermes(bool verbose = false) {
   }
 }*/
 
+template <typename T>
+py::array_t<T, py::array::c_style> scalar_pyarray(const std::vector<T> &data) {
+  std::vector<h_size> shape = {data.size()};
+  std::vector<h_size> strides = {sizeof(T)};
+  return py::array_t<T, py::array::c_style>(shape, strides, data.data());
+}
+
+template <typename DataType>
+py_array_f32 vector_pyarray(const std::vector<DataType> &data) {
+  std::vector<f32> py_data(data.size() * 3);
+  std::vector<h_size> shape = {data.size(), 3};
+  std::vector<h_size> strides = {3 * sizeof(f32), sizeof(f32)};
+  for (h_size i = 0; i < data.size(); ++i) {
+    py_data[i * 3 + 0] = data[i].x;
+    py_data[i * 3 + 1] = data[i].y;
+    py_data[i * 3 + 2] = 0;
+  }
+  return py_array_f32(shape, strides, py_data.data());
+}
+
 struct py_Mesh {
 
   static py_Mesh from(const naiades::geo::Grid2 &grid,
                       naiades::core::Element element) {
     py_Mesh mesh;
-    auto g_vertices = grid.positions(naiades::core::Element::VERTEX_CENTER);
-    auto g_positions = grid.positions(element);
+
+    mesh.face_centers =
+        vector_pyarray(grid.positions(naiades::core::Element::FACE_CENTER));
+    mesh.cell_centers =
+        vector_pyarray(grid.positions(naiades::core::Element::CELL_CENTER));
+    mesh.vertex_centers =
+        vector_pyarray(grid.positions(naiades::core::Element::VERTEX_CENTER));
+
     auto g_indices =
         grid.indices(element, naiades::core::Element::VERTEX_CENTER);
-    {
-      std::vector<f32> data(g_positions.size() * 3);
-      std::vector<h_size> shape = {g_positions.size(), 3};
-      std::vector<h_size> strides = {3 * sizeof(f32), sizeof(f32)};
-      for (h_size i = 0; i < g_positions.size(); ++i) {
-        data[i * 3 + 0] = g_positions[i].x;
-        data[i * 3 + 1] = g_positions[i].y;
-        data[i * 3 + 2] = 0;
-      }
-      mesh.positions =
-          py::array_t<f32, py::array::c_style>(shape, strides, data.data());
-    }
-    {
-      std::vector<f32> data(g_vertices.size() * 3);
-      std::vector<h_size> shape = {g_vertices.size(), 3};
-      std::vector<h_size> strides = {3 * sizeof(f32), sizeof(f32)};
-      for (h_size i = 0; i < g_vertices.size(); ++i) {
-        data[i * 3 + 0] = g_vertices[i].x;
-        data[i * 3 + 1] = g_vertices[i].y;
-        data[i * 3 + 2] = 0;
-      }
-      mesh.vertices =
-          py::array_t<f32, py::array::c_style>(shape, strides, data.data());
-    }
-    {
-      std::vector<u32> data(g_indices.size() * 4);
-      std::vector<h_size> shape = {g_positions.size(), 4};
-      std::vector<h_size> strides = {4 * sizeof(u32), sizeof(u32)};
-      for (h_size i = 0; i < g_indices.size(); ++i)
-        for (h_size j = 0; j < 4; ++j)
-          data[i * 4 + j] = g_indices[i][j];
-      mesh.faces =
-          py::array_t<u32, py::array::c_style>(shape, strides, data.data());
-    }
+    std::vector<u32> data(g_indices.size() * 4);
+    std::vector<h_size> shape = {
+        grid.elementCount(naiades::core::Element::CELL_CENTER), 4};
+    std::vector<h_size> strides = {4 * sizeof(u32), sizeof(u32)};
+    for (h_size i = 0; i < g_indices.size(); ++i)
+      for (h_size j = 0; j < 4; ++j)
+        data[i * 4 + j] = g_indices[i][j];
+    mesh.cells = py_array_u32(shape, strides, data.data());
+
     return mesh;
   }
 
-  py::array_t<f32, py::array::c_style> positions;
-  py::array_t<f32, py::array::c_style> vertices;
-  py::array_t<u32, py::array::c_style> faces;
+  py_array_f32 face_centers;
+  py_array_f32 cell_centers;
+  py_array_f32 vertex_centers;
+  py_array_u32 cells;
 };
 
 struct StableFluids2_py {
@@ -139,14 +143,10 @@ struct StableFluids2_py {
                             {"cell_R", "cell_G", "cell_B"});
     fields_.addScalarFields(naiades::core::Element::VERTEX_CENTER,
                             {"gaussian"});
+    fields_.addScalarFields(naiades::core::Element::X_FACE_CENTER, {"v"});
+    fields_.addScalarFields(naiades::core::Element::Y_FACE_CENTER, {"u"});
 
-    fields_.setElementCount(
-        naiades::core::Element::CELL_CENTER,
-        grid_.locationCount(naiades::core::Element::CELL_CENTER));
-
-    fields_.setElementCount(
-        naiades::core::Element::VERTEX_CENTER,
-        grid_.locationCount(naiades::core::Element::VERTEX_CENTER));
+    fields_.setElementCountFrom(&grid_);
   }
 
   void step(f32 timestep) {
@@ -155,11 +155,27 @@ struct StableFluids2_py {
       naiades::utils::zalesakVelocityField(grid_, *cell_velocity, {0.5f, 0.5f},
                                            hermes::math::constants::two_pi);
     }
+    if (auto *u = fields_.scalarField("u")) {
+      naiades::utils::setField<f32>(
+          grid_, *u, [&](const hermes::geo::point2 &p) -> f32 {
+            return naiades::utils::gaussian(hermes::geo::vec2(0.02),
+                                            hermes::geo::point2(0.5), p);
+          });
+    }
+    if (auto *v = fields_.scalarField("v")) {
+      naiades::utils::setField<f32>(
+          grid_, *v, [&](const hermes::geo::point2 &p) -> f32 {
+            return naiades::utils::zalesak(p, {0.5f, 0.5f},
+                                           hermes::math::constants::two_pi)
+                .y;
+          });
+    }
     if (auto *cell_velocity = fields_.scalarField("cell_R")) {
       naiades::utils::setField<f32>(
           grid_, *cell_velocity, [&](const hermes::geo::point2 &p) -> f32 {
-            return naiades::utils::gaussian(hermes::geo::vec2(0.02),
-                                            hermes::geo::point2(0.5), p);
+            return naiades::utils::zalesak(p, {0.5f, 0.5f},
+                                           hermes::math::constants::two_pi)
+                .x;
           });
     }
     if (auto *cell_velocity = fields_.scalarField("gaussian")) {
@@ -171,22 +187,37 @@ struct StableFluids2_py {
     }
   }
 
-  py::array_t<float> getFloatField(const std::string &name) {
+  py_array_f32 getStaggeredVelocityField() {
+    auto *u = fields_.scalarField("u");
+    auto *v = fields_.scalarField("v");
+    if (!u || !v)
+      throw std::runtime_error("Field not found!");
+
+    std::vector<hermes::geo::vec2> data(
+        grid_.elementCount(naiades::core::Element::Type::FACE_CENTER));
+
+    for (h_size i = 0; i < v->size(); ++i) {
+      auto flat_index =
+          grid_.flatIndexOffset(naiades::core::Element::Type::X_FACE_CENTER) +
+          i;
+      data[flat_index].x = 0;
+      data[flat_index].y = (*v)[i];
+    }
+    for (h_size i = 0; i < u->size(); ++i) {
+      auto flat_index =
+          grid_.flatIndexOffset(naiades::core::Element::Type::Y_FACE_CENTER) +
+          i;
+      data[flat_index].x = (*u)[i];
+      data[flat_index].y = 0;
+    }
+    return vector_pyarray(data);
+  }
+
+  py_array_f32 getScalarField(const std::string &name) {
     auto *field = fields_.scalarField(name);
     if (!field)
       throw std::runtime_error("Field not found!");
-
-    std::vector<float> data(field->size());
-    std::vector<h_size> shape = {field->size()};
-    std::vector<h_size> strides = {sizeof(float)};
-    for (h_size i = 0; i < field->size(); ++i)
-      data[i] = (*field)[i];
-
-    return py::array_t<float>(
-        shape, strides, data.data(),
-        py::cast(
-            std::move(data)) // Owner object (transfers std::vector ownership)
-    );
+    return scalar_pyarray(*field);
   }
 
   py::array_t<float> sampleFloatField(const std::string &name,
@@ -256,7 +287,7 @@ struct StableFluids2_py {
   }
 
   py::array_t<f32> getPositions(naiades::core::Element loc) {
-    auto positions_count = grid_.locationCount(loc);
+    auto positions_count = grid_.elementCount(loc);
     std::vector<f32> data(positions_count * 2);
 
     for (auto ij : hermes::range2(grid_.resolution(loc))) {
@@ -293,13 +324,16 @@ PYBIND11_MODULE(naiades_py, m) {
           .finalize();
 
   py::class_<py_Mesh>(m, "Mesh")
-      .def_readonly("field", &py_Mesh::positions)
-      .def_readonly("verts", &py_Mesh::vertices)
-      .def_readonly("faces", &py_Mesh::faces);
+      .def_readonly("cell_centers", &py_Mesh::cell_centers)
+      .def_readonly("face_centers", &py_Mesh::face_centers)
+      .def_readonly("vertex_centers", &py_Mesh::vertex_centers)
+      .def_readonly("cells", &py_Mesh::cells);
 
   py::class_<StableFluids2_py>(m, "StableFluids2")
       .def(py::init([](bool verbose) { return new StableFluids2_py(verbose); }))
-      .def("get_float_field", &StableFluids2_py::getFloatField, "")
+      .def("get_scalar_field", &StableFluids2_py::getScalarField, "")
+      .def("get_stag_velocity_field",
+           &StableFluids2_py::getStaggeredVelocityField, "")
       .def("step", &StableFluids2_py::step, "")
       .def("sample_float_field", &StableFluids2_py::sampleFloatField, "")
       .def("sample_vector_field", &StableFluids2_py::sampleVectorField, "")

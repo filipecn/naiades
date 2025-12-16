@@ -26,7 +26,7 @@ def create_plane(context, with_uvs=True):
 
 def create_mesh(context, mesh, name):
     new_mesh = bpy.data.meshes.new(name + "_Mesh")
-    new_mesh.from_pydata(mesh.verts, [], mesh.faces)
+    new_mesh.from_pydata(mesh.vertex_centers, [], mesh.cells)
     new_mesh.update()
     new_mesh.validate()
     
@@ -63,9 +63,9 @@ class MeshObject:
         self.cell_loops = []
         
         me = self.obj.data
-        
-        assert(len(me.polygons) == len(self.mesh_data.field))
-        assert(len(me.vertices) == len(self.mesh_data.verts))
+
+        assert(len(me.polygons) == len(self.mesh_data.cell_centers))
+        assert(len(me.vertices) == len(self.mesh_data.vertex_centers))
 
         self.cell_loops = [[]] * len(me.polygons)
         self.vert_loops = [[]] * len(me.vertices)

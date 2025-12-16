@@ -25,55 +25,50 @@ bl_info = {
 }
 
 
-# Global list to store the vectors data (start and end points of lines)
-vectors_data = []
-shader = None
-batch = None
+class VectorFieldShader:
+    verts = []
+    shader = None
+    batch = None
 
-def generate_vector_field_data(scale=0.5):
-    """Generates the vertices for the vector field display."""
-    global vectors_data
-    vectors_data = []
-    grid_size = 10
-    step = 1.0
-    for x in range(-grid_size, grid_size + 1):
-        for y in range(-grid_size, grid_size + 1):
-            for z in range(-grid_size, grid_size + 1):
-                start = Vector((x * step, y * step, z * step))
-                # Example: simple vector field based on the point's position + some noise
-                end = start + Vector((random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5))).normalized() * scale
-                vectors_data.extend([start, end])
+    def setVectors(self, origins, vecs):
+        if self.shader is None:
+            self.init()
+
+        assert(len(origins) == len(vecs))
+
+        self.verts = []
+        for i in range(len(origins)):
+            start = Vector((origins[i][0], origins[i][1], origins[i][2]))
+            end = start + Vector((vecs[i][0], vecs[i][1], vecs[i][2]))
+            self.verts.extend([start, end])
+            
+        self.batch = batch_for_shader(self.shader, 'LINES', {"pos": self.verts})
+
+    def draw(self):
+        if self.shader is None or self.batch is None:
+            return
+        gpu.state.depth_test_set("LESS_EQUAL")
+        gpu.state.blend_set("ALPHA")
+        self.shader.bind()
+        self.shader.uniform_float("color", (1.0, 0.0, 0.0, 1.0)) 
+        self.batch.draw(self.shader)
+        gpu.state.blend_set("NONE")
+        gpu.state.depth_test_set("NONE")
+
+    def init(self):
+        self.batch = None
+        self.shader = None
+        if self.shader is None:
+            self.shader = gpu.shader.from_builtin('UNIFORM_COLOR')
+
+
+vector_field_shader = VectorFieldShader()
+draw_handler = None
 
 def draw_vectors():
     """Custom draw function added to the viewport handlers."""
-    global shader, batch, vectors_data
-    if not vectors_data:
-        return
-
-    # Ensure the shader and batch are created
-    if shader is None or batch is None:
-        shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-        batch = batch_for_shader(shader, 'LINES', {"pos": vectors_data})
-
-    gpu.state.blend_set("ALPHA")
-    shader.bind()
-    shader.uniform_float("color", (1.0, 0.0, 0.0, 1.0)) # Draw lines in red
-    batch.draw(shader)
-    gpu.state.blend_set("NONE")
-
-class VECTOR_OT_refresh(bpy.types.Operator):
-    """Operator to refresh the vector field visualization."""
-    bl_idname = "vector_field.refresh"
-    bl_label = "Refresh Vectors"
-
-    def execute(self, context):
-        generate_vector_field_data()
-        # Invalidate batch and shader to force recreation with new data
-        global batch, shader
-        batch = None
-        shader = None
-        context.area.tag_redraw()
-        return {'FINISHED'}
+    global vector_field_shader
+    vector_field_shader.draw()
 
 class UVSimSettings(bpy.types.PropertyGroup):
     mesh_resolution: bpy.props.IntProperty(
@@ -153,22 +148,24 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
         return True
 
     def step(self):
-        # field = sim.get_float_field("density")
+        # field = sim.get_scalar_field("density")
         self.stable_fluids2.step(0.1)
 
-        cell_field = self.stable_fluids2.get_float_field("cell_R")
+        cell_field = self.stable_fluids2.get_scalar_field("cell_R")
         self.mesh.set_cell_field(cell_field)
 
-        vertex_field = self.stable_fluids2.get_float_field("gaussian")
+        vertex_field = self.stable_fluids2.get_scalar_field("gaussian")
         self.mesh.set_vertex_field(vertex_field)
+
+        stag_velocity = self.stable_fluids2.get_stag_velocity_field()
+
+        global vector_field_shader
+        vector_field_shader.setVectors(self.mesh.mesh_data.face_centers, stag_velocity)
 
 
     def invoke(self, context, event):
         if context.scene.uv_sim_settings.is_simulating:
             self.report({"WARNING"}, "Simulation is already running!")
-            return {"CANCELLED"}
-        if context.active_object is None:
-            self.report({"ERROR"}, "No active object selected to run simulation on.")
             return {"CANCELLED"}
         # start sim
         if not self.start(context):
@@ -192,14 +189,6 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
 
         # Check if the timer event occurred
         if event.type == "TIMER":
-            if (
-                self.target_object is None
-                or self.target_object.name not in bpy.data.objects
-            ):
-                self.report({"ERROR"}, "Target object no longer exists!")
-                self.cancel(context)
-                return {"FINISHED"}
-
             self.step()
 
             # Redraw the 3D viewport to show the changes in real-time
@@ -230,12 +219,11 @@ class VIEW3D_PT_uv_sim_panel(bpy.types.Panel):
         settings = context.scene.uv_sim_settings
         layout = self.layout
         row = layout.row()
-        layout.operator("vector_field.refresh", text="Refresh Vectors")
+        #layout.operator("vector_field.refresh", text="Refresh Vectors")
 
         layout.prop(settings, "mesh_resolution")
         # Check if the simulator is running by checking if it's the current modal operator
         if not context.scene.uv_sim_settings.is_simulating:
-            layout.label(text="Select an object and press Start.", icon="WORLD")
             layout.operator(
                 OBJECT_OT_uv_sim.bl_idname, text="Start Simulation", icon="PLAY"
             )
@@ -252,8 +240,7 @@ class VIEW3D_PT_uv_sim_panel(bpy.types.Panel):
 classes = (
     UVSimSettings,
     OBJECT_OT_uv_sim,
-    VIEW3D_PT_uv_sim_panel,
-    VECTOR_OT_refresh
+    VIEW3D_PT_uv_sim_panel
 )
 
 
@@ -263,9 +250,17 @@ def register():
         bpy.utils.register_class(cls)
     bpy.types.Scene.uv_sim_settings = bpy.props.PointerProperty(type=UVSimSettings)
 
-    generate_vector_field_data()
-    bpy.app.handlers.persistent(draw_vectors)
-    bpy.types.SpaceView3D.draw_handler_add(draw_vectors, (), 'WINDOW', 'POST_VIEW')
+    global vector_field_shader
+    vector_field_shader.init()
+
+    global draw_handler
+    if draw_handler:
+        bpy.types.SpaceView3D.draw_handler_remove(draw_handler, 'WINDOW')
+        draw_handler = None
+
+    draw_handler = bpy.types.SpaceView3D.draw_handler_add(draw_vectors, (), 'WINDOW', 'POST_VIEW')
+
+    #bpy.app.handlers.persistent(draw_vectors)
 
 
     print(f"{bl_info['name']} registered.")
@@ -276,22 +271,14 @@ def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 
-    bpy.types.SpaceView3D.draw_handler_remove(draw_vectors, 'WINDOW')
-    if draw_vectors in bpy.app.handlers.persistent:
-        bpy.app.handlers.persistent.remove(draw_vectors)
-    global shader, batch
-    del shader
-    del batch
+    global draw_handler
+    if draw_handler:
+        bpy.types.SpaceView3D.draw_handler_remove(draw_handler, 'WINDOW')
+        draw_handler = None
+    
+    #if draw_vectors in bpy.app.handlers.persistent:
+    #    bpy.app.handlers.persistent.remove(draw_vectors)
 
     print(f"{bl_info['name']} unregistered.")
-    print(f"{bl_info['name']} unregistered.")
 
 
-def unregister():
-    """Called by Blender when the add-on is disabled."""
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
-
-    print(f"{bl_info['name']} unregistered.")
-    print(f"{bl_info['name']} unregistered.")
-    print(f"{bl_info['name']} unregistered.")

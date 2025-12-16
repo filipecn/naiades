@@ -111,8 +111,6 @@ public:
   hermes::geo::vec2 gridOffset(core::Element loc) const;
   /// Grid resolution
   hermes::size2 resolution(core::Element loc) const;
-  /// Grid location counts
-  h_size locationCount(core::Element loc) const;
   /// Grid flat index offset.
   /// \note The flat index offset is zero for all elements, except for faces.
   h_size flatIndexOffset(core::Element loc) const;
@@ -138,12 +136,16 @@ public:
 
   // interface
 
+  /// Grid location counts
+  h_size elementCount(core::Element loc) const override;
   hermes::geo::point2 position(core::Element loc,
                                h_size flat_index) const override;
   std::vector<hermes::geo::point2> positions(core::Element loc) const override;
   std::vector<std::vector<h_size>>
   indices(core::Element loc, core::Element sub_loc) const override;
   std::vector<h_size> boundary(core::Element loc) const override;
+  core::element_alignments elementAlignment(core ::Element loc,
+                                            h_size index) const override;
 
 private:
   hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};

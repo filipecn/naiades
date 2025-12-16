@@ -92,25 +92,29 @@ TEST_CASE("regular grid 2", "[geo]") {
       REQUIRE(grid.resolution(core::Element::Type::VERTICAL_FACE_CENTER) ==
               grid.resolution(core::Element::Type::Y_FACE_CENTER));
     }
-    SECTION("locationCount") {
-      REQUIRE(grid.locationCount(core::Element::Type::CELL_CENTER) ==
+    SECTION("elementCount") {
+      REQUIRE(grid.elementCount(core::Element::Type::CELL_CENTER) ==
               (H + 0) * (V + 0));
-      REQUIRE(grid.locationCount(core::Element::Type::VERTEX_CENTER) ==
+      REQUIRE(grid.elementCount(core::Element::Type::VERTEX_CENTER) ==
               (H + 1) * (V + 1));
-      REQUIRE(grid.locationCount(core::Element::Type::HORIZONTAL_FACE_CENTER) ==
+      REQUIRE(grid.elementCount(core::Element::Type::HORIZONTAL_FACE_CENTER) ==
               (H + 1) * (V + 0));
-      REQUIRE(grid.locationCount(core::Element::Type::VERTICAL_FACE_CENTER) ==
+      REQUIRE(grid.elementCount(core::Element::Type::VERTICAL_FACE_CENTER) ==
               (H + 0) * (V + 1));
 
-      REQUIRE(grid.locationCount(core::Element::Type::HORIZONTAL_FACE_CENTER) ==
-              grid.locationCount(core::Element::Type::V_FACE_CENTER));
-      REQUIRE(grid.locationCount(core::Element::Type::HORIZONTAL_FACE_CENTER) ==
-              grid.locationCount(core::Element::Type::X_FACE_CENTER));
+      REQUIRE(grid.elementCount(core::Element::Type::HORIZONTAL_FACE_CENTER) ==
+              grid.elementCount(core::Element::Type::V_FACE_CENTER));
+      REQUIRE(grid.elementCount(core::Element::Type::HORIZONTAL_FACE_CENTER) ==
+              grid.elementCount(core::Element::Type::X_FACE_CENTER));
 
-      REQUIRE(grid.locationCount(core::Element::Type::VERTICAL_FACE_CENTER) ==
-              grid.locationCount(core::Element::Type::U_FACE_CENTER));
-      REQUIRE(grid.locationCount(core::Element::Type::VERTICAL_FACE_CENTER) ==
-              grid.locationCount(core::Element::Type::Y_FACE_CENTER));
+      REQUIRE(grid.elementCount(core::Element::Type::VERTICAL_FACE_CENTER) ==
+              grid.elementCount(core::Element::Type::U_FACE_CENTER));
+      REQUIRE(grid.elementCount(core::Element::Type::VERTICAL_FACE_CENTER) ==
+              grid.elementCount(core::Element::Type::Y_FACE_CENTER));
+
+      REQUIRE(grid.elementCount(core::Element::Type::FACE_CENTER) ==
+              grid.elementCount(core::Element::Type::HORIZONTAL_FACE_CENTER) +
+                  grid.elementCount(core::Element::Type::VERTICAL_FACE_CENTER));
     }
     SECTION("indices") {
       h_size i = 0;
@@ -120,7 +124,7 @@ TEST_CASE("regular grid 2", "[geo]") {
         REQUIRE(ij == grid.index(core::Element::Type::CELL_CENTER, i));
         i++;
       }
-      REQUIRE(i == grid.locationCount(core::Element::Type::CELL_CENTER));
+      REQUIRE(i == grid.elementCount(core::Element::Type::CELL_CENTER));
     }
     SECTION("safe indices") {
       /*    t6   |           t7            |  t8
@@ -262,6 +266,35 @@ TEST_CASE("regular grid 2", "[geo]") {
           auto boundary = grid.boundary(core::Element::FACE_CENTER);
           auto cell_res = grid.resolution(core::Element::CELL_CENTER);
           REQUIRE(boundary.size() == cell_res.width * 2 + cell_res.height * 2);
+        }
+      }
+    }
+    SECTION("alignment") {
+      auto check_f = [&](core::Element element) {
+        for (h_size i = 0; i < grid.elementCount(element); ++i)
+          REQUIRE(grid.elementAlignment(element, i) ==
+                  core::element_alignment_bits::any);
+      };
+      auto elements = {core::Element::Type::CELL_CENTER,
+                       core::Element::Type::VERTEX_CENTER};
+      for (auto element : elements)
+        check_f(element);
+      { // x-faces
+        h_size i = 0;
+        for (auto ij : hermes::range2(
+                 grid.resolution(core::Element::Type::X_FACE_CENTER))) {
+          REQUIRE(grid.elementAlignment(core::Element::Type::FACE_CENTER, i) ==
+                  core::element_alignment_bits::x);
+          i++;
+        }
+      }
+      { // y-faces
+        h_size i = grid.resolution(core::Element::Type::X_FACE_CENTER).total();
+        for (auto ij : hermes::range2(
+                 grid.resolution(core::Element::Type::Y_FACE_CENTER))) {
+          REQUIRE(grid.elementAlignment(core::Element::Type::FACE_CENTER, i) ==
+                  core::element_alignment_bits::y);
+          i++;
         }
       }
     }

@@ -132,12 +132,13 @@ hermes::geo::vec2 Grid2::gridOffset(core::Element loc) const {
   }
 }
 
-h_size Grid2::locationCount(core::Element loc) const {
+h_size Grid2::elementCount(core::Element loc) const {
   switch (loc) {
   case core::Element::Type::CELL_CENTER:
     return (resolution_.width + 0) * (resolution_.height + 0);
   case core::Element::Type::FACE_CENTER:
-    return (resolution_.width + 1) * (resolution_.height + 1);
+    return (resolution_.width + 1) * (resolution_.height + 0) +
+           (resolution_.width + 0) * (resolution_.height + 1);
   case core::Element::Type::HORIZONTAL_FACE_CENTER:
     return (resolution_.width + 0) * (resolution_.height + 1);
   case core::Element::Type::VERTICAL_FACE_CENTER:
@@ -298,6 +299,16 @@ std::vector<h_size> Grid2::boundary(core::Element loc) const {
       b.emplace_back(cell_range.flatIndex(o.coord2()));
   }
   return b;
+}
+
+core::element_alignments Grid2::elementAlignment(core ::Element loc,
+                                                 h_size index) const {
+  if (loc.is(core::element_primitive_bits::face)) {
+    return index < elementCount(core::Element::Type::X_FACE_CENTER)
+               ? core::element_alignment_bits::x
+               : core::element_alignment_bits::y;
+  }
+  return core::element_alignment_bits::any;
 }
 
 } // namespace naiades::geo

@@ -29,7 +29,7 @@
 
 #include <naiades/base/debug.h>
 #include <naiades/base/result.h>
-#include <naiades/core/element.h>
+#include <naiades/core/spatial_discretization.h>
 
 #include <hermes/geometry/vector.h>
 
@@ -59,6 +59,7 @@ public:
   NaResult addScalarField(const std::string &name, Element loc);
   NaResult addVectorField(const std::string &name, Element loc);
   NaResult setElementCount(Element loc, h_size count);
+  NaResult setElementCountFrom(SpatialDiscretization2 *sd);
 
   Field<f32> *scalarField(const std::string &name);
   Field<hermes::geo::vec2> *vectorField(const std::string &name);

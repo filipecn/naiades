@@ -97,6 +97,20 @@ NaResult FieldSet::setElementCount(Element loc, h_size count) {
   return NaResult::noError();
 }
 
+NaResult FieldSet::setElementCountFrom(SpatialDiscretization2 *sd) {
+  for (auto &item : scalar_fields_) {
+    auto count = sd->elementCount(item.second.element());
+    HERMES_ASSERT(count);
+    item.second.resize(count);
+  }
+  for (auto &item : vector_fields_) {
+    auto count = sd->elementCount(item.second.element());
+    HERMES_ASSERT(count);
+    item.second.resize(count);
+  }
+  return NaResult::noError();
+}
+
 Field<f32> *FieldSet::scalarField(const std::string &name) {
   auto it = scalar_fields_.find(name);
   if (it != scalar_fields_.end())

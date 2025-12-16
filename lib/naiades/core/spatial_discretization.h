@@ -53,6 +53,9 @@ public:
   SpatialDiscretization2() noexcept {}
   virtual ~SpatialDiscretization2() noexcept {}
 
+  /// \param loc
+  /// \return Total number of locations of a given element.
+  virtual h_size elementCount(Element loc) const = 0;
   /// Get the flat list of positions of an element type.
   /// \note The indices of the list match the element index.
   /// \note This returns a copy of the list.
@@ -78,6 +81,13 @@ public:
   /// \return A Boundary object with the indices and groups of the boundary
   ///         elements.
   virtual std::vector<h_size> boundary(Element loc) const = 0;
+  /// Get element alignment.
+  /// \note This considers the element primitive.
+  /// \param loc Element.
+  /// \param index Element index.
+  /// \return The element alignment at the given index.
+  virtual element_alignments elementAlignment(Element loc,
+                                              h_size index) const = 0;
 };
 
 } // namespace naiades::core
