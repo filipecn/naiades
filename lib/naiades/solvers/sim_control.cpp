@@ -20,35 +20,47 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   math.h
+/// \file   sim_time.cpp
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
-/// \brief  Math utils
 
-#pragma once
+#include <naiades/solvers/sim_control.h>
 
-#include <hermes/geometry/point.h>
+#include <naiades/utils/utils.h>
 
-namespace naiades::utils {
+namespace naiades::solvers {
 
-f32 gaussian(f32 sigma2, f32 mu, f32 x);
-
-f32 gaussian(const hermes::geo::vec2 &sigma2, const hermes::geo::point2 &mu,
-             const hermes::geo::point2 &p);
-
-hermes::geo::vec2 enright(const hermes::geo::point2 &p, float t);
-
-/// Constant vorticity velocity field
-/// \param p Evaluation point
-/// \param center Rotation center
-/// \param omega Angular velocity (radians per second)
-hermes::geo::vec2 zalesak(const hermes::geo::point2 &p,
-                          const hermes::geo::point2 &center, float omega);
-
-namespace sdf {
-
-f32 sphere(const hermes::geo::point2 &center, f32 radius,
-           const hermes::geo::point2 &p);
+SimControl &SimControl::setCFL(f32 value) {
+  cfl_ = value;
+  return *this;
 }
 
-} // namespace naiades::utils
+SimControl &SimControl::setTimestep(f32 timestep) {
+  dt_ = timestep;
+  return *this;
+}
+
+SimControl &SimControl::setWriteTimestep(f32 write_timestep) {
+  wdt_ = write_timestep;
+  return *this;
+}
+
+SimControl &SimControl::setStartTime(f32 start_time) {
+  start_time_ = start_time;
+  return *this;
+}
+
+SimControl &SimControl::setEndTime(f32 end_time) {
+  end_time_ = end_time;
+  return *this;
+}
+
+NaResult SimControl::run(Solver::Ptr solver) {
+  h_size step_count = (end_time_ - start_time_) / dt_;
+
+  for (auto iteration : utils::StepLoop().setDurationInSteps(step_count)) {
+  }
+  return NaResult::noError();
+}
+
+} // namespace naiades::solvers

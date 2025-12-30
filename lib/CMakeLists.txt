@@ -5,8 +5,10 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/base/debug.h
   ${NAIADES_SOURCE_DIR}/naiades/base/result.h
 
+  ${NAIADES_SOURCE_DIR}/naiades/core/boundary.h
   ${NAIADES_SOURCE_DIR}/naiades/core/element.h
   ${NAIADES_SOURCE_DIR}/naiades/core/field.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/operators.h
   ${NAIADES_SOURCE_DIR}/naiades/core/spatial_discretization.h
 
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.h
@@ -14,25 +16,32 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/sampling/sampler.h
   ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.h
   
+  ${NAIADES_SOURCE_DIR}/naiades/solvers/convection.h
+  ${NAIADES_SOURCE_DIR}/naiades/solvers/sim_control.h
   ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.h
 
   ${NAIADES_SOURCE_DIR}/naiades/utils/fields.h
   ${NAIADES_SOURCE_DIR}/naiades/utils/math.h
+  ${NAIADES_SOURCE_DIR}/naiades/utils/utils.h
 )
 
 set(NAIADES_SOURCES
+  ${NAIADES_SOURCE_DIR}/naiades/core/boundary.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/element.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/core/operators.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/spatial_discretization.cpp
   
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.cpp
 
+  ${NAIADES_SOURCE_DIR}/naiades/solvers/sim_control.cpp
   ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.cpp
   
   ${NAIADES_SOURCE_DIR}/naiades/utils/fields.cpp
   ${NAIADES_SOURCE_DIR}/naiades/utils/math.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/utils/utils.cpp
 )
 
 add_library(naiades STATIC ${NAIADES_SOURCES} ${NAIADES_HEADERS})
@@ -77,19 +86,19 @@ endif(NAIADES_INCLUDE_TO_STRING_METHODS)
 # ##############################################################################
 # python                                                                      ##
 # ##############################################################################
-pybind11_add_module(naiades_py naiades_py.cpp)
-
-add_dependencies(naiades_py hermes)
-target_link_libraries(naiades_py PUBLIC 
-  DEPS
-  naiades
-)
-
-target_include_directories(naiades_py PUBLIC 
-  ${DEPS_INCLUDE_DIRS}
-  ${NAIADES_SOURCE_DIR})
-
-if(NAIADES_INCLUDE_TO_STRING_METHODS)
-  target_compile_definitions(naiades_py PUBLIC NAIADES_INCLUDE_TO_STRING)
-  target_compile_definitions(naiades_py PUBLIC HERMES_INCLUDE_TO_STRING)
-endif(NAIADES_INCLUDE_TO_STRING_METHODS)
+#pybind11_add_module(naiades_py naiades_py.cpp)
+#
+#add_dependencies(naiades_py hermes)
+#target_link_libraries(naiades_py PUBLIC 
+#  DEPS
+#  naiades
+#)
+#
+#target_include_directories(naiades_py PUBLIC 
+#  ${DEPS_INCLUDE_DIRS}
+#  ${NAIADES_SOURCE_DIR})
+#
+#if(NAIADES_INCLUDE_TO_STRING_METHODS)
+#  target_compile_definitions(naiades_py PUBLIC NAIADES_INCLUDE_TO_STRING)
+#  target_compile_definitions(naiades_py PUBLIC HERMES_INCLUDE_TO_STRING)
+#endif(NAIADES_INCLUDE_TO_STRING_METHODS)

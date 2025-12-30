@@ -32,6 +32,7 @@
 #include <naiades/core/spatial_discretization.h>
 
 #include <hermes/geometry/vector.h>
+#include <hermes/storage/aos.h>
 
 #include <string>
 #include <unordered_map>
@@ -39,35 +40,102 @@
 
 namespace naiades::core {
 
-template <typename DataType> class Field : public std::vector<DataType> {
+template <typename T> class Field : public hermes::mem::AoS::FieldView<T> {
 public:
-  void setElement(Element element) { element_ = element; }
+  Field(const hermes::mem::AoS::FieldView<T> &field_view)
+      : hermes::mem::AoS::FieldView<T>(field_view) {}
+
   Element element() const { return element_; }
 
 private:
-  Element element_{Element::Type::ANY};
-  template <typename FriendDataType>
-  NAIADES_to_string_FRIEND(Field<FriendDataType>);
+  friend class FieldGroup;
+
+  Element element_;
+};
+
+template <typename T>
+class Field_RO : public hermes::mem::AoS::ConstFieldView<T> {
+public:
+  Field_RO(const hermes::mem::AoS::ConstFieldView<T> &field_view)
+      : hermes::mem::AoS::ConstFieldView<T>(field_view) {}
+  Field_RO(const Field<T> &field)
+      : hermes::mem::AoS::ConstFieldView<T>(
+            static_cast<hermes::mem::AoS::ConstFieldView<T>>(field)),
+        //    field.data_, field.stride_, field.offset_, field.size_),
+        element_(field.element()) {}
+
+  Element element() const { return element_; }
+
+private:
+  friend class FieldGroup;
+
+  Element element_;
+};
+
+/// A field group holds one or more fields defined over a single type of
+/// discrete location (ex: vertex and face centers).
+/// \note The values are stored in an array of structs.
+class FieldGroup : public hermes::mem::AoS {
+public:
+  void setElement(Element loc);
+  Element element() const;
+
+  template <typename T> Field<T> get(h_size field_index) {
+    Field<T> acc(field<T>(field_index));
+    acc.element_ = element_;
+    return acc;
+  }
+
+  template <typename T> Field_RO<T> get(h_size field_index) const {
+    Field_RO<T> acc(field<T>(field_index));
+    acc.element_ = element_;
+    return acc;
+  }
+
+private:
+  friend class FieldSet;
+
+  Element element_{Element::Type::NONE};
+  NAIADES_to_string_FRIEND(FieldGroup);
 };
 
 class FieldSet {
 public:
-  NaResult addScalarFields(Element loc,
-                           const std::vector<std::string> &field_names);
-  NaResult addVectorFields(Element loc,
-                           const std::vector<std::string> &field_names);
-  NaResult addScalarField(const std::string &name, Element loc);
-  NaResult addVectorField(const std::string &name, Element loc);
   NaResult setElementCount(Element loc, h_size count);
   NaResult setElementCountFrom(SpatialDiscretization2 *sd);
 
-  Field<f32> *scalarField(const std::string &name);
-  Field<hermes::geo::vec2> *vectorField(const std::string &name);
+  template <typename T>
+  NaResult add(Element loc, const std::vector<std::string> &field_names) {
+    for (const auto &field_name : field_names) {
+      FieldGroup field_group;
+      field_group.setElement(loc);
+      field_group.pushField<T>("value");
+      NAIADES_HE_RETURN_BAD_RESULT(field_group.resize(field_sizes_[loc]));
+      if (fields_.count(field_name))
+        HERMES_WARN("Overwriting field {} in field set.", field_name);
+      fields_[field_name] = std::move(field_group);
+    }
+    return NaResult::noError();
+  }
+
+  template <typename T> Result<Field<T>> get(const std::string &name) {
+    auto it = fields_.find(name);
+    if (it != fields_.end())
+      return Result<Field<T>>(it->second.get<T>(0));
+    return NaResult::notFound();
+  }
+
+  template <typename T> Result<Field_RO<T>> get(const std::string &name) const {
+    auto it = fields_.find(name);
+    if (it != fields_.end())
+      return Result<Field_RO<T>>(it->second.get<T>(0));
+    return NaResult::notFound();
+  }
 
 private:
   std::unordered_map<Element, h_size> field_sizes_;
-  std::unordered_map<std::string, Field<f32>> scalar_fields_;
-  std::unordered_map<std::string, Field<hermes::geo::vec2>> vector_fields_;
+  std::unordered_map<std::string, FieldGroup> fields_;
+
   NAIADES_to_string_FRIEND(FieldSet);
 };
 
@@ -75,11 +143,12 @@ private:
 
 namespace naiades {
 
-HERMES_TO_STRING_DEBUG_TEMPLATED_METHOD_BEGIN(core::Field<T>, typename T)
-HERMES_PUSH_DEBUG_TITLE
-HERMES_PUSH_DEBUG_NAIADES_FIELD(element_);
-HERMES_PUSH_DEBUG_LINE("size: {}\n", object.size());
-HERMES_PUSH_DEBUG_LINE("values: {}", hermes::cstr::join(object, ", ", 10));
-HERMES_TO_STRING_DEBUG_METHOD_END
+HERMES_TO_STRING_TEMPLATED_METHOD_BEGIN(core::Field<T>, typename T)
+HERMES_TO_STRING_METHOD_TITLE
+HERMES_TO_STRING_METHOD_LINE("loc: {}\n", naiades::to_string(object.element()));
+HERMES_TO_STRING_METHOD_LINE("size: {}\n", object.size());
+HERMES_TO_STRING_METHOD_LINE("values: {}",
+                             hermes::cstr::join(object, ", ", 10));
+HERMES_TO_STRING_METHOD_END
 
 } // namespace naiades

@@ -49,8 +49,17 @@ hermes::geo::vec2 enright(const hermes::geo::point2 &p, float t) {
 }
 
 hermes::geo::vec2 zalesak(const hermes::geo::point2 &p,
-                          const hermes::geo::point2 &center, float omega) {
-  return {-omega * (p.y - center.y), omega * (p.x - center.x)};
+                          const hermes::geo::point2 &center, f32 omega) {
+  return {omega * (center.y - p.y), omega * (p.x - center.x)};
 }
+
+namespace sdf {
+
+f32 sphere(const hermes::geo::point2 &center, f32 radius,
+           const hermes::geo::point2 &p) {
+  return (center - p).length2() - radius * radius;
+}
+
+} // namespace sdf
 
 } // namespace naiades::utils

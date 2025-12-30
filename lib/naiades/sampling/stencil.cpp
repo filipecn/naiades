@@ -29,14 +29,14 @@
 
 namespace naiades {
 
-HERMES_TO_STRING_DEBUG_METHOD_BEGIN(sampling::Stencil)
-HERMES_PUSH_DEBUG_TITLE
-HERMES_PUSH_DEBUG_LINE("size {}\n", object.indices_.size());
-HERMES_PUSH_DEBUG_LINE("indices: {}\n",
-                       hermes::cstr::join(object.indices_, " "));
-HERMES_PUSH_DEBUG_LINE("weights: {}\n",
-                       hermes::cstr::join(object.weights_, " "));
-HERMES_TO_STRING_DEBUG_METHOD_END
+HERMES_TO_STRING_METHOD_BEGIN(sampling::Stencil)
+HERMES_TO_STRING_METHOD_TITLE
+HERMES_TO_STRING_METHOD_LINE("size {}\n", object.indices_.size());
+HERMES_TO_STRING_METHOD_LINE("indices: {}\n",
+                             hermes::cstr::join(object.indices_, " "));
+HERMES_TO_STRING_METHOD_LINE("weights: {}\n",
+                             hermes::cstr::join(object.weights_, " "));
+HERMES_TO_STRING_METHOD_END
 
 } // namespace naiades
 
@@ -79,10 +79,14 @@ Stencil Stencil::bilinear(const geo::Grid2 &grid, core::Element loc,
   ///              |
   ///   v11        x   v21
 
-  auto v11 = grid.safeFlatIndex(loc, cell_index.plus(0, 0));
-  auto v21 = grid.safeFlatIndex(loc, cell_index.plus(1, 0));
-  auto v12 = grid.safeFlatIndex(loc, cell_index.plus(0, 1));
-  auto v22 = grid.safeFlatIndex(loc, cell_index.plus(1, 1));
+  auto v11 = grid.safeFlatIndex(loc, cell_index.plus(0, 0)) -
+             grid.flatIndexOffset(loc);
+  auto v21 = grid.safeFlatIndex(loc, cell_index.plus(1, 0)) -
+             grid.flatIndexOffset(loc);
+  auto v12 = grid.safeFlatIndex(loc, cell_index.plus(0, 1)) -
+             grid.flatIndexOffset(loc);
+  auto v22 = grid.safeFlatIndex(loc, cell_index.plus(1, 1)) -
+             grid.flatIndexOffset(loc);
 
   // since wp may fall off the grid or on top of its edges/vertices
   // we may have repeated indices

@@ -261,6 +261,17 @@ TEST_CASE("regular grid 2", "[geo]") {
           REQUIRE(boundary.size() == res.width * 2 + (res.height - 2) * 2);
         }
       }
+      SECTION("isBoundary") {
+        auto elements = {core::Element::Type::CELL_CENTER,
+                         core::Element::Type::VERTEX_CENTER};
+        for (auto element : elements) {
+          auto range = hermes::range2(grid.resolution(element));
+          for (auto ij : range) {
+            auto fij = grid.safeFlatIndex(element, ij);
+            REQUIRE(grid.isBoundary(element, fij) == range.isBoundary(ij));
+          }
+        }
+      }
       SECTION("faces") {
         SECTION("all") {
           auto boundary = grid.boundary(core::Element::FACE_CENTER);
@@ -273,7 +284,7 @@ TEST_CASE("regular grid 2", "[geo]") {
       auto check_f = [&](core::Element element) {
         for (h_size i = 0; i < grid.elementCount(element); ++i)
           REQUIRE(grid.elementAlignment(element, i) ==
-                  core::element_alignment_bits::any);
+                  core::element_alignment_bits::none);
       };
       auto elements = {core::Element::Type::CELL_CENTER,
                        core::Element::Type::VERTEX_CENTER};
@@ -295,6 +306,57 @@ TEST_CASE("regular grid 2", "[geo]") {
           REQUIRE(grid.elementAlignment(core::Element::Type::FACE_CENTER, i) ==
                   core::element_alignment_bits::y);
           i++;
+        }
+      }
+    }
+    SECTION("orientation") {
+      auto check_f = [&](core::Element element) {
+        for (h_size i = 0; i < grid.elementCount(element); ++i)
+          REQUIRE(grid.elementOrientation(element, i) ==
+                  core::element_orientation_bits::none);
+      };
+      auto elements = {core::Element::Type::CELL_CENTER,
+                       core::Element::Type::VERTEX_CENTER};
+      for (auto element : elements)
+        check_f(element);
+      { // x-faces
+        h_size i = 0;
+        for (auto ij : hermes::range2(
+                 grid.resolution(core::Element::Type::X_FACE_CENTER))) {
+          if (i < M)
+            REQUIRE(
+                grid.elementOrientation(core::Element::Type::FACE_CENTER, i) ==
+                core::element_orientation_bits::neg_y);
+          else if (i > M * (N + 1) - M)
+            REQUIRE(
+                grid.elementOrientation(core::Element::Type::FACE_CENTER, i) ==
+                core::element_orientation_bits::y);
+          else
+            REQUIRE(
+                grid.elementOrientation(core::Element::Type::FACE_CENTER, i) ==
+                core::element_orientation_bits::any_y);
+          i++;
+        }
+      }
+      { // y-faces
+        h_size i = grid.resolution(core::Element::Type::X_FACE_CENTER).total();
+        auto fij = 0;
+        for (auto ij : hermes::range2(
+                 grid.resolution(core::Element::Type::Y_FACE_CENTER))) {
+          if (fij % (M + 1) == 0)
+            REQUIRE(
+                grid.elementOrientation(core::Element::Type::FACE_CENTER, i) ==
+                core::element_orientation_bits::neg_x);
+          else if ((fij + 1) % (M + 1) == 0)
+            REQUIRE(
+                grid.elementOrientation(core::Element::Type::FACE_CENTER, i) ==
+                core::element_orientation_bits::x);
+          else
+            REQUIRE(
+                grid.elementOrientation(core::Element::Type::FACE_CENTER, i) ==
+                core::element_orientation_bits::any_x);
+          i++;
+          fij++;
         }
       }
     }

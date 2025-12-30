@@ -30,99 +30,46 @@
 
 namespace naiades {
 
-HERMES_TO_STRING_DEBUG_METHOD_BEGIN(core::FieldSet)
-HERMES_PUSH_DEBUG_TITLE
-HERMES_PUSH_DEBUG_LINE("scalar fields [{}]", object.scalar_fields_.size());
-HERMES_PUSH_DEBUG_MAP_FIELD_BEGIN(scalar_fields_, name, field)
-HERMES_PUSH_DEBUG_LINE("name: {}", name);
-HERMES_PUSH_DEBUG_LINE("{}", to_string(field));
-HERMES_PUSH_DEBUG_MAP_FIELD_END
-HERMES_TO_STRING_DEBUG_METHOD_END
+HERMES_TO_STRING_METHOD_BEGIN(core::FieldGroup)
+HERMES_TO_STRING_METHOD_TITLE
+HERMES_TO_STRING_METHOD_NAIADES_FIELD(element_);
+HERMES_TO_STRING_METHOD_LINE("size: {}\n", object.size());
+HERMES_TO_STRING_METHOD_LINE(
+    "values: {}", hermes::to_string(static_cast<hermes::mem::AoS>(object)));
+HERMES_TO_STRING_METHOD_END
+
+HERMES_TO_STRING_METHOD_BEGIN(core::FieldSet)
+HERMES_TO_STRING_METHOD_TITLE
+HERMES_TO_STRING_METHOD_LINE("fields [{}]", object.fields_.size());
+HERMES_TO_STRING_METHOD_MAP_FIELD_BEGIN(fields_, name, field)
+HERMES_TO_STRING_METHOD_LINE("name: {}", name);
+HERMES_TO_STRING_METHOD_LINE("{}", to_string(field));
+HERMES_TO_STRING_METHOD_MAP_FIELD_END
+HERMES_TO_STRING_METHOD_END
 
 } // namespace naiades
 
 namespace naiades::core {
 
-NaResult
-FieldSet::addScalarFields(Element loc,
-                          const std::vector<std::string> &field_names) {
-  for (const auto &name : field_names)
-    NAIADES_RETURN_BAD_RESULT(addScalarField(name, loc));
-  return NaResult::noError();
-}
+void FieldGroup::setElement(Element loc) { element_ = loc; }
 
-NaResult
-FieldSet::addVectorFields(Element loc,
-                          const std::vector<std::string> &field_names) {
-  for (const auto &name : field_names)
-    NAIADES_RETURN_BAD_RESULT(addVectorField(name, loc));
-  return NaResult::noError();
-}
-
-NaResult FieldSet::addScalarField(const std::string &name, Element loc) {
-  auto it = scalar_fields_.find(name);
-  if (it != scalar_fields_.end())
-    return NaResult::checkError();
-  Field<float> field;
-  field.setElement(loc);
-  // TODO check resize error
-  field.resize(field_sizes_[loc]);
-  scalar_fields_[name].setElement(loc);
-  return NaResult::noError();
-}
-
-NaResult FieldSet::addVectorField(const std::string &name, Element loc) {
-  auto it = vector_fields_.find(name);
-  if (it != vector_fields_.end())
-    return NaResult::checkError();
-  Field<hermes::geo::vec2> field;
-  field.setElement(loc);
-  // TODO check resize error
-  field.resize(field_sizes_[loc]);
-  vector_fields_[name].setElement(loc);
-  return NaResult::noError();
-}
+Element FieldGroup::element() const { return element_; }
 
 NaResult FieldSet::setElementCount(Element loc, h_size count) {
-  for (auto &item : scalar_fields_) {
-    // TODO check resize error
+  for (auto &item : fields_) {
     if (item.second.element() == loc)
-      item.second.resize(count);
-  }
-  for (auto &item : vector_fields_) {
-    // TODO check resize error
-    if (item.second.element() == loc)
-      item.second.resize(count);
+      NAIADES_HE_RETURN_BAD_RESULT(item.second.resize(count));
   }
   return NaResult::noError();
 }
 
 NaResult FieldSet::setElementCountFrom(SpatialDiscretization2 *sd) {
-  for (auto &item : scalar_fields_) {
+  for (auto &item : fields_) {
     auto count = sd->elementCount(item.second.element());
     HERMES_ASSERT(count);
-    item.second.resize(count);
-  }
-  for (auto &item : vector_fields_) {
-    auto count = sd->elementCount(item.second.element());
-    HERMES_ASSERT(count);
-    item.second.resize(count);
+    NAIADES_HE_RETURN_BAD_RESULT(item.second.resize(count));
   }
   return NaResult::noError();
-}
-
-Field<f32> *FieldSet::scalarField(const std::string &name) {
-  auto it = scalar_fields_.find(name);
-  if (it != scalar_fields_.end())
-    return &(it->second);
-  return nullptr;
-}
-
-Field<hermes::geo::vec2> *FieldSet::vectorField(const std::string &name) {
-  auto it = vector_fields_.find(name);
-  if (it != vector_fields_.end())
-    return &(it->second);
-  return nullptr;
 }
 
 } // namespace naiades::core

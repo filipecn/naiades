@@ -39,7 +39,7 @@ public:
   static Stencil bilinear(const geo::Grid2 &grid, core::Element loc,
                           const hermes::geo::point2 &p);
 
-  template <typename T> T evaluate(const core::Field<T> &field) {
+  template <typename T> T evaluate(const core::Field_RO<T> &field) {
     T s = {};
     const h_size n = indices_.size();
     for (h_size i = 0; i < n; ++i) {
@@ -48,14 +48,14 @@ public:
     return s;
   }
 
-  void add(h_size index, float weight);
+  void add(h_size index, f32 weight);
   h_size size() const;
   const std::vector<h_size> indices() const;
   const std::vector<f32> weights() const;
 
 private:
   std::vector<h_size> indices_;
-  std::vector<float> weights_;
+  std::vector<f32> weights_;
 
   NAIADES_to_string_FRIEND(Stencil);
 };

@@ -20,35 +20,22 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   math.h
+/// \file   blas.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
-/// \brief  Math utils
+/// \brief  BLAS
 
 #pragma once
 
-#include <hermes/geometry/point.h>
+#include <naiades/core/field.h>
 
-namespace naiades::utils {
+namespace naiades::core::blas {
 
-f32 gaussian(f32 sigma2, f32 mu, f32 x);
-
-f32 gaussian(const hermes::geo::vec2 &sigma2, const hermes::geo::point2 &mu,
-             const hermes::geo::point2 &p);
-
-hermes::geo::vec2 enright(const hermes::geo::point2 &p, float t);
-
-/// Constant vorticity velocity field
-/// \param p Evaluation point
-/// \param center Rotation center
-/// \param omega Angular velocity (radians per second)
-hermes::geo::vec2 zalesak(const hermes::geo::point2 &p,
-                          const hermes::geo::point2 &center, float omega);
-
-namespace sdf {
-
-f32 sphere(const hermes::geo::point2 &center, f32 radius,
-           const hermes::geo::point2 &p);
+/// a += k * b
+template <typename T> void akb(Field<T> &a, T k, const Field<T> &b) {
+  HERMES_ASSERT(a.size() == b.size());
+  for (h_size i = 0; i < a.size(); ++i)
+    a[i] += k * b[i];
 }
 
-} // namespace naiades::utils
+} // namespace naiades::core::blas

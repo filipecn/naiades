@@ -29,54 +29,254 @@
 
 #include <naiades/sampling/stencil.h>
 
+#include <hermes/math/space_filling.h>
+
 namespace naiades::sampling {
 
 template <typename T>
-core::Field<T> sample(const geo::Grid2 &grid, const core::Field<T> &field,
-                      core::Element sample_element) {
-  core::Field<T> samples(grid.resolution(sample_element).total());
+void sample(const geo::Grid2 &grid, const core::Field_RO<T> &field,
+            h_size component, core::Field<f32> &sample_field) {
+  auto field_element = field.element();
+  auto sample_element = sample_field.element();
+  auto sample_resolution = grid.resolution(sample_element);
+
+#define SRC(IJ)                                                                \
+  field[grid.safeFlatIndex(field_element, IJ) -                                \
+        grid.flatIndexOffset(field_element)][component]
+
+#define DST(IJ)                                                                \
+  sample_field[grid.flatIndex(sample_element, IJ) -                            \
+               grid.flatIndexOffset(sample_element)]
+
   if (field.element() == sample_element) {
-    // same element, copy field
-    samples = field;
-  } else if (field.element() == core::Element::HORIZONTAL_FACE_CENTER &&
-             sample_element == core::Element::CELL_CENTER) {
-    for (auto ij : hermes::range2(grid.resolution(sample_element)))
-      // -x-(i,j+1)
-      //  s (i,j)
-      // -x-(i,j)
-      samples[grid.flatIndex(sample_element, ij)] =
-          (field[grid.safeFlatIndex(field.element(), ij)] +
-           field[grid.safeFlatIndex(field.element(), ij.plus(0, 1))]) *
-          0.5;
-  } else if (field.element() == core::Element::VERTICAL_FACE_CENTER &&
-             sample_element == core::Element::CELL_CENTER) {
-    samples.resize(grid.resolution(sample_element).total());
-    for (auto ij : hermes::range2(grid.resolution(sample_element)))
-      //   x    s     x
-      // (i,j) (i,j) (i+1,j)
-      samples[grid.flatIndex(sample_element, ij)] =
-          (field[grid.safeFlatIndex(field.element(), ij)] +
-           field[grid.safeFlatIndex(field.element(), ij.plus(1, 0))]) *
-          0.5;
-  } else {
-    HERMES_NOT_IMPLEMENTED;
+    // copy
+    for (h_size i = 0; i < field.size(); ++i)
+      sample_field[i] = field[i][component];
+  } else if (field.element().is(core::element_primitive_bits::face)) {
+    if (field.element().alignments().contain(core::element_alignment_bits::x)) {
+      // x face is source
+      if (sample_element.is(core::element_primitive_bits::cell)) {
+        // cell is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(0, 1))) * 0.5;
+      } else if (sample_element.is(core::element_primitive_bits::vertex)) {
+        // vertex is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(-1, 0)) + SRC(ij.plus(0, 0))) * 0.5;
+      } else {
+        // y face is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(-1, 0)) + SRC(ij.plus(0, 0)) +
+                     SRC(ij.plus(0, 1)) + SRC(ij.plus(-1, 1))) *
+                    0.25;
+      }
+    } else if (field.element().alignments().contain(
+                   core::element_alignment_bits::y)) {
+      // y face is source
+      if (sample_element.is(core::element_primitive_bits::cell)) {
+        // cell is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(1, 0))) * 0.5;
+      } else if (sample_element.is(core::element_primitive_bits::vertex)) {
+        // vertex is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, -1)) + SRC(ij.plus(0, 0))) * 0.5;
+      } else {
+        // x face is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, -1)) + SRC(ij.plus(1, -1)) +
+                     SRC(ij.plus(1, 0)) + SRC(ij.plus(0, 0))) *
+                    0.25;
+      }
+    }
+  } else if (field.element().is(core::element_primitive_bits::cell)) {
+    // cell is source
+    if (sample_element.is(core::element_primitive_bits::vertex)) {
+      // vertex is destination
+      for (auto ij : hermes::range2(sample_resolution))
+        DST(ij) = (SRC(ij.plus(-1, -1)) + SRC(ij.plus(-1, 0)) +
+                   SRC(ij.plus(0, -1)) + SRC(ij.plus(0, 0))) *
+                  0.25;
+    } else if (sample_element.is(core::element_primitive_bits::face)) {
+      if (sample_element.alignments().contain(
+              core::element_alignment_bits::x)) {
+        // x faces are the destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, -1)) + SRC(ij.plus(0, 0))) * 0.5;
+      } else if (sample_element.alignments().contain(
+                     core::element_alignment_bits::y)) {
+        // y faces are the destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(-1, 0)) + SRC(ij.plus(0, 0))) * 0.5;
+      }
+    }
+  } else if (field.element().is(core::element_primitive_bits::vertex)) {
+    // vertex is source
+    if (sample_element.is(core::element_primitive_bits::cell)) {
+      // cell is destination
+      for (auto ij : hermes::range2(sample_resolution))
+        DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(0, 1)) +
+                   SRC(ij.plus(1, 0)) + SRC(ij.plus(1, 1))) *
+                  0.25;
+    } else if (sample_element.is(core::element_primitive_bits::face)) {
+      if (sample_element.alignments().contain(
+              core::element_alignment_bits::x)) {
+        // x faces are the destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(1, 0))) * 0.5;
+      } else if (sample_element.alignments().contain(
+                     core::element_alignment_bits::y)) {
+        // y faces are the destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(0, 1))) * 0.5;
+      }
+    }
   }
-  return samples;
+#undef SRC
+#undef DST
 }
 
 template <typename T>
-core::Field<T> sample(const geo::Grid2 &grid, const core::Field<T> &field,
-                      const std::vector<hermes::geo::point2> &positions) {
-  core::Field<T> samples;
-  samples.setElement(field.element());
-  samples.resize(positions.size());
+void sample(const geo::Grid2 &grid, const core::Field_RO<T> &field,
+            core::Field<T> &sample_field) {
+  auto field_element = field.element();
+  auto sample_element = sample_field.element();
+  auto sample_resolution = grid.resolution(sample_element);
 
+#define SRC(IJ)                                                                \
+  field[grid.safeFlatIndex(field_element, IJ) -                                \
+        grid.flatIndexOffset(field_element)]
+
+#define DST(IJ)                                                                \
+  sample_field[grid.flatIndex(sample_element, IJ) -                            \
+               grid.flatIndexOffset(sample_element)]
+
+  if (field.element() == sample_element) {
+    // copy
+    for (h_size i = 0; i < field.size(); ++i)
+      sample_field[i] = field[i];
+  } else if (field.element().is(core::element_primitive_bits::face)) {
+    if (field.element().alignments().contain(core::element_alignment_bits::x)) {
+      // x face is source
+      if (sample_element.is(core::element_primitive_bits::cell)) {
+        // cell is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(0, 1))) * 0.5;
+      } else if (sample_element.is(core::element_primitive_bits::vertex)) {
+        // vertex is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(-1, 0)) + SRC(ij.plus(0, 0))) * 0.5;
+      } else {
+        // y face is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(-1, 0)) + SRC(ij.plus(0, 0)) +
+                     SRC(ij.plus(0, 1)) + SRC(ij.plus(-1, 1))) *
+                    0.25;
+      }
+    } else if (field.element().alignments().contain(
+                   core::element_alignment_bits::y)) {
+      // y face is source
+      if (sample_element.is(core::element_primitive_bits::cell)) {
+        // cell is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(1, 0))) * 0.5;
+      } else if (sample_element.is(core::element_primitive_bits::vertex)) {
+        // vertex is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, -1)) + SRC(ij.plus(0, 0))) * 0.5;
+      } else {
+        // x face is destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, -1)) + SRC(ij.plus(1, -1)) +
+                     SRC(ij.plus(1, 0)) + SRC(ij.plus(0, 0))) *
+                    0.25;
+      }
+    }
+  } else if (field.element().is(core::element_primitive_bits::cell)) {
+    // cell is source
+    if (sample_element.is(core::element_primitive_bits::vertex)) {
+      // vertex is destination
+      for (auto ij : hermes::range2(sample_resolution))
+        DST(ij) = (SRC(ij.plus(-1, -1)) + SRC(ij.plus(-1, 0)) +
+                   SRC(ij.plus(0, -1)) + SRC(ij.plus(0, 0))) *
+                  0.25;
+    } else if (sample_element.is(core::element_primitive_bits::face)) {
+      if (sample_element.alignments().contain(
+              core::element_alignment_bits::x)) {
+        // x faces are the destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, -1)) + SRC(ij.plus(0, 0))) * 0.5;
+      } else if (sample_element.alignments().contain(
+                     core::element_alignment_bits::y)) {
+        // y faces are the destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(-1, 0)) + SRC(ij.plus(0, 0))) * 0.5;
+      }
+    }
+  } else if (field.element().is(core::element_primitive_bits::vertex)) {
+    // vertex is source
+    if (sample_element.is(core::element_primitive_bits::cell)) {
+      // cell is destination
+      for (auto ij : hermes::range2(sample_resolution))
+        DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(0, 1)) +
+                   SRC(ij.plus(1, 0)) + SRC(ij.plus(1, 1))) *
+                  0.25;
+    } else if (sample_element.is(core::element_primitive_bits::face)) {
+      if (sample_element.alignments().contain(
+              core::element_alignment_bits::x)) {
+        // x faces are the destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(1, 0))) * 0.5;
+      } else if (sample_element.alignments().contain(
+                     core::element_alignment_bits::y)) {
+        // y faces are the destination
+        for (auto ij : hermes::range2(sample_resolution))
+          DST(ij) = (SRC(ij.plus(0, 0)) + SRC(ij.plus(0, 1))) * 0.5;
+      }
+    }
+  }
+#undef SRC
+#undef DST
+}
+
+template <typename T>
+Result<core::FieldGroup> sample(const geo::Grid2 &grid,
+                                const core::Field_RO<T> &field,
+                                core::Element sample_element) {
+  core::FieldGroup samples;
+  samples.pushField<T>("value");
+  samples.setElement(sample_element);
+  NAIADES_HE_RETURN_BAD_RESULT(
+      samples.resize(grid.resolution(sample_element).total()));
+  if (field.size() != samples.size()) {
+    HERMES_ERROR("Sampling field size mismatch element count {} != {}",
+                 field.size(), samples.size());
+    return NaResult::checkError();
+  }
+  auto acc = samples.get<T>(0);
+  if (field.element() == sample_element)
+    for (h_size i = 0; i < samples.size(); ++i)
+      acc[i] = field[i];
+  else
+    sample(grid, field, acc);
+  return Result<core::FieldGroup>(std::move(samples));
+}
+
+template <typename T>
+Result<core::FieldGroup>
+sample(const geo::Grid2 &grid, const core::Field_RO<T> &field,
+       const std::vector<hermes::geo::point2> &positions) {
+  core::FieldGroup samples;
+  samples.pushField<T>("value");
+  samples.setElement(core::Element::Type::VERTEX_CENTER);
+  NAIADES_HE_RETURN_BAD_RESULT(samples.resize(positions.size()));
+
+  auto acc = samples.get<T>(0);
   for (h_size i = 0; i < positions.size(); ++i) {
-    samples[i] =
+    acc[i] =
         Stencil::bilinear(grid, field.element(), positions[i]).evaluate(field);
   }
 
-  return samples;
+  return Result<core::FieldGroup>(std::move(samples));
 }
-
 }; // namespace naiades::sampling

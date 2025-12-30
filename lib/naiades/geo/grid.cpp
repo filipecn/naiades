@@ -29,12 +29,12 @@
 #include <hermes/math/space_filling.h>
 
 namespace naiades {
-HERMES_TO_STRING_DEBUG_METHOD_BEGIN(geo::Grid2)
-HERMES_PUSH_DEBUG_TITLE
-HERMES_PUSH_DEBUG_HERMES_FIELD(bounds_)
-HERMES_PUSH_DEBUG_HERMES_FIELD(resolution_)
-HERMES_PUSH_DEBUG_HERMES_FIELD(cell_size_)
-HERMES_TO_STRING_DEBUG_METHOD_END
+HERMES_TO_STRING_METHOD_BEGIN(geo::Grid2)
+HERMES_TO_STRING_METHOD_TITLE
+HERMES_TO_STRING_METHOD_HERMES_FIELD(bounds_)
+HERMES_TO_STRING_METHOD_HERMES_FIELD(resolution_)
+HERMES_TO_STRING_METHOD_HERMES_FIELD(cell_size_)
+HERMES_TO_STRING_METHOD_END
 } // namespace naiades
 
 namespace naiades::geo {
@@ -276,27 +276,30 @@ std::vector<h_size> Grid2::boundary(core::Element loc) const {
 
     core::Element h_face_e(core::Element::Type::X_FACE_CENTER);
     auto h_face_res = resolution(h_face_e);
-    for (h_size i = 0; i < h_face_res.width; ++i)
-      b.emplace_back(flatIndex(h_face_e, hermes::index2(i, 0)));
-    for (h_size i = 0; i < h_face_res.width; ++i)
-      b.emplace_back(
-          flatIndex(h_face_e, hermes::index2(i, h_face_res.height - 1)));
+    if (loc.has(core::element_orientation_bits::neg_y))
+      for (h_size i = 0; i < h_face_res.width; ++i)
+        b.emplace_back(flatIndex(h_face_e, hermes::index2(i, 0)));
+    if (loc.has(core::element_orientation_bits::y))
+      for (h_size i = 0; i < h_face_res.width; ++i)
+        b.emplace_back(
+            flatIndex(h_face_e, hermes::index2(i, h_face_res.height - 1)));
 
     // y faces
 
     core::Element v_face_e(core::Element::Type::Y_FACE_CENTER);
     auto v_face_res = resolution(v_face_e);
-    for (h_size i = 0; i < v_face_res.height; ++i)
-      b.emplace_back(flatIndex(v_face_e, hermes::index2(0, i)));
-    for (h_size i = 0; i < v_face_res.height; ++i)
-      b.emplace_back(
-          flatIndex(v_face_e, hermes::index2(h_face_res.width - 1, i)));
+    if (loc.has(core::element_orientation_bits::neg_x))
+      for (h_size i = 0; i < v_face_res.height; ++i)
+        b.emplace_back(flatIndex(v_face_e, hermes::index2(0, i)));
+    if (loc.has(core::element_orientation_bits::x))
+      for (h_size i = 0; i < v_face_res.height; ++i)
+        b.emplace_back(
+            flatIndex(v_face_e, hermes::index2(h_face_res.width - 1, i)));
   } else {
-
-    const auto cell_res = resolution(loc);
-    const auto cell_range = hermes::range2(cell_res);
-    for (auto o : hermes::math::space_filling::OnionRange(cell_res, 1))
-      b.emplace_back(cell_range.flatIndex(o.coord2()));
+    const auto res = resolution(loc);
+    const auto range = hermes::range2(res);
+    for (auto o : hermes::math::space_filling::OnionRange(res, 1))
+      b.emplace_back(range.flatIndex(o.coord2()));
   }
   return b;
 }
@@ -308,7 +311,39 @@ core::element_alignments Grid2::elementAlignment(core ::Element loc,
                ? core::element_alignment_bits::x
                : core::element_alignment_bits::y;
   }
-  return core::element_alignment_bits::any;
+  return core::element_alignment_bits::none;
+}
+
+core::element_orientations Grid2::elementOrientation(core ::Element loc,
+                                                     h_size index) const {
+  if (loc.is(core::element_primitive_bits::face)) {
+    if (index < elementCount(core::Element::Type::X_FACE_CENTER)) {
+      auto res = resolution(core::Element::Type::X_FACE_CENTER);
+      // x alignment
+      if (index < res.width)
+        return core::element_orientation_bits::neg_y;
+      if (index > res.total() - res.width)
+        return core::element_orientation_bits::y;
+      return core::element_orientation_bits::any_y;
+    } else {
+      auto res = resolution(core::Element::Type::Y_FACE_CENTER);
+      auto i = index - flatIndexOffset(core::Element::Y_FACE_CENTER);
+      // y alignment
+      if (i % res.width == 0)
+        return core::element_orientation_bits::neg_x;
+      if ((i + 1) % res.width == 0)
+        return core::element_orientation_bits::x;
+      return core::element_orientation_bits::any_x;
+    }
+  }
+  return core::element_orientation_bits::none;
+}
+
+bool Grid2::isBoundary(core::Element loc, h_size i) const {
+  auto res = resolution(loc);
+  auto ij = index(loc, i);
+  return ij.i <= 0 || ij.i >= res.width - 1 || ij.j <= 0 ||
+         ij.j >= res.height - 1;
 }
 
 } // namespace naiades::geo

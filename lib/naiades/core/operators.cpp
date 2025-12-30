@@ -20,35 +20,30 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   math.h
+/// \file   operators.cpp
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
-/// \brief  Math utils
 
-#pragma once
+#include <naiades/core/operators.h>
 
-#include <hermes/geometry/point.h>
+namespace naiades::core {
 
-namespace naiades::utils {
+/// Compute divergence field.
+void divergence(const geo::Grid2 &grid, const Field_RO<f32> &u,
+                const Field_RO<f32> &v, Field<f32> &f) {
+  HERMES_ASSERT(u.element() == Element::Type::Y_FACE_CENTER);
+  HERMES_ASSERT(v.element() == Element::Type::X_FACE_CENTER);
+  HERMES_ASSERT(f.element() == Element::Type::CELL_CENTER);
 
-f32 gaussian(f32 sigma2, f32 mu, f32 x);
+#define AT(F, IJ)                                                              \
+  F[grid.flatIndex(F.element(), IJ) - grid.flatIndexOffset(F.element())]
 
-f32 gaussian(const hermes::geo::vec2 &sigma2, const hermes::geo::point2 &mu,
-             const hermes::geo::point2 &p);
-
-hermes::geo::vec2 enright(const hermes::geo::point2 &p, float t);
-
-/// Constant vorticity velocity field
-/// \param p Evaluation point
-/// \param center Rotation center
-/// \param omega Angular velocity (radians per second)
-hermes::geo::vec2 zalesak(const hermes::geo::point2 &p,
-                          const hermes::geo::point2 &center, float omega);
-
-namespace sdf {
-
-f32 sphere(const hermes::geo::point2 &center, f32 radius,
-           const hermes::geo::point2 &p);
+  const auto d = grid.cellSize();
+  for (auto ij : hermes::range2(grid.resolution(f.element()))) {
+    AT(f, ij) = -0.5 * (d.y * (AT(v, ij.up()) - AT(v, ij)) +
+                        d.x * (AT(u, ij.right()) - AT(u, ij)));
+  }
+#undef AT
 }
 
-} // namespace naiades::utils
+} // namespace naiades::core

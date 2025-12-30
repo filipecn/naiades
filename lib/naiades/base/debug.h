@@ -44,21 +44,21 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
 #define NAIADES_VIRTUAL_toString_METHOD_OVERRIDE                               \
   virtual std::string toString(u32 tab_size = 0) const override;
 
-#ifndef HERMES_PUSH_DEBUG_NAIADES_FIELD
-#define HERMES_PUSH_DEBUG_NAIADES_FIELD(F)                                     \
+#ifndef HERMES_TO_STRING_METHOD_NAIADES_FIELD
+#define HERMES_TO_STRING_METHOD_NAIADES_FIELD(F)                               \
   debug_fields.add(HERMES_DebugFields::Type::Inline, #F,                       \
                    naiades::to_string(object.F));
 #endif
 
-#ifndef HERMES_PUSH_DEBUG_NAIADES_PTR_FIELD
-#define HERMES_PUSH_DEBUG_NAIADES_PTR_FIELD(F)                                 \
+#ifndef HERMES_TO_STRING_METHOD_NAIADES_PTR_FIELD
+#define HERMES_TO_STRING_METHOD_NAIADES_PTR_FIELD(F)                           \
   debug_fields.add(HERMES_DebugFields::Type::Inline, #F,                       \
                    object.F ? naiades::to_string(*object.F) : "NULL");
 #endif
 
 #else
 #define NAIADES_to_string_FRIEND
-#define HERMES_PUSH_DEBUG_NAIADES_FIELD
+#define HERMES_TO_STRING_METHOD_NAIADES_FIELD
 #endif
 
 #ifndef NAIADES_CHECK_NA_RESULT
@@ -155,16 +155,16 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
 
 #endif
 
-#ifndef NAIADES_DECLARE_OR_RETURN_BAD_RESULT
-#define NAIADES_DECLARE_OR_RETURN_BAD_RESULT(TYPE, VAR, V)                     \
+#ifndef NAIADES_DECLARE_OR_BAD_RESULT
+#define NAIADES_DECLARE_OR_BAD_RESULT(VAR, V)                                  \
   auto _naiades_result_##VAR = V;                                              \
   if (!_naiades_result_##VAR) {                                                \
-    HERMES_ERROR("Error at: {}::Ptr {} = {}", #TYPE, #VAR, #V);                \
+    HERMES_ERROR("Error at: auto {} = {}", #VAR, #V);                          \
     HERMES_ERROR("  w/ err: {}",                                               \
                  naiades::to_string(_naiades_result_##VAR.status()));          \
     return _naiades_result_##VAR.status();                                     \
   }                                                                            \
-  TYPE VAR = std::move(*_naiades_result_##VAR);
+  auto VAR = std::move(*_naiades_result_##VAR);
 
 #endif
 

@@ -27,24 +27,67 @@
 
 #pragma once
 
+#include <naiades/core/boundary.h>
 #include <naiades/core/field.h>
 #include <naiades/geo/grid.h>
 
 namespace naiades::solvers {
 
-class SmokeSolver2 {
+class Solver {
 public:
+  using Ptr = hermes::Ref<Solver>;
+
+  virtual void step(f32 dt) = 0;
+};
+
+class SmokeSolver2 : public Solver {
+public:
+  using Ptr = hermes::Ref<SmokeSolver2>;
+
+  struct Parameters {
+    f32 visc{};
+    f32 diff{};
+    f32 bouyancy_scale{0.5f};
+  };
   struct Config {
+    Config &setGrid(const geo::Grid2 &grid);
     Result<SmokeSolver2> build() const;
+
+  private:
+    geo::Grid2 grid_;
   };
 
   SmokeSolver2() noexcept;
   virtual ~SmokeSolver2() noexcept;
 
+  void step(f32 dt) override;
+
+  const geo::Grid2 &geo() const;
+  core::Field<f32> density();
+  core::Field<f32> u();
+  core::Field<f32> v();
+  core::Boundary &boundary();
+
 private:
+  core::FieldSet &current();
+  core::FieldSet &previous();
+
+  // Solve Ax = b by jacobi Gauss-Siedel method
+  NaResult solve(core::Field<f32> &x, const core::Field<f32> &b, f32 a, f32 c);
+  NaResult addForces(f32 dt);
+  NaResult solveVelocity(f32 dt);
+  NaResult solveDensity(f32 dt);
+  NaResult setBoundaries();
+
+  Parameters parameters_;
   h_size current_step_{0};
-  core::FieldSet fields_[2];
+  // advected fields
+  core::FieldSet dynamic_fields_[2];
+  // p, div, etc
+  core::FieldSet static_fields_;
   geo::Grid2 grid_;
+  // Bounday conditions
+  core::Boundary boundary_;
 };
 
 } // namespace naiades::solvers

@@ -57,4 +57,11 @@ void zalesakVelocityField(const geo::Grid2 &grid,
 void enrightVelocityField(const geo::Grid2 &grid,
                           core::Field<hermes::geo::vec2> &field, f32 t);
 
+namespace sdf {
+
+void sphere(const geo::Grid2 &grid, core::Field<f32> &field,
+            const hermes::geo::point2 &center, f32 radius);
+
+} // namespace sdf
+
 } // namespace naiades::utils

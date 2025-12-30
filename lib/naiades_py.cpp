@@ -26,8 +26,9 @@
 /// \brief  Python interface for Naiades lib.
 
 #include <hermes/base/str.h>
-#include <hermes/random/rng.h>
 #include <naiades/sampling/sampler.h>
+#include <naiades/solvers/convection.h>
+#include <naiades/solvers/smoke_solver.h>
 #include <naiades/utils/fields.h>
 #include <naiades/utils/math.h>
 
@@ -80,7 +81,8 @@ void initHermes(bool verbose = false) {
 }*/
 
 template <typename T>
-py::array_t<T, py::array::c_style> scalar_pyarray(const std::vector<T> &data) {
+py::array_t<T, py::array::c_style>
+scalar_pyarray(const naiades::core::Field<T> &data) {
   std::vector<h_size> shape = {data.size()};
   std::vector<h_size> strides = {sizeof(T)};
   return py::array_t<T, py::array::c_style>(shape, strides, data.data());
@@ -136,85 +138,135 @@ struct StableFluids2_py {
   StableFluids2_py(bool verbose = false) {
     grid_.setSize({50, 50});
     grid_.setCellSize(1.f / 50);
+
+    solver_ =
+        naiades::solvers::SmokeSolver2::Config().setGrid(grid_).build().value();
+
+    auto u = solver_.u();
+    auto v = solver_.v();
+    auto d = solver_.density();
+
+    naiades::utils::setField<f32>(
+        grid_, u, [&](const hermes::geo::point2 &p) -> f32 { return 0; });
+
+    naiades::utils::setField<f32>(
+        grid_, v, [&](const hermes::geo::point2 &p) -> f32 { return 0; });
+
+    naiades::utils::setField<f32>(
+        grid_, d, [&](const hermes::geo::point2 &p) -> f32 {
+          return naiades::utils::sdf::sphere(hermes::geo::point2(0.5, 0.75),
+                                             0.15, p) <= 0;
+        });
+
     HERMES_UNUSED_VARIABLE(verbose);
-    fields_.addVectorFields(naiades::core::Element::CELL_CENTER,
-                            {"cell_velocity"});
-    fields_.addScalarFields(naiades::core::Element::CELL_CENTER,
-                            {"cell_R", "cell_G", "cell_B"});
-    fields_.addScalarFields(naiades::core::Element::VERTEX_CENTER,
-                            {"gaussian"});
-    fields_.addScalarFields(naiades::core::Element::X_FACE_CENTER, {"v"});
-    fields_.addScalarFields(naiades::core::Element::Y_FACE_CENTER, {"u"});
+    fields_.add<hermes::geo::vec2>(naiades::core::Element::CELL_CENTER,
+                                   {"cell_velocity"});
+    fields_.add<f32>(naiades::core::Element::CELL_CENTER,
+                     {"density_0", "density_1", "cell_R", "cell_G", "cell_B"});
+    fields_.add<f32>(naiades::core::Element::VERTEX_CENTER, {"gaussian"});
+    fields_.add<f32>(naiades::core::Element::X_FACE_CENTER, {"v"});
+    fields_.add<f32>(naiades::core::Element::Y_FACE_CENTER, {"u"});
 
     fields_.setElementCountFrom(&grid_);
+
+    auto cell_velocity = fields_.get<f32>("density_0").value();
+    naiades::utils::setField<f32>(
+        grid_, cell_velocity, [&](const hermes::geo::point2 &p) -> f32 {
+          return naiades::utils::sdf::sphere(hermes::geo::point2(0.5, 0.75),
+                                             0.15, p) <= 0;
+        });
+
+    cell_velocity = fields_.get<f32>("density_1").value();
+    naiades::utils::setField<f32>(
+        grid_, cell_velocity, [&](const hermes::geo::point2 &p) -> f32 {
+          return naiades::utils::sdf::sphere(hermes::geo::point2(0.5, 0.75),
+                                             0.15, p) <= 0;
+        });
+
+    auto uf = fields_.get<f32>("u").value();
+    naiades::utils::setField<f32>(
+        grid_, uf, [&](const hermes::geo::point2 &p) -> f32 {
+          return naiades::utils::zalesak(p, {0.5f, 0.5f},
+                                         hermes::math::constants::two_pi)
+              .x;
+        });
+
+    auto vf = *fields_.get<f32>("v");
+    naiades::utils::setField<f32>(
+        grid_, vf, [&](const hermes::geo::point2 &p) -> f32 {
+          return naiades::utils::zalesak(p, {0.5f, 0.5f},
+                                         hermes::math::constants::two_pi)
+              .y;
+        });
   }
 
   void step(f32 timestep) {
-    HERMES_UNUSED_VARIABLE(timestep);
-    if (auto *cell_velocity = fields_.vectorField("cell_velocity")) {
-      naiades::utils::zalesakVelocityField(grid_, *cell_velocity, {0.5f, 0.5f},
-                                           hermes::math::constants::two_pi);
-    }
-    if (auto *u = fields_.scalarField("u")) {
-      naiades::utils::setField<f32>(
-          grid_, *u, [&](const hermes::geo::point2 &p) -> f32 {
-            return naiades::utils::gaussian(hermes::geo::vec2(0.02),
-                                            hermes::geo::point2(0.5), p);
-          });
-    }
-    if (auto *v = fields_.scalarField("v")) {
-      naiades::utils::setField<f32>(
-          grid_, *v, [&](const hermes::geo::point2 &p) -> f32 {
-            return naiades::utils::zalesak(p, {0.5f, 0.5f},
-                                           hermes::math::constants::two_pi)
-                .y;
-          });
-    }
-    if (auto *cell_velocity = fields_.scalarField("cell_R")) {
-      naiades::utils::setField<f32>(
-          grid_, *cell_velocity, [&](const hermes::geo::point2 &p) -> f32 {
-            return naiades::utils::zalesak(p, {0.5f, 0.5f},
-                                           hermes::math::constants::two_pi)
-                .x;
-          });
-    }
-    if (auto *cell_velocity = fields_.scalarField("gaussian")) {
-      naiades::utils::setField<f32>(
-          grid_, *cell_velocity, [&](const hermes::geo::point2 &p) -> f32 {
-            return naiades::utils::gaussian(hermes::geo::vec2(0.02),
-                                            hermes::geo::point2(0.5), p);
-          });
-    }
+    solver_.step(timestep);
+
+    auto u = *fields_.get<f32>("u");
+    auto v = *fields_.get<f32>("v");
+    std::string names[] = {"density_0", "density_1"};
+    auto src_d = *fields_.get<f32>(names[(frame_ + 0) % 2]);
+    auto dst_d = *fields_.get<f32>(names[(frame_ + 1) % 2]);
+
+    auto f = [](const naiades::geo::Grid2 &grid,
+                const naiades::core::Field_RO<f32> &field,
+                const hermes::geo::point2 &p) -> f32 {
+      auto stencil =
+          naiades::sampling::Stencil::bilinear(grid, field.element(), p);
+      return stencil.evaluate(field);
+    };
+
+    naiades::solvers::advect<f32>(grid_, u, v, f, timestep, src_d, dst_d);
+
+    auto cell_velocity = *fields_.get<hermes::geo::vec2>("cell_velocity");
+    naiades::utils::zalesakVelocityField(grid_, cell_velocity, {0.5f, 0.5f},
+                                         hermes::math::constants::two_pi);
+
+    auto cell_r = *fields_.get<f32>("cell_R");
+    naiades::utils::setField<f32>(
+        grid_, cell_r, [&](const hermes::geo::point2 &p) -> f32 {
+          return naiades::utils::zalesak(p, {0.5f, 0.5f},
+                                         hermes::math::constants::two_pi)
+              .x;
+        });
+
+    frame_++;
+  }
+
+  py_array_f32 getDensity() {
+    auto density = fields_.get<f32>(frame_ % 2 ? "density_1" : "density_0");
+    return scalar_pyarray(density.value());
   }
 
   py_array_f32 getStaggeredVelocityField() {
-    auto *u = fields_.scalarField("u");
-    auto *v = fields_.scalarField("v");
-    if (!u || !v)
-      throw std::runtime_error("Field not found!");
+    // auto *u = fields_.get<f32>("u");
+    // auto *v = fields_.get<f32>("v");
+    auto u = solver_.u();
+    auto v = solver_.v();
 
     std::vector<hermes::geo::vec2> data(
         grid_.elementCount(naiades::core::Element::Type::FACE_CENTER));
 
-    for (h_size i = 0; i < v->size(); ++i) {
+    for (h_size i = 0; i < v.size(); ++i) {
       auto flat_index =
           grid_.flatIndexOffset(naiades::core::Element::Type::X_FACE_CENTER) +
           i;
       data[flat_index].x = 0;
-      data[flat_index].y = (*v)[i];
+      data[flat_index].y = v[i];
     }
-    for (h_size i = 0; i < u->size(); ++i) {
+    for (h_size i = 0; i < u.size(); ++i) {
       auto flat_index =
           grid_.flatIndexOffset(naiades::core::Element::Type::Y_FACE_CENTER) +
           i;
-      data[flat_index].x = (*u)[i];
+      data[flat_index].x = u[i];
       data[flat_index].y = 0;
     }
     return vector_pyarray(data);
   }
 
   py_array_f32 getScalarField(const std::string &name) {
-    auto *field = fields_.scalarField(name);
+    auto field = fields_.get<f32>(name);
     if (!field)
       throw std::runtime_error("Field not found!");
     return scalar_pyarray(*field);
@@ -222,7 +274,7 @@ struct StableFluids2_py {
 
   py::array_t<float> sampleFloatField(const std::string &name,
                                       py::array_t<f32> &arr) {
-    auto *field = fields_.scalarField(name);
+    auto field = fields_.get<f32>(name);
     if (!field)
       throw std::runtime_error("Field not found!");
 
@@ -254,7 +306,7 @@ struct StableFluids2_py {
 
   py::array_t<float> sampleVectorField(const std::string &name,
                                        py::array_t<f32> &arr) {
-    auto *field = fields_.vectorField(name);
+    auto field = fields_.get<hermes::geo::vec2>(name);
     if (!field)
       throw std::runtime_error("Field not found!");
 
@@ -309,7 +361,8 @@ struct StableFluids2_py {
 
   naiades::geo::Grid2 grid_;
   naiades::core::FieldSet fields_;
-  hermes::random::PCGRNG rng;
+  naiades::solvers::SmokeSolver2 solver_;
+  u32 frame_{0};
 };
 
 #define PY_ENUM_VALUE(T, V) .value(#V, T::V)
@@ -332,6 +385,7 @@ PYBIND11_MODULE(naiades_py, m) {
   py::class_<StableFluids2_py>(m, "StableFluids2")
       .def(py::init([](bool verbose) { return new StableFluids2_py(verbose); }))
       .def("get_scalar_field", &StableFluids2_py::getScalarField, "")
+      .def("get_density_field", &StableFluids2_py::getDensity, "")
       .def("get_stag_velocity_field",
            &StableFluids2_py::getStaggeredVelocityField, "")
       .def("step", &StableFluids2_py::step, "")

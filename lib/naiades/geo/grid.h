@@ -144,8 +144,11 @@ public:
   std::vector<std::vector<h_size>>
   indices(core::Element loc, core::Element sub_loc) const override;
   std::vector<h_size> boundary(core::Element loc) const override;
-  core::element_alignments elementAlignment(core ::Element loc,
+  core::element_alignments elementAlignment(core::Element loc,
                                             h_size index) const override;
+  core::element_orientations elementOrientation(core::Element loc,
+                                                h_size index) const override;
+  bool isBoundary(core::Element loc, h_size index) const override;
 
 private:
   hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};

@@ -33,17 +33,9 @@
 #include <hermes/core/ref.h>
 #include <hermes/geometry/point.h>
 
-#include <unordered_map>
 #include <vector>
 
 namespace naiades::core {
-
-struct Boundary {
-  /// element indices
-  std::unordered_map<element_alignments, std::vector<h_size>> indices;
-  /// section name -> (start, count)
-  std::unordered_map<std::string, std::pair<h_size, h_size>> sections;
-};
 
 /// A simulation mesh holds the geometry and topology of the discretization and
 /// other information required by simulation algorithms.
@@ -88,6 +80,17 @@ public:
   /// \return The element alignment at the given index.
   virtual element_alignments elementAlignment(Element loc,
                                               h_size index) const = 0;
+  /// Get element orientation.
+  /// \note This considers the element primitive.
+  /// \param loc Element.
+  /// \param index Element index.
+  /// \return The element orientation at the given index.
+  virtual element_orientations elementOrientation(Element loc,
+                                                  h_size index) const = 0;
+  /// \param loc Element.
+  /// \param index Element index.
+  /// \return True if this is the index of a boundary element.
+  virtual bool isBoundary(Element loc, h_size index) const = 0;
 };
 
 } // namespace naiades::core

@@ -20,35 +20,19 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   math.h
+/// \file   operators.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
-/// \brief  Math utils
+/// \brief  Field differential operators.
 
 #pragma once
 
-#include <hermes/geometry/point.h>
+#include <naiades/core/field.h>
+#include <naiades/geo/grid.h>
 
-namespace naiades::utils {
+namespace naiades::core {
 
-f32 gaussian(f32 sigma2, f32 mu, f32 x);
+void divergence(const geo::Grid2 &grid, const Field_RO<f32> &u,
+                const Field_RO<f32> &v, Field<f32> &f);
 
-f32 gaussian(const hermes::geo::vec2 &sigma2, const hermes::geo::point2 &mu,
-             const hermes::geo::point2 &p);
-
-hermes::geo::vec2 enright(const hermes::geo::point2 &p, float t);
-
-/// Constant vorticity velocity field
-/// \param p Evaluation point
-/// \param center Rotation center
-/// \param omega Angular velocity (radians per second)
-hermes::geo::vec2 zalesak(const hermes::geo::point2 &p,
-                          const hermes::geo::point2 &center, float omega);
-
-namespace sdf {
-
-f32 sphere(const hermes::geo::point2 &center, f32 radius,
-           const hermes::geo::point2 &p);
-}
-
-} // namespace naiades::utils
+} // namespace naiades::core

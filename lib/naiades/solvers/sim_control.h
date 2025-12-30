@@ -20,35 +20,32 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   math.h
+/// \file   sim_control.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
-/// \brief  Math utils
 
 #pragma once
 
-#include <hermes/geometry/point.h>
+#include <naiades/solvers/smoke_solver.h>
 
-namespace naiades::utils {
+namespace naiades::solvers {
 
-f32 gaussian(f32 sigma2, f32 mu, f32 x);
+struct SimControl {
 
-f32 gaussian(const hermes::geo::vec2 &sigma2, const hermes::geo::point2 &mu,
-             const hermes::geo::point2 &p);
+  SimControl &setCFL(f32 value);
+  SimControl &setTimestep(f32 timestep);
+  SimControl &setWriteTimestep(f32 write_timestep);
+  SimControl &setStartTime(f32 start_time);
+  SimControl &setEndTime(f32 end_time);
 
-hermes::geo::vec2 enright(const hermes::geo::point2 &p, float t);
+  NaResult run(Solver::Ptr solver);
 
-/// Constant vorticity velocity field
-/// \param p Evaluation point
-/// \param center Rotation center
-/// \param omega Angular velocity (radians per second)
-hermes::geo::vec2 zalesak(const hermes::geo::point2 &p,
-                          const hermes::geo::point2 &center, float omega);
+private:
+  f32 start_time_{0};
+  f32 end_time_{1};
+  f32 cfl_{1};
+  f32 dt_{0.01};
+  f32 wdt_{0.01};
+};
 
-namespace sdf {
-
-f32 sphere(const hermes::geo::point2 &center, f32 radius,
-           const hermes::geo::point2 &p);
-}
-
-} // namespace naiades::utils
+} // namespace naiades::solvers

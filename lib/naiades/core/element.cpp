@@ -38,7 +38,7 @@ namespace naiades {
     break;                                                                     \
   }
 
-HERMES_TO_STRING_DEBUG_METHOD_BEGIN(core::element_primitives)
+HERMES_TO_STRING_METHOD_BEGIN(core::element_primitives)
 std::vector<std::string> ss;
 NAIADES_ENUM_TO_STRING_APPEND(core::element_primitive_bits, any)
 NAIADES_ENUM_TO_STRING_APPEND(core::element_primitive_bits, vertex)
@@ -47,10 +47,12 @@ NAIADES_ENUM_TO_STRING_APPEND(core::element_primitive_bits, cell)
 NAIADES_ENUM_TO_STRING_APPEND(core::element_primitive_bits, particle)
 NAIADES_ENUM_TO_STRING_APPEND(core::element_primitive_bits, point)
 NAIADES_ENUM_TO_STRING_APPEND(core::element_primitive_bits, custom)
-HERMES_PUSH_DEBUG_LINE("{}", hermes::cstr::join(ss, "|"))
-HERMES_TO_STRING_DEBUG_METHOD_END
+if (object == core::element_primitive_bits::none)
+  ss.emplace_back("none");
+HERMES_TO_STRING_METHOD_LINE("{}", hermes::cstr::join(ss, "|"))
+HERMES_TO_STRING_METHOD_END
 
-HERMES_TO_STRING_DEBUG_METHOD_BEGIN(core::element_alignments)
+HERMES_TO_STRING_METHOD_BEGIN(core::element_alignments)
 std::vector<std::string> ss;
 NAIADES_ENUM_TO_STRING_APPEND(core::element_alignment_bits, any)
 NAIADES_ENUM_TO_STRING_APPEND(core::element_alignment_bits, x)
@@ -60,12 +62,33 @@ NAIADES_ENUM_TO_STRING_APPEND(core::element_alignment_bits, custom)
 NAIADES_ENUM_TO_STRING_APPEND(core::element_alignment_bits, xy)
 NAIADES_ENUM_TO_STRING_APPEND(core::element_alignment_bits, xz)
 NAIADES_ENUM_TO_STRING_APPEND(core::element_alignment_bits, yz)
-HERMES_PUSH_DEBUG_LINE("{}", hermes::cstr::join(ss, "|"))
-HERMES_TO_STRING_DEBUG_METHOD_END
+if (object == core::element_alignment_bits::none)
+  ss.emplace_back("none");
+HERMES_TO_STRING_METHOD_LINE("{}", hermes::cstr::join(ss, "|"))
+HERMES_TO_STRING_METHOD_END
 
-HERMES_TO_STRING_DEBUG_METHOD_BEGIN(core::element_primitive_bits)
+HERMES_TO_STRING_METHOD_BEGIN(core::element_orientations)
+std::vector<std::string> ss;
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, any)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, x)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, y)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, z)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, neg_x)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, neg_y)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, neg_z)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, custom)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, xy)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, xz)
+NAIADES_ENUM_TO_STRING_APPEND(core::element_orientation_bits, yz)
+if (object == core::element_orientation_bits::none)
+  ss.emplace_back("none");
+HERMES_TO_STRING_METHOD_LINE("{}", hermes::cstr::join(ss, "|"))
+HERMES_TO_STRING_METHOD_END
+
+HERMES_TO_STRING_METHOD_BEGIN(core::element_primitive_bits)
 std::string s;
 switch (object) {
+  NAIADES_ENUM_TO_STRING_CASE(core::element_primitive_bits, none)
   NAIADES_ENUM_TO_STRING_CASE(core::element_primitive_bits, any)
   NAIADES_ENUM_TO_STRING_CASE(core::element_primitive_bits, vertex)
   NAIADES_ENUM_TO_STRING_CASE(core::element_primitive_bits, face)
@@ -74,12 +97,13 @@ switch (object) {
   NAIADES_ENUM_TO_STRING_CASE(core::element_primitive_bits, point)
   NAIADES_ENUM_TO_STRING_CASE(core::element_primitive_bits, custom)
 }
-HERMES_PUSH_DEBUG_LINE(s.c_str())
-HERMES_TO_STRING_DEBUG_METHOD_END
+HERMES_TO_STRING_METHOD_LINE(s.c_str())
+HERMES_TO_STRING_METHOD_END
 
-HERMES_TO_STRING_DEBUG_METHOD_BEGIN(core::element_alignment_bits)
+HERMES_TO_STRING_METHOD_BEGIN(core::element_alignment_bits)
 std::string s;
 switch (object) {
+  NAIADES_ENUM_TO_STRING_CASE(core::element_alignment_bits, none)
   NAIADES_ENUM_TO_STRING_CASE(core::element_alignment_bits, any)
   NAIADES_ENUM_TO_STRING_CASE(core::element_alignment_bits, x)
   NAIADES_ENUM_TO_STRING_CASE(core::element_alignment_bits, y)
@@ -89,12 +113,32 @@ switch (object) {
   NAIADES_ENUM_TO_STRING_CASE(core::element_alignment_bits, xz)
   NAIADES_ENUM_TO_STRING_CASE(core::element_alignment_bits, yz)
 }
-HERMES_PUSH_DEBUG_LINE(s.c_str())
-HERMES_TO_STRING_DEBUG_METHOD_END
+HERMES_TO_STRING_METHOD_LINE(s.c_str())
+HERMES_TO_STRING_METHOD_END
 
-HERMES_TO_STRING_DEBUG_METHOD_BEGIN(core::Element::Type)
+HERMES_TO_STRING_METHOD_BEGIN(core::element_orientation_bits)
 std::string s;
 switch (object) {
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, none)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, any)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, x)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, y)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, z)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, neg_x)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, neg_y)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, neg_z)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, custom)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, xy)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, xz)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, yz)
+}
+HERMES_TO_STRING_METHOD_LINE(s.c_str())
+HERMES_TO_STRING_METHOD_END
+
+HERMES_TO_STRING_METHOD_BEGIN(core::Element::Type)
+std::string s;
+switch (object) {
+  NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, NONE)
   NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, ANY)
   NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, CELL_CENTER)
   NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, FACE_CENTER)
@@ -105,13 +149,15 @@ switch (object) {
   NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, YZ_FACE_CENTER)
   NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, XY_FACE_CENTER)
 }
-HERMES_PUSH_DEBUG_LINE(s.c_str())
-HERMES_TO_STRING_DEBUG_METHOD_END
+HERMES_TO_STRING_METHOD_LINE(s.c_str())
+HERMES_TO_STRING_METHOD_END
 
-HERMES_TO_STRING_DEBUG_METHOD_BEGIN(core::Element)
-HERMES_PUSH_DEBUG_LINE("[{},{}]", naiades::to_string(object.primitives()),
-                       naiades::to_string(object.alignments()));
-HERMES_TO_STRING_DEBUG_METHOD_END
+HERMES_TO_STRING_METHOD_BEGIN(core::Element)
+HERMES_TO_STRING_METHOD_LINE("[{},{},{}]",
+                             naiades::to_string(object.primitives()),
+                             naiades::to_string(object.alignments()),
+                             naiades::to_string(object.orientations()));
+HERMES_TO_STRING_METHOD_END
 
 #undef NAIADES_ENUM_TO_STRING_CASE
 
