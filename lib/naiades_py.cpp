@@ -82,7 +82,7 @@ void initHermes(bool verbose = false) {
 
 template <typename T>
 py::array_t<T, py::array::c_style>
-scalar_pyarray(const naiades::core::Field<T> &data) {
+scalar_pyarray(const naiades::core::FieldRef<T> &data) {
   std::vector<h_size> shape = {data.size()};
   std::vector<h_size> strides = {sizeof(T)};
   return py::array_t<T, py::array::c_style>(shape, strides, data.data());
@@ -210,7 +210,7 @@ struct StableFluids2_py {
     auto dst_d = *fields_.get<f32>(names[(frame_ + 1) % 2]);
 
     auto f = [](const naiades::geo::Grid2 &grid,
-                const naiades::core::Field_RO<f32> &field,
+                const naiades::core::FieldCRef<f32> &field,
                 const hermes::geo::point2 &p) -> f32 {
       auto stencil =
           naiades::sampling::Stencil::bilinear(grid, field.element(), p);

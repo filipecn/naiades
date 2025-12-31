@@ -37,11 +37,11 @@ namespace naiades::solvers {
 
 template <typename QuantityType>
 void advect(
-    const geo::Grid2 &grid, const core::Field_RO<hermes::geo::vec2> &velocity,
+    const geo::Grid2 &grid, const core::FieldCRef<hermes::geo::vec2> &velocity,
     const std::function<QuantityType(const geo::Grid2 &, core::Element,
                                      const hermes::geo::point2 &)> &sample_func,
-    float dt, const core::Field_RO<QuantityType> &in_field,
-    core::Field<QuantityType> &out_field) {
+    float dt, const core::FieldCRef<QuantityType> &in_field,
+    core::FieldRef<QuantityType> &out_field) {
   auto field_res = grid.resolution(in_field.location());
   for (auto z :
        hermes::math::space_filling::MortonRange(0, field_res.total())) {
@@ -57,13 +57,13 @@ void advect(
 }
 
 template <typename QuantityType>
-NaResult advect(const geo::Grid2 &grid, const core::Field_RO<f32> &u,
-                const core::Field_RO<f32> &v,
+NaResult advect(const geo::Grid2 &grid, const core::FieldCRef<f32> &u,
+                const core::FieldCRef<f32> &v,
                 const std::function<QuantityType(
-                    const geo::Grid2 &, const core::Field_RO<QuantityType> &,
+                    const geo::Grid2 &, const core::FieldCRef<QuantityType> &,
                     const hermes::geo::point2 &)> &sample_func,
-                float dt, const core::Field_RO<QuantityType> &in_field,
-                core::Field<QuantityType> &out_field) {
+                float dt, const core::FieldCRef<QuantityType> &in_field,
+                core::FieldRef<QuantityType> &out_field) {
   const auto in_field_element = in_field.element();
   auto field_res = grid.resolution(in_field_element);
   // sample velocities at cell centers

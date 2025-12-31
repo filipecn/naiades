@@ -39,7 +39,7 @@ public:
   static Stencil bilinear(const geo::Grid2 &grid, core::Element loc,
                           const hermes::geo::point2 &p);
 
-  template <typename T> T evaluate(const core::Field_RO<T> &field) {
+  template <typename T> T evaluate(const core::FieldCRef<T> &field) {
     T s = {};
     const h_size n = indices_.size();
     for (h_size i = 0; i < n; ++i) {

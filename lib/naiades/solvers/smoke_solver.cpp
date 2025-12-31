@@ -102,7 +102,7 @@ NaResult SmokeSolver2::solveVelocity(f32 dt) {
   NAIADES_DECLARE_OR_BAD_RESULT(prev_v, previous().get<f32>("v"));
 
   auto f = [](const naiades::geo::Grid2 &grid,
-              const naiades::core::Field_RO<f32> &field,
+              const naiades::core::FieldCRef<f32> &field,
               const hermes::geo::point2 &p) -> f32 {
     auto stencil =
         naiades::sampling::Stencil::bilinear(grid, field.element(), p);
@@ -120,8 +120,8 @@ NaResult SmokeSolver2::solveVelocity(f32 dt) {
   return NaResult::noError();
 }
 
-NaResult SmokeSolver2::solve(core::Field<f32> &x, const core::Field<f32> &x0,
-                             f32 a, f32 c) {
+NaResult SmokeSolver2::solve(core::FieldRef<f32> &x,
+                             const core::FieldRef<f32> &x0, f32 a, f32 c) {
   const h_size iter = 4;
   const f32 inv_c = 1.f / c;
   const auto x_element = x.element();
@@ -168,13 +168,13 @@ NaResult SmokeSolver2::setBoundaries() { return NaResult::noError(); }
 
 const geo::Grid2 &SmokeSolver2::geo() const { return grid_; }
 
-core::Field<f32> SmokeSolver2::density() {
-  return current().get<f32>("density").value();
+core::FieldRef<f32> SmokeSolver2::density() {
+  return *current().get<f32>("density");
 }
 
-core::Field<f32> SmokeSolver2::u() { return current().get<f32>("u").value(); }
+core::FieldRef<f32> SmokeSolver2::u() { return *current().get<f32>("u"); }
 
-core::Field<f32> SmokeSolver2::v() { return current().get<f32>("v").value(); }
+core::FieldRef<f32> SmokeSolver2::v() { return *current().get<f32>("v"); }
 
 core::Boundary &SmokeSolver2::boundary() { return boundary_; }
 

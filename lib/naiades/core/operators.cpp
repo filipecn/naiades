@@ -29,8 +29,8 @@
 namespace naiades::core {
 
 /// Compute divergence field.
-void divergence(const geo::Grid2 &grid, const Field_RO<f32> &u,
-                const Field_RO<f32> &v, Field<f32> &f) {
+void divergence(const geo::Grid2 &grid, const FieldCRef<f32> &u,
+                const FieldCRef<f32> &v, FieldRef<f32> &f) {
   HERMES_ASSERT(u.element() == Element::Type::Y_FACE_CENTER);
   HERMES_ASSERT(v.element() == Element::Type::X_FACE_CENTER);
   HERMES_ASSERT(f.element() == Element::Type::CELL_CENTER);

@@ -43,6 +43,8 @@ int main() {
   auto neumann = naiades::core::bc::Neumann<f32>::Ptr::shared();
   solver.boundary().set("p", neumann);
 
+  HERMES_INFO("{}", naiades::to_string(solver.boundary()));
+
   naiades::solvers::SimControl().run(&solver);
 
   return 0;

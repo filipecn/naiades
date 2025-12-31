@@ -63,9 +63,9 @@ public:
   void step(f32 dt) override;
 
   const geo::Grid2 &geo() const;
-  core::Field<f32> density();
-  core::Field<f32> u();
-  core::Field<f32> v();
+  core::FieldRef<f32> density();
+  core::FieldRef<f32> u();
+  core::FieldRef<f32> v();
   core::Boundary &boundary();
 
 private:
@@ -73,7 +73,8 @@ private:
   core::FieldSet &previous();
 
   // Solve Ax = b by jacobi Gauss-Siedel method
-  NaResult solve(core::Field<f32> &x, const core::Field<f32> &b, f32 a, f32 c);
+  NaResult solve(core::FieldRef<f32> &x, const core::FieldRef<f32> &b, f32 a,
+                 f32 c);
   NaResult addForces(f32 dt);
   NaResult solveVelocity(f32 dt);
   NaResult solveDensity(f32 dt);

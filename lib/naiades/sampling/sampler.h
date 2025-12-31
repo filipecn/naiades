@@ -34,8 +34,8 @@
 namespace naiades::sampling {
 
 template <typename T>
-void sample(const geo::Grid2 &grid, const core::Field_RO<T> &field,
-            h_size component, core::Field<f32> &sample_field) {
+void sample(const geo::Grid2 &grid, const core::FieldCRef<T> &field,
+            h_size component, core::FieldRef<f32> &sample_field) {
   auto field_element = field.element();
   auto sample_element = sample_field.element();
   auto sample_resolution = grid.resolution(sample_element);
@@ -137,8 +137,8 @@ void sample(const geo::Grid2 &grid, const core::Field_RO<T> &field,
 }
 
 template <typename T>
-void sample(const geo::Grid2 &grid, const core::Field_RO<T> &field,
-            core::Field<T> &sample_field) {
+void sample(const geo::Grid2 &grid, const core::FieldCRef<T> &field,
+            core::FieldRef<T> &sample_field) {
   auto field_element = field.element();
   auto sample_element = sample_field.element();
   auto sample_resolution = grid.resolution(sample_element);
@@ -241,10 +241,10 @@ void sample(const geo::Grid2 &grid, const core::Field_RO<T> &field,
 
 template <typename T>
 Result<core::FieldGroup> sample(const geo::Grid2 &grid,
-                                const core::Field_RO<T> &field,
+                                const core::FieldCRef<T> &field,
                                 core::Element sample_element) {
   core::FieldGroup samples;
-  samples.pushField<T>("value");
+  samples.pushField<T>();
   samples.setElement(sample_element);
   NAIADES_HE_RETURN_BAD_RESULT(
       samples.resize(grid.resolution(sample_element).total()));
@@ -264,10 +264,10 @@ Result<core::FieldGroup> sample(const geo::Grid2 &grid,
 
 template <typename T>
 Result<core::FieldGroup>
-sample(const geo::Grid2 &grid, const core::Field_RO<T> &field,
+sample(const geo::Grid2 &grid, const core::FieldCRef<T> &field,
        const std::vector<hermes::geo::point2> &positions) {
   core::FieldGroup samples;
-  samples.pushField<T>("value");
+  samples.pushField<T>();
   samples.setElement(core::Element::Type::VERTEX_CENTER);
   NAIADES_HE_RETURN_BAD_RESULT(samples.resize(positions.size()));
 

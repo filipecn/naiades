@@ -32,7 +32,7 @@
 
 namespace naiades::core {
 
-void divergence(const geo::Grid2 &grid, const Field_RO<f32> &u,
-                const Field_RO<f32> &v, Field<f32> &f);
+void divergence(const geo::Grid2 &grid, const FieldCRef<f32> &u,
+                const FieldCRef<f32> &v, FieldRef<f32> &f);
 
 } // namespace naiades::core

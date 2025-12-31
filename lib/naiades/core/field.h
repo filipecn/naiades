@@ -40,9 +40,9 @@
 
 namespace naiades::core {
 
-template <typename T> class Field : public hermes::mem::AoS::FieldView<T> {
+template <typename T> class FieldRef : public hermes::mem::AoS::FieldView<T> {
 public:
-  Field(const hermes::mem::AoS::FieldView<T> &field_view)
+  FieldRef(const hermes::mem::AoS::FieldView<T> &field_view)
       : hermes::mem::AoS::FieldView<T>(field_view) {}
 
   Element element() const { return element_; }
@@ -54,11 +54,11 @@ private:
 };
 
 template <typename T>
-class Field_RO : public hermes::mem::AoS::ConstFieldView<T> {
+class FieldCRef : public hermes::mem::AoS::ConstFieldView<T> {
 public:
-  Field_RO(const hermes::mem::AoS::ConstFieldView<T> &field_view)
+  FieldCRef(const hermes::mem::AoS::ConstFieldView<T> &field_view)
       : hermes::mem::AoS::ConstFieldView<T>(field_view) {}
-  Field_RO(const Field<T> &field)
+  FieldCRef(const FieldRef<T> &field)
       : hermes::mem::AoS::ConstFieldView<T>(
             static_cast<hermes::mem::AoS::ConstFieldView<T>>(field)),
         //    field.data_, field.stride_, field.offset_, field.size_),
@@ -80,14 +80,14 @@ public:
   void setElement(Element loc);
   Element element() const;
 
-  template <typename T> Field<T> get(h_size field_index) {
-    Field<T> acc(field<T>(field_index));
+  template <typename T> FieldRef<T> get(h_size field_index) {
+    FieldRef<T> acc(field<T>(field_index));
     acc.element_ = element_;
     return acc;
   }
 
-  template <typename T> Field_RO<T> get(h_size field_index) const {
-    Field_RO<T> acc(field<T>(field_index));
+  template <typename T> FieldCRef<T> get(h_size field_index) const {
+    FieldCRef<T> acc(field<T>(field_index));
     acc.element_ = element_;
     return acc;
   }
@@ -118,17 +118,18 @@ public:
     return NaResult::noError();
   }
 
-  template <typename T> Result<Field<T>> get(const std::string &name) {
+  template <typename T> Result<FieldRef<T>> get(const std::string &name) {
     auto it = fields_.find(name);
     if (it != fields_.end())
-      return Result<Field<T>>(it->second.get<T>(0));
+      return Result<FieldRef<T>>(it->second.get<T>(0));
     return NaResult::notFound();
   }
 
-  template <typename T> Result<Field_RO<T>> get(const std::string &name) const {
+  template <typename T>
+  Result<FieldCRef<T>> get(const std::string &name) const {
     auto it = fields_.find(name);
     if (it != fields_.end())
-      return Result<Field_RO<T>>(it->second.get<T>(0));
+      return Result<FieldCRef<T>>(it->second.get<T>(0));
     return NaResult::notFound();
   }
 
@@ -143,7 +144,7 @@ private:
 
 namespace naiades {
 
-HERMES_TO_STRING_TEMPLATED_METHOD_BEGIN(core::Field<T>, typename T)
+HERMES_TO_STRING_TEMPLATED_METHOD_BEGIN(core::FieldRef<T>, typename T)
 HERMES_TO_STRING_METHOD_TITLE
 HERMES_TO_STRING_METHOD_LINE("loc: {}\n", naiades::to_string(object.element()));
 HERMES_TO_STRING_METHOD_LINE("size: {}\n", object.size());

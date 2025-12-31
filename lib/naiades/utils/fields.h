@@ -33,7 +33,7 @@
 namespace naiades::utils {
 
 template <typename FieldType>
-void setField(const geo::Grid2 &grid, core::Field<FieldType> &field,
+void setField(const geo::Grid2 &grid, core::FieldRef<FieldType> &field,
               const std::function<FieldType(const hermes::geo::point2 &)> &f) {
   for (h_size flat_index = 0; flat_index < field.size(); ++flat_index) {
     auto position = grid.position(
@@ -48,18 +48,18 @@ void setField(const geo::Grid2 &grid, core::Field<FieldType> &field,
 /// \param center Center of rotation.
 /// \param omega Angular velocity (in radians per second).
 void zalesakVelocityField(const geo::Grid2 &grid,
-                          core::Field<hermes::geo::vec2> &field,
+                          core::FieldRef<hermes::geo::vec2> &field,
                           const hermes::geo::point2 &center, f32 omega);
 
 /// Divergence-free velocity field
 // The Enright velocity field test is commonly used in a [0,2]^2 domain
 // and over t = [0,2].
 void enrightVelocityField(const geo::Grid2 &grid,
-                          core::Field<hermes::geo::vec2> &field, f32 t);
+                          core::FieldRef<hermes::geo::vec2> &field, f32 t);
 
 namespace sdf {
 
-void sphere(const geo::Grid2 &grid, core::Field<f32> &field,
+void sphere(const geo::Grid2 &grid, core::FieldRef<f32> &field,
             const hermes::geo::point2 &center, f32 radius);
 
 } // namespace sdf

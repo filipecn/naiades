@@ -29,7 +29,6 @@
 
 #include <naiades/core/field.h>
 
-#include <set>
 #include <variant>
 
 namespace naiades::core {
@@ -60,7 +59,7 @@ public:
 
 } // namespace bc
 
-/// Represents an contiguous interval of boundary indices [start,end)
+/// Represents a contiguous interval of boundary indices [start,end)
 struct IndexInterval {
   h_size start;
   h_size end;

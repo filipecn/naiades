@@ -193,14 +193,14 @@ TEST_CASE("sample", "[sampling]") {
                   {"y_face_samples", "y_face_exact"});
   fields.setElementCountFrom(&grid);
 
-  core::Field<f32> exact_fields[] = {
+  core::FieldRef<f32> exact_fields[] = {
       *fields.get<f32>("vertex_exact"), *fields.get<f32>("cell_exact"),
       *fields.get<f32>("x_face_exact"), *fields.get<f32>("y_face_exact")};
 
   for (auto exact : exact_fields)
     utils::setField<f32>(grid, exact, f);
 
-  core::Field<f32> sample_fields[] = {
+  core::FieldRef<f32> sample_fields[] = {
       *fields.get<f32>("vertex_samples"), *fields.get<f32>("cell_samples"),
       *fields.get<f32>("x_face_samples"), *fields.get<f32>("y_face_samples")};
 
@@ -291,7 +291,7 @@ TEST_CASE("sample vectors", "[sampling]") {
                   {"y_face_scalar_samples", "y_face_scalar_exact"});
   fields.setElementCountFrom(&grid);
 
-  core::Field<hermes::geo::vec2> exact_fields[] = {
+  core::FieldRef<hermes::geo::vec2> exact_fields[] = {
       *fields.get<hermes::geo::vec2>("vertex_exact"),
       *fields.get<hermes::geo::vec2>("cell_exact"),
       *fields.get<hermes::geo::vec2>("x_face_exact"),
@@ -300,13 +300,13 @@ TEST_CASE("sample vectors", "[sampling]") {
   for (auto exact : exact_fields)
     utils::setField<hermes::geo::vec2>(grid, exact, f);
 
-  core::Field<hermes::geo::vec2> sample_fields[] = {
+  core::FieldRef<hermes::geo::vec2> sample_fields[] = {
       *fields.get<hermes::geo::vec2>("vertex_samples"),
       *fields.get<hermes::geo::vec2>("cell_samples"),
       *fields.get<hermes::geo::vec2>("x_face_samples"),
       *fields.get<hermes::geo::vec2>("y_face_samples")};
 
-  core::Field<f32> sample_scalar_fields[] = {
+  core::FieldRef<f32> sample_scalar_fields[] = {
       *fields.get<f32>("vertex_scalar_samples"),
       *fields.get<f32>("cell_scalar_samples"),
       *fields.get<f32>("x_face_scalar_samples"),

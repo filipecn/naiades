@@ -31,7 +31,7 @@
 namespace naiades::utils {
 
 void zalesakVelocityField(const geo::Grid2 &grid,
-                          core::Field<hermes::geo::vec2> &field,
+                          core::FieldRef<hermes::geo::vec2> &field,
                           const hermes::geo::point2 &center, f32 omega) {
   for (auto ij : hermes::range2(grid.resolution(field.element()))) {
     auto flat_ij = grid.safeFlatIndex(field.element(), ij);
@@ -41,7 +41,7 @@ void zalesakVelocityField(const geo::Grid2 &grid,
 }
 
 void enrightVelocityField(const geo::Grid2 &grid,
-                          core::Field<hermes::geo::vec2> &field, f32 t) {
+                          core::FieldRef<hermes::geo::vec2> &field, f32 t) {
   for (auto ij : hermes::range2(grid.resolution(field.element()))) {
     auto flat_ij = grid.safeFlatIndex(field.element(), ij);
     auto wp = grid.position(field.element(), ij);

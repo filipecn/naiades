@@ -224,8 +224,8 @@ TEST_CASE("FieldSet", "[core]") {
     vec2_acc[i] = {i * 100.f, i * 10.f};
   }
 
-  auto const_check = [](const Field_RO<i32> &i32_acc,
-                        const Field_RO<hermes::geo::vec2> &vec2_acc,
+  auto const_check = [](const FieldCRef<i32> &i32_acc,
+                        const FieldCRef<hermes::geo::vec2> &vec2_acc,
                         h_size count) {
     for (h_size i = 0; i < count; ++i) {
       REQUIRE(i32_acc[i] == i);
