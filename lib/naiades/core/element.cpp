@@ -38,6 +38,25 @@ namespace naiades {
     break;                                                                     \
   }
 
+HERMES_TO_STRING_METHOD_BEGIN(core::IndexSpace)
+std::string s;
+switch (object) {
+  NAIADES_ENUM_TO_STRING_CASE(core::IndexSpace, GLOBAL)
+  NAIADES_ENUM_TO_STRING_CASE(core::IndexSpace, LOCAL)
+  NAIADES_ENUM_TO_STRING_CASE(core::IndexSpace, CUSTOM)
+}
+HERMES_TO_STRING_METHOD_LINE(s.c_str())
+HERMES_TO_STRING_METHOD_END
+
+HERMES_TO_STRING_METHOD_BEGIN(core::Index)
+if (object) {
+  HERMES_TO_STRING_METHOD_LINE("{}", *object);
+} else {
+  HERMES_TO_STRING_METHOD_LINE("[invalid - ]", *object,
+                               naiades::to_string(object.space()));
+}
+HERMES_TO_STRING_METHOD_END
+
 HERMES_TO_STRING_METHOD_BEGIN(core::element_primitives)
 std::vector<std::string> ss;
 NAIADES_ENUM_TO_STRING_APPEND(core::element_primitive_bits, any)
@@ -121,6 +140,9 @@ std::string s;
 switch (object) {
   NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, none)
   NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, any)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, any_x)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, any_y)
+  NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, any_z)
   NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, x)
   NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, y)
   NAIADES_ENUM_TO_STRING_CASE(core::element_orientation_bits, z)
@@ -162,3 +184,9 @@ HERMES_TO_STRING_METHOD_END
 #undef NAIADES_ENUM_TO_STRING_CASE
 
 } // namespace naiades
+
+namespace naiades::core {
+
+h_size Index::s_invalid_value_ = 1 << 30;
+
+} // namespace naiades::core

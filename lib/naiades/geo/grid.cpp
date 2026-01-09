@@ -24,6 +24,9 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
+#include "hermes/core/debug.h"
+#include "naiades/core/discretization.h"
+#include "naiades/core/element.h"
 #include <naiades/geo/grid.h>
 
 #include <hermes/math/space_filling.h>
@@ -180,6 +183,13 @@ h_size Grid2::flatIndexOffset(core::Element loc) const {
 }
 
 hermes::index2 Grid2::index(core::Element loc, h_size flat_index) const {
+  // force face alignment based on index
+  if (loc.is(core::element_primitive_bits::face)) {
+    if (flat_index >= flatIndexOffset(core::Element::Y_FACE_CENTER))
+      loc = core::Element::Y_FACE_CENTER;
+    else
+      loc = core::Element::X_FACE_CENTER;
+  }
   auto res = resolution(loc);
   auto local_flat_index = flat_index - flatIndexOffset(loc);
   return hermes::index2(local_flat_index % res.width,
@@ -346,4 +356,75 @@ bool Grid2::isBoundary(core::Element loc, h_size i) const {
          ij.j >= res.height - 1;
 }
 
+std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size flat_index,
+                                         core::Element boundary_loc) const {
+  std::vector<core::Neighbour> neighbours;
+  if (loc.is(core::element_primitive_bits::cell)) {
+    bool include_boundary = boundary_loc.is(core::element_primitive_bits::face);
+    auto res = resolution(loc);
+    auto ij = index(loc, flat_index);
+    //
+    //            (i,j+1)
+    //           -------
+    //         |         |
+    //   (i,j) |  [ij]   | (i+1,j)
+    //         |         |
+    //           -------
+    //            (i,j)
+    //
+
+    // bottom
+    if (ij.j == 0) {
+      if (include_boundary)
+        neighbours.push_back(
+            {.element = core::Element::Type::FACE_CENTER,
+             .index = safeFlatIndex(core::Element::Type::X_FACE_CENTER, ij),
+             .is_boundary = true});
+    } else
+      neighbours.push_back({.element = loc,
+                            .index = safeFlatIndex(loc, ij.down()),
+                            .is_boundary = false});
+
+    // right
+    if (ij.i == res.width - 1) {
+      if (include_boundary)
+        neighbours.push_back(
+            {.element = core::Element::Type::FACE_CENTER,
+             .index =
+                 safeFlatIndex(core::Element::Type::Y_FACE_CENTER, ij.right()),
+             .is_boundary = true});
+    } else
+      neighbours.push_back({.element = loc,
+                            .index = safeFlatIndex(loc, ij.right()),
+                            .is_boundary = false});
+
+    // top
+    if (ij.j == res.height - 1) {
+      if (include_boundary)
+        neighbours.push_back({.element = core::Element::Type::FACE_CENTER,
+                              .index = safeFlatIndex(
+                                  core::Element::Type::X_FACE_CENTER, ij.up()),
+                              .is_boundary = true});
+    } else
+      neighbours.push_back({.element = loc,
+                            .index = safeFlatIndex(loc, ij.up()),
+                            .is_boundary = false});
+
+    // left
+    if (ij.i == 0) {
+      if (include_boundary)
+        neighbours.push_back(
+            {.element = core::Element::Type::FACE_CENTER,
+             .index =
+                 safeFlatIndex(core::Element::Type::Y_FACE_CENTER, ij.left()),
+             .is_boundary = true});
+    } else
+      neighbours.push_back({.element = loc,
+                            .index = safeFlatIndex(loc, ij.left()),
+                            .is_boundary = false});
+  } else {
+    HERMES_NOT_IMPLEMENTED;
+  }
+  return neighbours;
+}
 } // namespace naiades::geo

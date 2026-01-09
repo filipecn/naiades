@@ -75,8 +75,12 @@ Result<SmokeSolver2> SmokeSolver2::Config::build() const {
           .setOrientations(core::element_orientation_bits::x),
       core::Element(core::Element::Type::Y_FACE_CENTER)
           .setOrientations(core::element_orientation_bits::neg_x)};
-  for (auto b : boundary_element_types)
-    solver.boundary_.setRegion(solver.grid_.boundary(b));
+  for (auto b : boundary_element_types) {
+    solver.boundary_.addRegion("p", solver.grid_.boundary(b));
+    solver.boundary_.addRegion("v", solver.grid_.boundary(b));
+    solver.boundary_.addRegion("u", solver.grid_.boundary(b));
+    solver.boundary_.addRegion("density", solver.grid_.boundary(b));
+  }
 
   return Result<SmokeSolver2>(std::move(solver));
 }
@@ -176,7 +180,7 @@ core::FieldRef<f32> SmokeSolver2::u() { return *current().get<f32>("u"); }
 
 core::FieldRef<f32> SmokeSolver2::v() { return *current().get<f32>("v"); }
 
-core::Boundary &SmokeSolver2::boundary() { return boundary_; }
+core::BoundarySet &SmokeSolver2::boundary() { return boundary_; }
 
 core::FieldSet &SmokeSolver2::current() {
   return dynamic_fields_[current_step_ % 2];

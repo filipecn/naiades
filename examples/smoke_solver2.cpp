@@ -34,13 +34,13 @@ int main() {
 
   // setup boundary conditions
 
-  auto dirichlet = naiades::core::bc::Dirichlet<f32>::Ptr::shared(0);
-  solver.boundary().set(0, "v", dirichlet);
-  solver.boundary().set(2, "v", dirichlet);
-  solver.boundary().set(1, "u", dirichlet);
-  solver.boundary().set(3, "u", dirichlet);
+  auto dirichlet = naiades::core::bc::Dirichlet::Ptr::shared(0);
+  solver.boundary().set("v", 0, dirichlet);
+  solver.boundary().set("v", 2, dirichlet);
+  solver.boundary().set("u", 1, dirichlet);
+  solver.boundary().set("u", 3, dirichlet);
   solver.boundary().set("density", dirichlet);
-  auto neumann = naiades::core::bc::Neumann<f32>::Ptr::shared();
+  auto neumann = naiades::core::bc::Neumann::Ptr::shared();
   solver.boundary().set("p", neumann);
 
   HERMES_INFO("{}", naiades::to_string(solver.boundary()));

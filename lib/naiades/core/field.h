@@ -29,7 +29,7 @@
 
 #include <naiades/base/debug.h>
 #include <naiades/base/result.h>
-#include <naiades/core/spatial_discretization.h>
+#include <naiades/core/discretization.h>
 
 #include <hermes/geometry/vector.h>
 #include <hermes/storage/aos.h>
@@ -102,7 +102,7 @@ private:
 class FieldSet {
 public:
   NaResult setElementCount(Element loc, h_size count);
-  NaResult setElementCountFrom(SpatialDiscretization2 *sd);
+  NaResult setElementCountFrom(DiscretizationTopology *sd);
 
   template <typename T>
   NaResult add(Element loc, const std::vector<std::string> &field_names) {

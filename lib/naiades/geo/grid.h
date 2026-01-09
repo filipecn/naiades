@@ -27,8 +27,8 @@
 
 #pragma once
 
+#include <naiades/core/discretization.h>
 #include <naiades/core/field.h>
-#include <naiades/core/spatial_discretization.h>
 
 #include <hermes/base/size.h>
 #include <hermes/geometry/bounds.h>
@@ -83,7 +83,7 @@ namespace naiades::geo {
 ///   - flat x-face index (i, j): j * M + i
 ///   - flat y-face index (i, j): M * (N + 1) + j * (M + 1) + i
 ///
-class Grid2 : public core::SpatialDiscretization2 {
+class Grid2 : public core::DiscretizationGeometry2 {
 public:
   struct Config {
     Config &setSize(const hermes::size2 &size);
@@ -149,6 +149,8 @@ public:
   core::element_orientations elementOrientation(core::Element loc,
                                                 h_size index) const override;
   bool isBoundary(core::Element loc, h_size index) const override;
+  std::vector<core::Neighbour> star(core::Element loc, h_size index,
+                                    core::Element boundary_loc) const override;
 
 private:
   hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};

@@ -140,6 +140,42 @@ template <> struct FlagTraits<naiades::core::element_orientation_bits> {
 
 namespace naiades::core {
 
+enum class IndexSpace { GLOBAL, LOCAL, CUSTOM };
+
+/// The element index holds the unique id of an element within a given space.
+struct Index {
+  static Index local(h_size value) { return {value, IndexSpace::LOCAL}; }
+  static Index global(h_size value) { return {value, IndexSpace::GLOBAL}; }
+  static Index invalid() { return {s_invalid_value_, IndexSpace::LOCAL}; }
+
+  Index() : space_{IndexSpace::GLOBAL}, value_{s_invalid_value_} {}
+  Index(h_size value, IndexSpace ctx) : space_{ctx}, value_{value} {}
+
+  Index &operator=(h_size i) {
+    value_ = i;
+    return *this;
+  }
+
+  bool operator==(const Index &rhs) const {
+    return space_ == rhs.space_ && value_ == rhs.value_;
+  }
+
+  operator h_size() const { return value_; };
+  operator bool() const { return isValid(); };
+
+  h_size operator*() const { return value_; };
+  bool isValid() const { return value_ != s_invalid_value_; }
+
+  IndexSpace space() const { return space_; }
+
+private:
+  IndexSpace space_{IndexSpace::GLOBAL};
+  h_size value_;
+  static h_size s_invalid_value_;
+
+  NAIADES_to_string_FRIEND(Index);
+};
+
 class Element {
 public:
   ///      v --- V ---- v    v - VERTEX_CENTER
@@ -324,6 +360,7 @@ private:
 
 namespace naiades {
 
+HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::IndexSpace)
 HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::element_primitive_bits)
 HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::element_alignment_bits)
 HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::element_orientation_bits)

@@ -2,6 +2,7 @@ add_executable(naiades_tests
   core_tests.cpp
   geo_tests.cpp
   sampling_tests.cpp
+  utils_tests.cpp
 )
 
 target_link_options(naiades_tests INTERFACE --coverage)

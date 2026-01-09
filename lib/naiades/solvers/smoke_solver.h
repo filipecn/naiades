@@ -66,7 +66,7 @@ public:
   core::FieldRef<f32> density();
   core::FieldRef<f32> u();
   core::FieldRef<f32> v();
-  core::Boundary &boundary();
+  core::BoundarySet &boundary();
 
 private:
   core::FieldSet &current();
@@ -88,7 +88,7 @@ private:
   core::FieldSet static_fields_;
   geo::Grid2 grid_;
   // Bounday conditions
-  core::Boundary boundary_;
+  core::BoundarySet boundary_;
 };
 
 } // namespace naiades::solvers

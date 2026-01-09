@@ -63,7 +63,7 @@ NaResult FieldSet::setElementCount(Element loc, h_size count) {
   return NaResult::noError();
 }
 
-NaResult FieldSet::setElementCountFrom(SpatialDiscretization2 *sd) {
+NaResult FieldSet::setElementCountFrom(DiscretizationTopology *sd) {
   for (auto &item : fields_) {
     auto count = sd->elementCount(item.second.element());
     HERMES_ASSERT(count);

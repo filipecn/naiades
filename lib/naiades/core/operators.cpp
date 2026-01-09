@@ -24,9 +24,52 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
+#include "hermes/core/debug.h"
 #include <naiades/core/operators.h>
 
+#include <naiades/core/boundary.h>
+
+namespace naiades {
+
+HERMES_TO_STRING_METHOD_BEGIN(core::DiscreteOperator)
+HERMES_TO_STRING_METHOD_MAP_FIELD_BEGIN(nodes_, index, weight)
+HERMES_TO_STRING_METHOD_LINE("({}: {})\n", index, weight)
+HERMES_TO_STRING_METHOD_MAP_FIELD_END
+HERMES_TO_STRING_METHOD_FIELD(constant_);
+HERMES_TO_STRING_METHOD_END
+
+} // namespace naiades
+
 namespace naiades::core {
+
+DiscreteOperator
+DiscreteOperator::laplacian(DiscretizationGeometry2::Ptr discretization,
+                            const Boundary &boundary, Element loc, h_size index,
+                            Element boundary_loc) {
+  DiscreteOperator op;
+  // build stencil
+  auto neighbours = discretization->star(loc, index, boundary_loc);
+  op.add(index, -(int)neighbours.size());
+  // resolve stencil
+  for (const auto &n : neighbours)
+    if (n.is_boundary)
+      op += boundary.resolve(n.index, index) * 1.0;
+    else
+      op.add(n.index, 1.0);
+  return op;
+}
+
+DiscreteOperator DiscreteOperator::divergence(const geo::Grid2 &grid,
+                                              h_size index) {
+  DiscreteOperator op;
+  const auto d = grid.cellSize();
+  const auto ij = grid.index(Element::Type::CELL_CENTER, index);
+  op.add(grid.flatIndex(Element::Type::X_FACE_CENTER, ij.up()), -0.5 * d.y);
+  op.add(grid.flatIndex(Element::Type::X_FACE_CENTER, ij), 0.5 * d.y);
+  op.add(grid.flatIndex(Element::Type::Y_FACE_CENTER, ij.right()), -0.5 * d.x);
+  op.add(grid.flatIndex(Element::Type::Y_FACE_CENTER, ij), 0.5 * d.x);
+  return op;
+}
 
 /// Compute divergence field.
 void divergence(const geo::Grid2 &grid, const FieldCRef<f32> &u,
@@ -45,5 +88,52 @@ void divergence(const geo::Grid2 &grid, const FieldCRef<f32> &u,
   }
 #undef AT
 }
+
+DiscreteOperator::DiscreteOperator(const std::vector<h_size> &indices,
+                                   const std::vector<real_t> &weights) {
+  HERMES_ASSERT(indices.size() == weights.size());
+  for (h_size i = 0; i < indices.size(); ++i)
+    nodes_[indices[i]] = weights[i];
+}
+
+void DiscreteOperator::add(h_size index, real_t weight) {
+  nodes_[index] += weight;
+}
+
+void DiscreteOperator::setConstant(real_t s) { constant_ = s; }
+
+real_t DiscreteOperator::constant() const { return constant_; }
+
+real_t DiscreteOperator::operator[](h_size index) const {
+  auto it = nodes_.find(index);
+  if (it == nodes_.end())
+    return 0;
+  return it->second;
+}
+
+real_t &DiscreteOperator::operator[](h_size index) {
+  static real_t s_dummy = 0;
+  auto it = nodes_.find(index);
+  if (it == nodes_.end())
+    return s_dummy;
+  return it->second;
+}
+
+DiscreteOperator &DiscreteOperator::operator+=(const DiscreteOperator &rhs) {
+  for (const auto &node : rhs.nodes_)
+    nodes_[node.first] += node.second;
+  constant_ += rhs.constant_;
+  return *this;
+}
+
+DiscreteOperator DiscreteOperator::operator*(real_t s) const {
+  DiscreteOperator op;
+  op.constant_ = constant_ * s;
+  for (auto &node : nodes_)
+    op.nodes_[node.first] = node.second * s;
+  return op;
+}
+
+h_size DiscreteOperator::size() const { return nodes_.size(); }
 
 } // namespace naiades::core

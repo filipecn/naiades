@@ -1,7 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <naiades/core/boundary.h>
+#include <naiades/core/discretization.h>
 #include <naiades/core/field.h>
-#include <naiades/core/spatial_discretization.h>
+#include <naiades/core/operators.h>
+#include <naiades/geo/grid.h>
 
 using namespace naiades;
 using namespace naiades::core;
@@ -233,4 +237,65 @@ TEST_CASE("FieldSet", "[core]") {
     }
   };
   const_check(i32_acc, vec2_acc, count);
+}
+
+TEST_CASE("Discrete Operator", "[core]") {
+  SECTION("Sanity") {
+    DiscreteOperator op;
+    REQUIRE(op.size() == 0);
+    REQUIRE_THAT(op.constant(), Catch::Matchers::WithinAbs(0, 1e-8));
+    op.add(1, 1.0);
+    DiscreteOperator op2;
+    op2.add(1, 1.0);
+    op2.add(2, 1.0);
+    op2.add(2, 1.0);
+    op += op2;
+    REQUIRE_THAT(op[1], Catch::Matchers::WithinAbs(2.0, 1e-8));
+    REQUIRE_THAT(op[2], Catch::Matchers::WithinAbs(2.0, 1e-8));
+  }
+  SECTION("grid") {
+    auto grid = geo::Grid2::Config()
+                    .setCellSize({0.1, 0.2})
+                    .setSize({3, 4})
+                    .build()
+                    .value();
+    core::BoundarySet bs;
+
+    auto boundary_element_types = {
+        core::Element(core::Element::Type::X_FACE_CENTER)
+            .setOrientations(core::element_orientation_bits::neg_y),
+        core::Element(core::Element::Type::X_FACE_CENTER)
+            .setOrientations(core::element_orientation_bits::y),
+        core::Element(core::Element::Type::Y_FACE_CENTER)
+            .setOrientations(core::element_orientation_bits::x),
+        core::Element(core::Element::Type::Y_FACE_CENTER)
+            .setOrientations(core::element_orientation_bits::neg_x)};
+    for (auto b : boundary_element_types)
+      bs.addRegion("p", grid.boundary(b));
+
+    auto dirichlet = naiades::core::bc::Dirichlet::Ptr::shared(10);
+    auto neumann = naiades::core::bc::Neumann::Ptr::shared();
+    bs.set("p", neumann);
+    bs.set("p", 0, dirichlet);
+
+    SECTION("Laplacian") {
+      auto op = DiscreteOperator::laplacian(
+          &grid, bs["p"], core::Element::Type::CELL_CENTER,
+          grid.flatIndex(core::Element::Type::CELL_CENTER, {1, 1}),
+          core::Element::Type::FACE_CENTER);
+      HERMES_WARN("{}", naiades::to_string(op));
+
+      op = DiscreteOperator::laplacian(
+          &grid, bs["p"], core::Element::Type::CELL_CENTER,
+          grid.flatIndex(core::Element::Type::CELL_CENTER, {0, 1}),
+          core::Element::Type::FACE_CENTER);
+      HERMES_WARN("{}", naiades::to_string(op));
+
+      op = DiscreteOperator::laplacian(
+          &grid, bs["p"], core::Element::Type::CELL_CENTER,
+          grid.flatIndex(core::Element::Type::CELL_CENTER, {0, 0}),
+          core::Element::Type::FACE_CENTER);
+      HERMES_WARN("{}", naiades::to_string(op));
+    }
+  }
 }

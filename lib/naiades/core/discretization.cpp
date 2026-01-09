@@ -24,8 +24,15 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
-#include <naiades/core/spatial_discretization.h>
+#include <naiades/core/discretization.h>
 
-#include <hermes/math/space_filling.h>
+namespace naiades {
+
+HERMES_TO_STRING_METHOD_BEGIN(core::Neighbour)
+HERMES_TO_STRING_METHOD_LINE("[{} {} {}]", naiades::to_string(object.element),
+                             object.index, object.is_boundary)
+HERMES_TO_STRING_METHOD_END
+
+} // namespace naiades
 
 namespace naiades::core {} // namespace naiades::core

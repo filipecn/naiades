@@ -28,6 +28,7 @@
 #pragma once
 
 #include <naiades/core/field.h>
+#include <naiades/core/operators.h>
 
 namespace naiades::core::blas {
 
@@ -36,6 +37,20 @@ template <typename T> void akb(FieldRef<T> &a, T k, const FieldRef<T> &b) {
   HERMES_ASSERT(a.size() == b.size());
   for (h_size i = 0; i < a.size(); ++i)
     a[i] += k * b[i];
+}
+
+inline NaResult solve(const std::vector<DiscreteOperator> &stencils,
+                      const Boundary &boundary, FieldRef<f32> &x,
+                      const FieldRef<f32> &x0, f32 a, f32 c) {
+  const h_size iter = 4;
+  const f32 inv_c = 1.f / c;
+  const auto x_element = x.element();
+  for (h_size k = 0; k < iter; ++k) {
+    for (h_size i = 0; i < stencils.size(); ++i) {
+      x[i] = (x0[i] + stencils[i](x)) * inv_c;
+    }
+  }
+  return NaResult::noError();
 }
 
 } // namespace naiades::core::blas

@@ -223,7 +223,7 @@ TEST_CASE("regular grid 2", "[geo]") {
       }
     }
   }
-  SECTION("interface") {
+  SECTION("Discretization Geometry") {
     u32 N = 3;
     u32 M = 5;
     auto grid = Grid2::Config().setSize({M, N}).build().value();
@@ -242,6 +242,11 @@ TEST_CASE("regular grid 2", "[geo]") {
               grid.resolution(core::Element::X_FACE_CENTER).total() +
                   grid.resolution(core::Element::Y_FACE_CENTER).total());
     }
+  }
+  SECTION("Discretization Topology") {
+    u32 N = 3;
+    u32 M = 5;
+    auto grid = Grid2::Config().setSize({M, N}).build().value();
     SECTION("indices") {
       auto indices = grid.indices(core::Element::Type::CELL_CENTER,
                                   core::Element::Type::VERTEX_CENTER);
@@ -359,6 +364,31 @@ TEST_CASE("regular grid 2", "[geo]") {
           fij++;
         }
       }
+    }
+    SECTION("start") {
+      auto interior_star =
+          grid.star(core::Element::CELL_CENTER,
+                    grid.flatIndex(core::Element::CELL_CENTER, {1, 1}),
+                    core::Element::FACE_CENTER);
+      REQUIRE(interior_star.size() == 4);
+      for (auto n : interior_star)
+        HERMES_INFO(
+            "{} {}", naiades::to_string(n),
+            hermes::to_string(grid.index(core::Element::CELL_CENTER, n.index)));
+      auto boundary_star =
+          grid.star(core::Element::CELL_CENTER,
+                    grid.flatIndex(core::Element::CELL_CENTER, {0, 0}),
+                    core::Element::FACE_CENTER);
+      for (auto n : boundary_star)
+        if (n.is_boundary) {
+          HERMES_INFO("{} {}", naiades::to_string(n),
+                      hermes::to_string(
+                          grid.index(core::Element::FACE_CENTER, n.index)));
+        } else {
+          HERMES_INFO("{} {}", naiades::to_string(n),
+                      hermes::to_string(
+                          grid.index(core::Element::CELL_CENTER, n.index)));
+        }
     }
   }
 }

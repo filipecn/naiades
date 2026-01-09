@@ -28,28 +28,8 @@
 
 namespace naiades {
 
-HERMES_TO_STRING_METHOD_BEGIN(core::IndexInterval)
-HERMES_TO_STRING_METHOD_LINE("[{}, {})", object.start, object.end);
-HERMES_TO_STRING_METHOD_END
-
 HERMES_TO_STRING_METHOD_BEGIN(core::Boundary::Region)
-HERMES_TO_STRING_METHOD_LINE(
-    "values: {}\n",
-    std::visit(
-        core::IndexSetOverloaded{
-            [](std::monostate s) { return std::string(); },
-            [](const std::vector<h_size> &indices) -> std::string {
-              return hermes::cstr::join(indices, ", ", 10);
-            },
-            [](const std::vector<core::IndexInterval> &indices) -> std::string {
-              auto f = [](const core::IndexInterval &interval) -> std::string {
-                return naiades::to_string(interval);
-              };
-              return hermes::cstr::join<std::vector<core::IndexInterval>,
-                                        core::IndexInterval>(indices, f, ", ",
-                                                             10);
-            }},
-        object.index_set_));
+HERMES_TO_STRING_METHOD_NAIADES_FIELD(index_set_);
 HERMES_TO_STRING_METHOD_END
 
 HERMES_TO_STRING_METHOD_BEGIN(core::Boundary)
@@ -60,48 +40,99 @@ HERMES_TO_STRING_METHOD_LINE("{}\n", naiades::to_string(region));
 HERMES_TO_STRING_METHOD_MAP_FIELD_END
 HERMES_TO_STRING_METHOD_END
 
+HERMES_TO_STRING_METHOD_BEGIN(core::BoundarySet)
+HERMES_TO_STRING_METHOD_TITLE
+HERMES_TO_STRING_METHOD_MAP_FIELD_BEGIN(boundaries_, name, boundary)
+HERMES_TO_STRING_METHOD_LINE("{}", naiades::to_string(boundary));
+HERMES_TO_STRING_METHOD_MAP_FIELD_END
+HERMES_TO_STRING_METHOD_END
+
 } // namespace naiades
 
 namespace naiades::core {
 
-void Boundary::Region::setCondition(const std::string &field_name,
-                                    bc::Condition<f32>::Ptr condition) {}
+void Boundary::Region::setIndices(const std::vector<h_size> &indices) {
+  index_set_.set(indices);
+}
 
-h_size Boundary::setRegion(const std::vector<h_size> &indices) {
-  if (indices.empty())
-    return NaResult::inputError();
-  std::vector<IndexInterval> intervals;
-  h_size last_index = indices.front();
-  IndexInterval interval;
-  interval.start = last_index;
-  interval.end = last_index + 1;
-  for (auto index : indices) {
-    if (index > last_index + 1) {
-      interval.end = last_index + 1;
-      intervals.emplace_back(interval);
-      interval.start = index;
-      interval.end = index + 1;
-    }
-    last_index = index;
-  }
-  interval.end = last_index + 1;
-  intervals.emplace_back(interval);
+void Boundary::Region::setCondition(bc::BoundaryCondition::Ptr condition) {
+  condition_ = condition;
+}
 
+Boundary::Region::Region(const std::vector<h_size> &indices) {
+  setIndices(indices);
+}
+
+f32 Boundary::compute(h_size boundary_index, h_size interior_index,
+                      FieldRef<f32> field) const {
+  auto op = resolve(boundary_index, interior_index);
+  return op(field);
+}
+
+bool Boundary::Region::contains(const Index &index) const {
+  return index_set_.contains(index);
+}
+
+DiscreteOperator Boundary::Region::resolve(h_size boundary_index,
+                                           h_size interior_index) const {
+  return condition_->resolve(boundary_index, interior_index);
+}
+
+h_size Boundary::addRegion(const std::vector<h_size> &indices) {
+  h_size new_region_index = regions_.size();
   regions_.emplace_back();
-  regions_.back().index_set_ = intervals;
-  return NaResult::noError();
+  regions_.back().setIndices(indices);
+  return new_region_index;
 }
 
-void Boundary::set(h_size region_index, const std::string &field_name,
-                   bc::Condition<f32>::Ptr condition) {
+void Boundary::setCondition(h_size region_index,
+                            bc::BoundaryCondition::Ptr condition) {
   HERMES_ASSERT(region_index < regions_.size());
-  regions_[region_index].setCondition(field_name, condition);
+  regions_[region_index].setCondition(condition);
 }
 
-void Boundary::set(const std::string &field_name,
-                   bc::Condition<f32>::Ptr condition) {
-  for (auto &region : regions_)
-    region.setCondition(field_name, condition);
+void Boundary::setCondition(bc::BoundaryCondition::Ptr condition) {
+  for (h_size i = 0; i < regions_.size(); ++i)
+    setCondition(i, condition);
+}
+
+DiscreteOperator Boundary::resolve(h_size boundary_index,
+                                   h_size interior_index) const {
+  for (const auto &region : regions_)
+    if (region.contains(Index::global(boundary_index)))
+      return region.resolve(boundary_index, interior_index);
+  // HERMES_ASSERT(false);
+  return {};
+}
+
+void Boundary::Region::compute(FieldCRef<f32> interior_field,
+                               FieldRef<f32> field) {
+  if (stencils_.size() != index_set_.size())
+    stencils_.resize(index_set_.size());
+  // compute the stencil for each boundary index
+}
+
+h_size BoundarySet::addRegion(const std::string &field_name,
+                              const std::vector<h_size> &indices) {
+  return boundaries_[field_name].addRegion(indices);
+}
+
+void BoundarySet::set(const std::string &field_name, h_size region_index,
+                      bc::BoundaryCondition::Ptr condition) {
+  boundaries_[field_name].setCondition(region_index, condition);
+}
+
+void BoundarySet::set(const std::string &field_name,
+                      bc::BoundaryCondition::Ptr condition) {
+  boundaries_[field_name].setCondition(condition);
+}
+
+const Boundary &BoundarySet::operator[](const std::string &field_name) const {
+  static Boundary s_dummy;
+  auto it = boundaries_.find(field_name);
+  if (it == boundaries_.end())
+    return s_dummy;
+  return it->second;
 }
 
 } // namespace naiades::core

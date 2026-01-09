@@ -1,15 +1,16 @@
 # ##############################################################################
-# naiades lib                                                                ##
+# naiades lib                                                                 ##
 # ##############################################################################
 set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/base/debug.h
   ${NAIADES_SOURCE_DIR}/naiades/base/result.h
 
   ${NAIADES_SOURCE_DIR}/naiades/core/boundary.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/boundary_conditions.h
   ${NAIADES_SOURCE_DIR}/naiades/core/element.h
   ${NAIADES_SOURCE_DIR}/naiades/core/field.h
   ${NAIADES_SOURCE_DIR}/naiades/core/operators.h
-  ${NAIADES_SOURCE_DIR}/naiades/core/spatial_discretization.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/discretization.h
 
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.h
 
@@ -30,7 +31,7 @@ set(NAIADES_SOURCES
   ${NAIADES_SOURCE_DIR}/naiades/core/element.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/operators.cpp
-  ${NAIADES_SOURCE_DIR}/naiades/core/spatial_discretization.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/core/discretization.cpp
   
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
 

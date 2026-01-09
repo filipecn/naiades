@@ -37,22 +37,29 @@
 
 namespace naiades::core {
 
+/// A Stencil is a set of elements that connect to a center element by some
+/// criteria.
+struct Neighbour {
+  Element element;
+  h_size index;
+  bool is_boundary;
+
+  NAIADES_to_string_FRIEND(Neighbour);
+};
+
 /// A simulation mesh holds the geometry and topology of the discretization and
 /// other information required by simulation algorithms.
 /// \note Mesh can only be setup by friend GeometryType classes.
-class SpatialDiscretization2 {
+class DiscretizationTopology {
 public:
-  SpatialDiscretization2() noexcept {}
-  virtual ~SpatialDiscretization2() noexcept {}
+  using Ptr = hermes::Ref<DiscretizationTopology>;
+
+  DiscretizationTopology() noexcept {}
+  virtual ~DiscretizationTopology() noexcept {}
 
   /// \param loc
   /// \return Total number of locations of a given element.
   virtual h_size elementCount(Element loc) const = 0;
-  /// Get the flat list of positions of an element type.
-  /// \note The indices of the list match the element index.
-  /// \note This returns a copy of the list.
-  /// \param loc Element.
-  virtual std::vector<hermes::geo::point2> positions(Element loc) const = 0;
   /// \brief Get the lists of indices of an element type.
   /// Elements may consist of a set of different sub-elements.
   /// Ex: A polygonal cell contains a set of vertices and a set of faces.
@@ -61,12 +68,6 @@ public:
   /// \return The lists of sub-elements of all elements.
   virtual std::vector<std::vector<h_size>>
   indices(Element element, Element sub_element) const = 0;
-  /// Get the position of an element.
-  /// \note This returns a copy of the position.
-  /// \param loc Element.
-  /// \param index Element index.
-  /// \return The element position in world coordinates.
-  virtual hermes::geo::point2 position(Element loc, h_size index) const = 0;
   /// Get the indices of an element at the boundary.
   /// \note This returns a copy of the indices.
   /// \param loc Element.
@@ -91,6 +92,29 @@ public:
   /// \param index Element index.
   /// \return True if this is the index of a boundary element.
   virtual bool isBoundary(Element loc, h_size index) const = 0;
+  /// The star neighbourhood of a given element.
+  /// \param loc Element type.
+  /// \param index Center index.
+  /// \param boundary_loc Boundary elements included in the star.
+  /// \return List of neighbours of the given element.
+  virtual std::vector<Neighbour> star(Element loc, h_size index,
+                                      Element boundary_loc) const = 0;
+};
+
+class DiscretizationGeometry2 : public DiscretizationTopology {
+public:
+  using Ptr = hermes::Ref<DiscretizationGeometry2>;
+  /// Get the position of an element.
+  /// \note This returns a copy of the position.
+  /// \param loc Element.
+  /// \param index Element index.
+  /// \return The element position in world coordinates.
+  virtual hermes::geo::point2 position(Element loc, h_size index) const = 0;
+  /// Get the flat list of positions of an element type.
+  /// \note The indices of the list match the element index.
+  /// \note This returns a copy of the list.
+  /// \param loc Element.
+  virtual std::vector<hermes::geo::point2> positions(Element loc) const = 0;
 };
 
 } // namespace naiades::core
