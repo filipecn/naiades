@@ -299,6 +299,7 @@ TEST_CASE("regular grid 2", "[geo]") {
         h_size i = 0;
         for (auto ij : hermes::range2(
                  grid.resolution(core::Element::Type::X_FACE_CENTER))) {
+          HERMES_UNUSED_VARIABLE(ij);
           REQUIRE(grid.elementAlignment(core::Element::Type::FACE_CENTER, i) ==
                   core::element_alignment_bits::x);
           i++;
@@ -308,6 +309,7 @@ TEST_CASE("regular grid 2", "[geo]") {
         h_size i = grid.resolution(core::Element::Type::X_FACE_CENTER).total();
         for (auto ij : hermes::range2(
                  grid.resolution(core::Element::Type::Y_FACE_CENTER))) {
+          HERMES_UNUSED_VARIABLE(ij);
           REQUIRE(grid.elementAlignment(core::Element::Type::FACE_CENTER, i) ==
                   core::element_alignment_bits::y);
           i++;
@@ -328,6 +330,7 @@ TEST_CASE("regular grid 2", "[geo]") {
         h_size i = 0;
         for (auto ij : hermes::range2(
                  grid.resolution(core::Element::Type::X_FACE_CENTER))) {
+          HERMES_UNUSED_VARIABLE(ij);
           if (i < M)
             REQUIRE(
                 grid.elementOrientation(core::Element::Type::FACE_CENTER, i) ==
@@ -348,6 +351,7 @@ TEST_CASE("regular grid 2", "[geo]") {
         auto fij = 0;
         for (auto ij : hermes::range2(
                  grid.resolution(core::Element::Type::Y_FACE_CENTER))) {
+          HERMES_UNUSED_VARIABLE(ij);
           if (fij % (M + 1) == 0)
             REQUIRE(
                 grid.elementOrientation(core::Element::Type::FACE_CENTER, i) ==
@@ -389,6 +393,20 @@ TEST_CASE("regular grid 2", "[geo]") {
                       hermes::to_string(
                           grid.index(core::Element::CELL_CENTER, n.index)));
         }
+    }
+    SECTION("neighbours") {
+      {
+        auto element = core::Element::Type::X_FACE_CENTER;
+        auto res = grid.resolution(element);
+        for (auto ij : hermes::range2(res)) {
+          auto ns = grid.neighbours(element, grid.flatIndex(element, ij),
+                                    core::Element::Type::CELL_CENTER);
+          if (ij.j == 0 || ij.j == static_cast<i32>(res.height) - 1)
+            REQUIRE(ns.size() == 1);
+          else
+            REQUIRE(ns.size() == 2);
+        }
+      }
     }
   }
 }

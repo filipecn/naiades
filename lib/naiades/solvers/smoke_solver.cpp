@@ -76,10 +76,11 @@ Result<SmokeSolver2> SmokeSolver2::Config::build() const {
       core::Element(core::Element::Type::Y_FACE_CENTER)
           .setOrientations(core::element_orientation_bits::neg_x)};
   for (auto b : boundary_element_types) {
-    solver.boundary_.addRegion("p", solver.grid_.boundary(b));
-    solver.boundary_.addRegion("v", solver.grid_.boundary(b));
-    solver.boundary_.addRegion("u", solver.grid_.boundary(b));
-    solver.boundary_.addRegion("density", solver.grid_.boundary(b));
+    auto bd = solver.grid_.boundary(b);
+    solver.boundary_.addRegion("p", bd);
+    solver.boundary_.addRegion("v", bd);
+    solver.boundary_.addRegion("u", bd);
+    solver.boundary_.addRegion("density", bd);
   }
 
   return Result<SmokeSolver2>(std::move(solver));

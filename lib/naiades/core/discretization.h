@@ -99,6 +99,13 @@ public:
   /// \return List of neighbours of the given element.
   virtual std::vector<Neighbour> star(Element loc, h_size index,
                                       Element boundary_loc) const = 0;
+  /// The direct neighbourhood of elements for a given element.
+  /// \param loc Element type.
+  /// \param index Center index.
+  /// \param neighbour_loc neighbour element type.
+  /// \return List of neighbours of the given element.
+  virtual std::vector<h_size> neighbours(Element loc, h_size index,
+                                         Element neighbour_loc) const = 0;
 };
 
 class DiscretizationGeometry2 : public DiscretizationTopology {

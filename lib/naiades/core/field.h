@@ -47,6 +47,14 @@ public:
 
   Element element() const { return element_; }
 
+  FieldRef &operator=(const T &value) {
+    auto n = this->size();
+    for (h_size i = 0; i < n; ++i) {
+      (*this)[i] = value;
+    }
+    return *this;
+  }
+
 private:
   friend class FieldGroup;
 

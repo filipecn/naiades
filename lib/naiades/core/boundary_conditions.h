@@ -39,8 +39,8 @@ class BoundaryCondition {
 public:
   using Ptr = hermes::Ref<BoundaryCondition>;
 
-  virtual DiscreteOperator resolve(h_size boundary_index,
-                                   h_size interior_index) const = 0;
+  virtual DiscreteOperator resolve(DiscretizationTopology::Ptr d_t,
+                                   h_size boundary_index) const = 0;
 };
 
 /// Dirichlet
@@ -48,11 +48,12 @@ class Dirichlet : public BoundaryCondition {
 public:
   using Ptr = hermes::Ref<Dirichlet>;
 
-  Dirichlet() = default;
   Dirichlet(const real_t &fixed_value) : value_(fixed_value) {}
 
-  DiscreteOperator resolve(h_size boundary_index,
-                           h_size interior_index) const override {
+  DiscreteOperator resolve(DiscretizationTopology::Ptr d_t,
+                           h_size boundary_index) const override {
+    HERMES_UNUSED_VARIABLE(d_t);
+    HERMES_UNUSED_VARIABLE(boundary_index);
     DiscreteOperator op;
     std::visit(
         [&](auto &&arg) {
@@ -75,10 +76,12 @@ class Neumann : public BoundaryCondition {
 public:
   using Ptr = hermes::Ref<Neumann>;
 
-  DiscreteOperator resolve(h_size boundary_index,
-                           h_size interior_index) const override {
+  DiscreteOperator resolve(DiscretizationTopology::Ptr d_t,
+                           h_size boundary_index) const override {
+    HERMES_UNUSED_VARIABLE(d_t);
+    HERMES_UNUSED_VARIABLE(boundary_index);
     DiscreteOperator op;
-    op.add(interior_index, 1.0);
+    // op.add(interior_index, 1.0);
     return op;
   }
 };

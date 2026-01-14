@@ -171,7 +171,10 @@ TEST_CASE("sample", "[sampling]") {
     return p.x * p.x - p.x * p.y + p.y * p.y;
   };
 
-  auto reset = [](const hermes::geo::point2 &p) -> f32 { return 0; };
+  auto reset = [](const hermes::geo::point2 &p) -> f32 {
+    HERMES_UNUSED_VARIABLE(p);
+    return 0;
+  };
 
   auto param = GENERATE(SampleTestCaseParameters(0.001, 1e-4, 1e-3));
 
@@ -248,17 +251,17 @@ TEST_CASE("sample", "[sampling]") {
 
 TEST_CASE("sample vectors", "[sampling]") {
 
-  auto fx = [](const hermes::geo::point2 &p) -> f32 {
-    return p.x * p.x - p.x * p.y + p.y * p.y;
+  auto resetx = [](const hermes::geo::point2 &p) -> f32 {
+    HERMES_UNUSED_VARIABLE(p);
+    return 0;
   };
-
-  auto resetx = [](const hermes::geo::point2 &p) -> f32 { return 0; };
 
   auto f = [](const hermes::geo::point2 &p) -> hermes::geo::vec2 {
     return {p.x * p.x - p.x * p.y + p.y * p.y, p.x * p.x + p.y * p.y};
   };
 
   auto reset = [](const hermes::geo::point2 &p) -> hermes::geo::vec2 {
+    HERMES_UNUSED_VARIABLE(p);
     return {};
   };
 

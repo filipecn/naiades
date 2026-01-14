@@ -231,7 +231,7 @@ TEST_CASE("FieldSet", "[core]") {
   auto const_check = [](const FieldCRef<i32> &i32_acc,
                         const FieldCRef<hermes::geo::vec2> &vec2_acc,
                         h_size count) {
-    for (h_size i = 0; i < count; ++i) {
+    for (i32 i = 0; i < static_cast<i32>(count); ++i) {
       REQUIRE(i32_acc[i] == i);
       REQUIRE(vec2_acc[i] == hermes::geo::vec2{i * 100.f, i * 10.f});
     }
@@ -259,7 +259,10 @@ TEST_CASE("Discrete Operator", "[core]") {
                     .setSize({3, 4})
                     .build()
                     .value();
-    core::BoundarySet bs;
+    core::BoundarySet bs = BoundarySet::Config()
+                               .setElement(core::Element::Type::FACE_CENTER)
+                               .setTopology(&grid)
+                               .build();
 
     auto boundary_element_types = {
         core::Element(core::Element::Type::X_FACE_CENTER)
@@ -277,6 +280,38 @@ TEST_CASE("Discrete Operator", "[core]") {
     auto neumann = naiades::core::bc::Neumann::Ptr::shared();
     bs.set("p", neumann);
     bs.set("p", 0, dirichlet);
+
+    REQUIRE(bs["p"].resolve() == NaResult::noError());
+
+    SECTION("compute") {
+      auto dirichlet_v = naiades::core::bc::Dirichlet::Ptr::shared(10);
+      auto dirichlet_u = naiades::core::bc::Dirichlet::Ptr::shared(20);
+      bs.addRegion("u", grid.boundary(core::Element::Type::U_FACE_CENTER));
+      bs.addRegion("v", grid.boundary(core::Element::Type::V_FACE_CENTER));
+      bs.set("u", dirichlet_u);
+      bs.set("v", dirichlet_v);
+
+      REQUIRE(bs["u"].resolve() == NaResult::noError());
+      REQUIRE(bs["v"].resolve() == NaResult::noError());
+
+      FieldSet fields;
+      fields.add<f32>(core::Element::Type::V_FACE_CENTER, {"v"});
+      fields.add<f32>(core::Element::Type::U_FACE_CENTER, {"u"});
+      fields.setElementCountFrom(&grid);
+      auto v = fields.get<f32>("v").value();
+      auto u = fields.get<f32>("u").value();
+      v = 0.0f;
+      u = 0.0f;
+
+      HERMES_WARN("u:\n{}", naiades::spatialFieldString<f32>(grid, u));
+      HERMES_WARN("v:\n{}", naiades::spatialFieldString<f32>(grid, v));
+
+      bs["u"].compute(u, u);
+      bs["v"].compute(v, v);
+
+      HERMES_WARN("v:\n{}", naiades::spatialFieldString<f32>(grid, v));
+      HERMES_WARN("u:\n{}", naiades::spatialFieldString<f32>(grid, u));
+    }
 
     SECTION("Laplacian") {
       auto op = DiscreteOperator::laplacian(

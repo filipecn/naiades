@@ -20,5 +20,6 @@ endif(NAIADES_INCLUDE_TO_STRING_METHODS)
 target_link_libraries(smoke_solver2 PRIVATE 
   naiades
   hermes
+  gcov
 )
 

@@ -304,7 +304,7 @@ std::vector<h_size> Grid2::boundary(core::Element loc) const {
     if (loc.has(core::element_orientation_bits::x))
       for (h_size i = 0; i < v_face_res.height; ++i)
         b.emplace_back(
-            flatIndex(v_face_e, hermes::index2(h_face_res.width - 1, i)));
+            flatIndex(v_face_e, hermes::index2(h_face_res.width, i)));
   } else {
     const auto res = resolution(loc);
     const auto range = hermes::range2(res);
@@ -352,8 +352,8 @@ core::element_orientations Grid2::elementOrientation(core ::Element loc,
 bool Grid2::isBoundary(core::Element loc, h_size i) const {
   auto res = resolution(loc);
   auto ij = index(loc, i);
-  return ij.i <= 0 || ij.i >= res.width - 1 || ij.j <= 0 ||
-         ij.j >= res.height - 1;
+  return ij.i <= 0 || ij.i >= static_cast<i32>(res.width) - 1 || ij.j <= 0 ||
+         ij.j >= static_cast<i32>(res.height) - 1;
 }
 
 std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size flat_index,
@@ -386,7 +386,7 @@ std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size flat_index,
                             .is_boundary = false});
 
     // right
-    if (ij.i == res.width - 1) {
+    if (ij.i == static_cast<i32>(res.width) - 1) {
       if (include_boundary)
         neighbours.push_back(
             {.element = core::Element::Type::FACE_CENTER,
@@ -399,7 +399,7 @@ std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size flat_index,
                             .is_boundary = false});
 
     // top
-    if (ij.j == res.height - 1) {
+    if (ij.j == static_cast<i32>(res.height) - 1) {
       if (include_boundary)
         neighbours.push_back({.element = core::Element::Type::FACE_CENTER,
                               .index = safeFlatIndex(
@@ -427,4 +427,39 @@ std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size flat_index,
   }
   return neighbours;
 }
+
+std::vector<h_size> Grid2::neighbours(core::Element loc, h_size flat_index,
+                                      core::Element neighbour_loc) const {
+  std::vector<h_size> ns;
+  if (loc.is(core::element_primitive_bits::face)) {
+    if (flat_index < flatIndexOffset(core::Element::Type::Y_FACE_CENTER)) {
+      auto res = resolution(core::Element::Type::X_FACE_CENTER);
+      auto ij = index(core::Element::Type::X_FACE_CENTER, flat_index);
+      if (neighbour_loc.is(core::element_primitive_bits::cell)) {
+        if (ij.j > 0)
+          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij));
+        if (ij.j < static_cast<i32>(res.height) - 1)
+          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij.up()));
+      } else {
+        HERMES_NOT_IMPLEMENTED
+      }
+    } else {
+      auto res = resolution(core::Element::Type::Y_FACE_CENTER);
+      auto ij = index(core::Element::Type::Y_FACE_CENTER, flat_index);
+      if (neighbour_loc.is(core::element_primitive_bits::cell)) {
+        if (ij.i > 0)
+          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij));
+        if (ij.i < static_cast<i32>(res.width) - 1)
+          ns.emplace_back(
+              flatIndex(core::Element::Type::CELL_CENTER, ij.right()));
+      } else {
+        HERMES_NOT_IMPLEMENTED
+      }
+    }
+  } else {
+    HERMES_NOT_IMPLEMENTED
+  }
+  return ns;
+}
+
 } // namespace naiades::geo

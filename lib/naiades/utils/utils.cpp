@@ -45,7 +45,10 @@ HERMES_TO_STRING_METHOD_LINE(
     "set indices: {}\n",
     std::visit(
         utils::IndexSetOverloaded{
-            [](std::monostate s) { return std::string(); },
+            [](std::monostate s) {
+              HERMES_UNUSED_VARIABLE(s);
+              return std::string();
+            },
             [](const std::vector<h_size> &indices) -> std::string {
               return hermes::cstr::join(indices, ", ", 10);
             },
@@ -127,15 +130,17 @@ h_size IndexSet::size() const { return index_count_; }
 void IndexSet::set(const std::vector<h_size> &set_indices) {
   if (set_indices.empty())
     return;
+  auto sorted_indices = set_indices;
+  std::sort(sorted_indices.begin(), sorted_indices.end());
 
   index_count_ = set_indices.size();
 
   std::vector<IndexInterval> intervals;
-  h_size last_index = set_indices.front();
+  h_size last_index = sorted_indices.front();
   IndexInterval interval;
   interval.start = last_index;
   interval.end = last_index + 1;
-  for (auto index : set_indices) {
+  for (auto index : sorted_indices) {
     if (index > last_index + 1) {
       interval.end = last_index + 1;
       intervals.emplace_back(interval);
@@ -172,7 +177,8 @@ findIntervalIndex(const std::vector<IndexInterval> &indices, h_size index) {
                              });
   auto interval_index = it - indices.begin();
   // corner case
-  if (indices[interval_index].start <= index &&
+  if (static_cast<h_size>(interval_index) < indices.size() &&
+      indices[interval_index].start <= index &&
       indices[interval_index].end > index)
     return interval_index;
   if (interval_index > 0) {
@@ -188,6 +194,7 @@ h_size IndexSet::operator[](h_size seq_index) const {
   return std::visit(
       IndexSetOverloaded{
           [](std::monostate s) -> h_size {
+            HERMES_UNUSED_VARIABLE(s);
             HERMES_ASSERT(false);
             return {};
           },
@@ -221,6 +228,7 @@ h_size IndexSet::seqIndex(h_size set_index) const {
   return std::visit(
       IndexSetOverloaded{
           [](std::monostate s) -> core::Index {
+            HERMES_UNUSED_VARIABLE(s);
             return core::Index::invalid();
           },
           [&](const std::vector<h_size> &indices) -> core::Index {
@@ -246,7 +254,10 @@ bool IndexSet::contains(const core::Index &index) const {
   if (index.space() == core::IndexSpace::LOCAL)
     return *index < index_count_;
   return std::visit(IndexSetOverloaded{
-                        [](std::monostate s) -> bool { return false; },
+                        [](std::monostate s) -> bool {
+                          HERMES_UNUSED_VARIABLE(s);
+                          return false;
+                        },
                         [&](const std::vector<h_size> &indices) -> bool {
                           if (indices.empty())
                             return false;

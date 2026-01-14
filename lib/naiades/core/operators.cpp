@@ -53,7 +53,7 @@ DiscreteOperator::laplacian(DiscretizationGeometry2::Ptr discretization,
   // resolve stencil
   for (const auto &n : neighbours)
     if (n.is_boundary)
-      op += boundary.resolve(n.index, index) * 1.0;
+      op += boundary.stencil(core::Index::global(n.index)) * 1.0;
     else
       op.add(n.index, 1.0);
   return op;

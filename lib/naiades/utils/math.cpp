@@ -42,7 +42,6 @@ f32 gaussian(const hermes::geo::vec2 &sigma2, const hermes::geo::point2 &mu,
 }
 
 hermes::geo::vec2 enright(const hermes::geo::point2 &p, float t) {
-  const auto pip = hermes::math::constants::pi * p;
   const auto pit = hermes::math::constants::pi * t;
   return {2 * std::sin(p.x) * std::cos(p.y) * std::cos(pit),
           -2 * std::cos(p.x) * std::sin(p.y) * std::cos(pit)};

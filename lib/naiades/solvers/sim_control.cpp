@@ -56,9 +56,11 @@ SimControl &SimControl::setEndTime(f32 end_time) {
 }
 
 NaResult SimControl::run(Solver::Ptr solver) {
+  HERMES_UNUSED_VARIABLE(solver);
   h_size step_count = (end_time_ - start_time_) / dt_;
 
   for (auto iteration : utils::StepLoop().setDurationInSteps(step_count)) {
+    HERMES_UNUSED_VARIABLE(iteration);
   }
   return NaResult::noError();
 }

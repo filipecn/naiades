@@ -51,7 +51,9 @@ HERMES_TO_STRING_METHOD_END
 
 namespace naiades::core {
 
-void Boundary::Region::setIndices(const std::vector<h_size> &indices) {
+Boundary::Region::Region(DiscretizationTopology::Ptr d_t, Element element_type,
+                         const std::vector<h_size> &indices)
+    : discretization_{d_t}, element_type_{element_type} {
   index_set_.set(indices);
 }
 
@@ -59,76 +61,154 @@ void Boundary::Region::setCondition(bc::BoundaryCondition::Ptr condition) {
   condition_ = condition;
 }
 
-Boundary::Region::Region(const std::vector<h_size> &indices) {
-  setIndices(indices);
-}
-
-f32 Boundary::compute(h_size boundary_index, h_size interior_index,
-                      FieldRef<f32> field) const {
-  auto op = resolve(boundary_index, interior_index);
-  return op(field);
+NaResult Boundary::compute(FieldCRef<f32> interior_field,
+                           FieldRef<f32> boundary_field) const {
+  for (const auto &region : regions_)
+    NAIADES_RETURN_BAD_RESULT(region.compute(interior_field, boundary_field));
+  return NaResult::noError();
 }
 
 bool Boundary::Region::contains(const Index &index) const {
   return index_set_.contains(index);
 }
 
-DiscreteOperator Boundary::Region::resolve(h_size boundary_index,
-                                           h_size interior_index) const {
-  return condition_->resolve(boundary_index, interior_index);
+NaResult Boundary::Region::resolve() {
+  if (!(bool)discretization_ || !(bool)condition_) {
+    return NaResult::checkError();
+  }
+  stencils_.resize(index_set_.size());
+  for (auto it : index_set_)
+    stencils_[it.flat_index] = condition_->resolve(discretization_, it.index);
+  return NaResult::noError();
 }
 
-h_size Boundary::addRegion(const std::vector<h_size> &indices) {
-  h_size new_region_index = regions_.size();
-  regions_.emplace_back();
-  regions_.back().setIndices(indices);
-  return new_region_index;
+const DiscreteOperator &Boundary::Region::stencil(const Index &index) const {
+  if (stencils_.empty()) {
+    HERMES_ERROR(
+        "Accessing stencil in boundary but boundary regions is not resolved.");
+    static DiscreteOperator dop;
+    return dop;
+  }
+  if (index.space() == IndexSpace::LOCAL) {
+    HERMES_ASSERT(*index < stencils_.size());
+    return stencils_[*index];
+  }
+  auto local_index = index_set_.seqIndex(*index);
+  HERMES_ASSERT(local_index < stencils_.size());
+  return stencils_[local_index];
 }
 
-void Boundary::setCondition(h_size region_index,
-                            bc::BoundaryCondition::Ptr condition) {
+Boundary &Boundary::set(DiscretizationTopology::Ptr d_t, Element element_type) {
+  discretization_ = d_t;
+  element_ = element_type;
+  return *this;
+}
+
+Boundary &Boundary::addRegion(const std::vector<h_size> &indices,
+                              h_size *region_index) {
+  if (region_index)
+    *region_index = regions_.size();
+  regions_.emplace_back(discretization_, element_, indices);
+  return *this;
+}
+
+Boundary &Boundary::setCondition(h_size region_index,
+                                 bc::BoundaryCondition::Ptr condition) {
   HERMES_ASSERT(region_index < regions_.size());
   regions_[region_index].setCondition(condition);
+  return *this;
 }
 
-void Boundary::setCondition(bc::BoundaryCondition::Ptr condition) {
+Boundary &Boundary::setCondition(bc::BoundaryCondition::Ptr condition) {
   for (h_size i = 0; i < regions_.size(); ++i)
     setCondition(i, condition);
+  return *this;
 }
 
-DiscreteOperator Boundary::resolve(h_size boundary_index,
-                                   h_size interior_index) const {
+NaResult Boundary::resolve() {
+  for (auto &region : regions_)
+    NAIADES_RETURN_BAD_RESULT(region.resolve());
+  return NaResult::noError();
+}
+
+const DiscreteOperator &Boundary::stencil(const Index &index) const {
   for (const auto &region : regions_)
-    if (region.contains(Index::global(boundary_index)))
-      return region.resolve(boundary_index, interior_index);
-  // HERMES_ASSERT(false);
-  return {};
+    if (region.contains(index))
+      return region.stencil(index);
+  HERMES_WARN("Index {} not found in boundary.", naiades::to_string(index));
+  static DiscreteOperator s_dop;
+  return s_dop;
 }
 
-void Boundary::Region::compute(FieldCRef<f32> interior_field,
-                               FieldRef<f32> field) {
-  if (stencils_.size() != index_set_.size())
-    stencils_.resize(index_set_.size());
-  // compute the stencil for each boundary index
+NaResult Boundary::Region::compute(FieldCRef<f32> interior_field,
+                                   FieldRef<f32> field) const {
+  if (stencils_.size() < index_set_.size()) {
+    HERMES_ERROR("Boundary region not resolved before compute!");
+    return NaResult::checkError();
+  }
+  for (auto i : index_set_) {
+    field[i.index] = stencils_[i.flat_index](interior_field);
+  }
+  return NaResult::noError();
 }
 
-h_size BoundarySet::addRegion(const std::string &field_name,
-                              const std::vector<h_size> &indices) {
-  return boundaries_[field_name].addRegion(indices);
+BoundarySet::Config &BoundarySet::Config::setElement(Element element_type) {
+  element_type_ = element_type;
+  return *this;
 }
 
-void BoundarySet::set(const std::string &field_name, h_size region_index,
-                      bc::BoundaryCondition::Ptr condition) {
+BoundarySet::Config &
+BoundarySet::Config::setTopology(DiscretizationTopology::Ptr d_t) {
+  d_t_ = d_t;
+  return *this;
+}
+
+BoundarySet BoundarySet::Config::build() const {
+  BoundarySet bs;
+  bs.element_type_ = element_type_;
+  bs.discretization_ = d_t_;
+  return bs;
+}
+
+BoundarySet &BoundarySet::addRegion(const std::string &field_name,
+                                    const std::vector<h_size> &indices,
+                                    h_size *region_index) {
+  auto it = boundaries_.find(field_name);
+  if (it == boundaries_.end())
+    boundaries_[field_name].set(discretization_, element_type_);
+  boundaries_[field_name].addRegion(indices, region_index);
+  return *this;
+}
+
+BoundarySet &BoundarySet::set(const std::string &field_name,
+                              h_size region_index,
+                              bc::BoundaryCondition::Ptr condition) {
+  auto it = boundaries_.find(field_name);
+  if (it == boundaries_.end())
+    boundaries_[field_name].set(discretization_, element_type_);
   boundaries_[field_name].setCondition(region_index, condition);
+  return *this;
 }
 
-void BoundarySet::set(const std::string &field_name,
-                      bc::BoundaryCondition::Ptr condition) {
+BoundarySet &BoundarySet::set(const std::string &field_name,
+                              bc::BoundaryCondition::Ptr condition) {
+  auto it = boundaries_.find(field_name);
+  if (it == boundaries_.end())
+    boundaries_[field_name].set(discretization_, element_type_);
   boundaries_[field_name].setCondition(condition);
+  return *this;
 }
 
 const Boundary &BoundarySet::operator[](const std::string &field_name) const {
-  static Boundary s_dummy;
+  static Boundary s_dummy({});
+  auto it = boundaries_.find(field_name);
+  if (it == boundaries_.end())
+    return s_dummy;
+  return it->second;
+}
+
+Boundary &BoundarySet::operator[](const std::string &field_name) {
+  static Boundary s_dummy({});
   auto it = boundaries_.find(field_name);
   if (it == boundaries_.end())
     return s_dummy;

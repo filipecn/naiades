@@ -65,8 +65,8 @@ public:
   private:
     iterator(const IndexSet &index_set, h_size flat_index);
     h_size interval_index_{0};
-    Item item_;
     const IndexSet &index_set_;
+    Item item_;
 
     friend class IndexSet;
   };

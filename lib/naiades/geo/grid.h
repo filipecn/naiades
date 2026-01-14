@@ -151,6 +151,8 @@ public:
   bool isBoundary(core::Element loc, h_size index) const override;
   std::vector<core::Neighbour> star(core::Element loc, h_size index,
                                     core::Element boundary_loc) const override;
+  std::vector<h_size> neighbours(core::Element loc, h_size index,
+                                 core::Element neighbour_loc) const override;
 
 private:
   hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};
@@ -161,3 +163,26 @@ private:
 };
 
 } // namespace naiades::geo
+
+namespace naiades {
+
+#ifdef NAIADES_INCLUDE_TO_STRING
+template <typename T>
+std::string spatialFieldString(const geo::Grid2 &grid,
+                               const core::FieldCRef<T> &field) {
+  auto res = grid.resolution(field.element());
+  hermes::cstr s;
+  s.appendLine(naiades::to_string(field.element()));
+  for (i32 y = res.height - 1; y != 0; --y) {
+    for (i32 x = 0; x < static_cast<i32>(res.width); ++x) {
+      s.append(field[grid.safeFlatIndex(field.element(), {x, y}) -
+                     grid.flatIndexOffset(field.element())],
+               " ");
+    }
+    s.append("\n");
+  }
+  return s.str();
+}
+#endif
+
+} // namespace naiades
