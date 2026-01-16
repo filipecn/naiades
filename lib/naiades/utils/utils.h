@@ -77,7 +77,7 @@ public:
   h_size size() const;
   void set(const std::vector<h_size> &set_indices);
   h_size operator[](h_size seq_index) const;
-  h_size seqIndex(h_size set_index) const;
+  core::Index seqIndex(h_size set_index) const;
   bool contains(const core::Index &index) const;
 
   iterator begin() const;

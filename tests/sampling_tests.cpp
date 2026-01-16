@@ -186,13 +186,15 @@ TEST_CASE("sample", "[sampling]") {
                   .build()
                   .value();
   core::FieldSet fields;
-  fields.add<f32>(core::Element::Type::CELL_CENTER,
+  fields.add<f32>(core::Element::Type::CELL_CENTER, 0,
                   {"cell_samples", "cell_exact"});
-  fields.add<f32>(core::Element::Type::VERTEX_CENTER,
+  fields.add<f32>(core::Element::Type::VERTEX_CENTER, 0,
                   {"vertex_samples", "vertex_exact"});
   fields.add<f32>(core::Element::Type::X_FACE_CENTER,
+                  grid.flatIndexOffset(core::Element::Type::X_FACE_CENTER),
                   {"x_face_samples", "x_face_exact"});
   fields.add<f32>(core::Element::Type::Y_FACE_CENTER,
+                  grid.flatIndexOffset(core::Element::Type::Y_FACE_CENTER),
                   {"y_face_samples", "y_face_exact"});
   fields.setElementCountFrom(&grid);
 
@@ -275,22 +277,28 @@ TEST_CASE("sample vectors", "[sampling]") {
                   .build()
                   .value();
   core::FieldSet fields;
-  fields.add<hermes::geo::vec2>(core::Element::Type::CELL_CENTER,
+  fields.add<hermes::geo::vec2>(core::Element::Type::CELL_CENTER, 0,
                                 {"cell_samples", "cell_exact"});
-  fields.add<hermes::geo::vec2>(core::Element::Type::VERTEX_CENTER,
+  fields.add<hermes::geo::vec2>(core::Element::Type::VERTEX_CENTER, 0,
                                 {"vertex_samples", "vertex_exact"});
-  fields.add<hermes::geo::vec2>(core::Element::Type::X_FACE_CENTER,
-                                {"x_face_samples", "x_face_exact"});
-  fields.add<hermes::geo::vec2>(core::Element::Type::Y_FACE_CENTER,
-                                {"y_face_samples", "y_face_exact"});
+  fields.add<hermes::geo::vec2>(
+      core::Element::Type::X_FACE_CENTER,
+      grid.flatIndexOffset(core::Element::Type::X_FACE_CENTER),
+      {"x_face_samples", "x_face_exact"});
+  fields.add<hermes::geo::vec2>(
+      core::Element::Type::Y_FACE_CENTER,
+      grid.flatIndexOffset(core::Element::Type::Y_FACE_CENTER),
+      {"y_face_samples", "y_face_exact"});
 
-  fields.add<f32>(core::Element::Type::CELL_CENTER,
+  fields.add<f32>(core::Element::Type::CELL_CENTER, 0,
                   {"cell_scalar_samples", "cell_scalar_exact"});
-  fields.add<f32>(core::Element::Type::VERTEX_CENTER,
+  fields.add<f32>(core::Element::Type::VERTEX_CENTER, 0,
                   {"vertex_scalar_samples", "vertex_scalar_exact"});
   fields.add<f32>(core::Element::Type::X_FACE_CENTER,
+                  grid.flatIndexOffset(core::Element::Type::X_FACE_CENTER),
                   {"x_face_scalar_samples", "x_face_scalar_exact"});
   fields.add<f32>(core::Element::Type::Y_FACE_CENTER,
+                  grid.flatIndexOffset(core::Element::Type::Y_FACE_CENTER),
                   {"y_face_scalar_samples", "y_face_scalar_exact"});
   fields.setElementCountFrom(&grid);
 

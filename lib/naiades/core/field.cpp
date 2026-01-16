@@ -33,6 +33,7 @@ namespace naiades {
 HERMES_TO_STRING_METHOD_BEGIN(core::FieldGroup)
 HERMES_TO_STRING_METHOD_TITLE
 HERMES_TO_STRING_METHOD_NAIADES_FIELD(element_);
+HERMES_TO_STRING_METHOD_FIELD(index_offset_);
 HERMES_TO_STRING_METHOD_LINE("size: {}\n", object.size());
 HERMES_TO_STRING_METHOD_LINE(
     "values: {}", hermes::to_string(static_cast<hermes::mem::AoS>(object)));
@@ -53,7 +54,11 @@ namespace naiades::core {
 
 void FieldGroup::setElement(Element loc) { element_ = loc; }
 
+void FieldGroup::setIndexOffset(h_size o) { index_offset_ = o; }
+
 Element FieldGroup::element() const { return element_; }
+
+h_size FieldGroup::indexOffset() const { return index_offset_; }
 
 NaResult FieldSet::setElementCount(Element loc, h_size count) {
   for (auto &item : fields_) {

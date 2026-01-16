@@ -46,6 +46,7 @@ public:
       : hermes::mem::AoS::FieldView<T>(field_view) {}
 
   Element element() const { return element_; }
+  h_size indexOffset() const { return index_offset_; }
 
   FieldRef &operator=(const T &value) {
     auto n = this->size();
@@ -55,10 +56,25 @@ public:
     return *this;
   }
 
+  HERMES_CPU_GPU const T &at(const Index &i) const {
+    if (i.space() == IndexSpace::LOCAL)
+      return (*this)[*i];
+    HERMES_ASSERT(*i >= index_offset_);
+    return (*this)[*i - index_offset_];
+  }
+
+  HERMES_CPU_GPU T &at(const Index &i) {
+    if (i.space() == IndexSpace::LOCAL)
+      return (*this)[*i];
+    HERMES_ASSERT(*i >= index_offset_);
+    return (*this)[*i - index_offset_];
+  }
+
 private:
   friend class FieldGroup;
 
   Element element_;
+  h_size index_offset_{0};
 };
 
 template <typename T>
@@ -70,33 +86,54 @@ public:
       : hermes::mem::AoS::ConstFieldView<T>(
             static_cast<hermes::mem::AoS::ConstFieldView<T>>(field)),
         //    field.data_, field.stride_, field.offset_, field.size_),
-        element_(field.element()) {}
+        element_(field.element()), index_offset_(field.indexOffset()) {}
 
   Element element() const { return element_; }
+
+  HERMES_CPU_GPU const T &at(const Index &i) const {
+    if (i.space() == IndexSpace::LOCAL)
+      return (*this)[*i];
+    HERMES_ASSERT(*i >= index_offset_);
+    return (*this)[*i - index_offset_];
+  }
 
 private:
   friend class FieldGroup;
 
   Element element_;
+  h_size index_offset_{0};
 };
 
 /// A field group holds one or more fields defined over a single type of
 /// discrete location (ex: vertex and face centers).
 /// \note The values are stored in an array of structs.
+/// \note Field groups carry an index offset that can be present in certain
+///       discretizations structures. The index offset transforms the indices
+///       into global and local indices. Given a field group of N elements:
+///       - local indices:  [0, N)
+///       - global indices: [offset, N + offset )
 class FieldGroup : public hermes::mem::AoS {
 public:
+  /// \param loc Type of element indexed by this field.
   void setElement(Element loc);
+  /// \param o Index offset.
+  void setIndexOffset(h_size o);
+  /// \return The type of element indexed by this field group.
   Element element() const;
+  /// \return The index offset carried by this field group.
+  h_size indexOffset() const;
 
   template <typename T> FieldRef<T> get(h_size field_index) {
     FieldRef<T> acc(field<T>(field_index));
     acc.element_ = element_;
+    acc.index_offset_ = index_offset_;
     return acc;
   }
 
   template <typename T> FieldCRef<T> get(h_size field_index) const {
     FieldCRef<T> acc(field<T>(field_index));
     acc.element_ = element_;
+    acc.index_offset_ = index_offset_;
     return acc;
   }
 
@@ -104,6 +141,7 @@ private:
   friend class FieldSet;
 
   Element element_{Element::Type::NONE};
+  h_size index_offset_{0};
   NAIADES_to_string_FRIEND(FieldGroup);
 };
 
@@ -112,13 +150,20 @@ public:
   NaResult setElementCount(Element loc, h_size count);
   NaResult setElementCountFrom(DiscretizationTopology *sd);
 
+  /// \param loc Type of element indexed by the new field groups.
+  /// \param index_offset Index offset carried by the new field groups.
+  /// \param field_names List of names of the new field groups.
+  /// \return Error status.
   template <typename T>
-  NaResult add(Element loc, const std::vector<std::string> &field_names) {
+  NaResult add(Element loc, h_size index_offset,
+               const std::vector<std::string> &field_names) {
     for (const auto &field_name : field_names) {
       FieldGroup field_group;
       field_group.setElement(loc);
+      field_group.setIndexOffset(index_offset);
       field_group.pushField<T>("value");
-      NAIADES_HE_RETURN_BAD_RESULT(field_group.resize(field_sizes_[loc]));
+      NAIADES_HE_RETURN_BAD_RESULT(
+          field_group.resize(field_sizes_by_type_[loc]));
       if (fields_.count(field_name))
         HERMES_WARN("Overwriting field {} in field set.", field_name);
       fields_[field_name] = std::move(field_group);
@@ -126,6 +171,8 @@ public:
     return NaResult::noError();
   }
 
+  /// \param name Field group name.
+  /// \return Field reference or NOT_FOUND error.
   template <typename T> Result<FieldRef<T>> get(const std::string &name) {
     auto it = fields_.find(name);
     if (it != fields_.end())
@@ -133,6 +180,8 @@ public:
     return NaResult::notFound();
   }
 
+  /// \param name Field group name.
+  /// \return Field const reference or NOT_FOUND error.
   template <typename T>
   Result<FieldCRef<T>> get(const std::string &name) const {
     auto it = fields_.find(name);
@@ -142,7 +191,7 @@ public:
   }
 
 private:
-  std::unordered_map<Element, h_size> field_sizes_;
+  std::unordered_map<Element, h_size> field_sizes_by_type_;
   std::unordered_map<std::string, FieldGroup> fields_;
 
   NAIADES_to_string_FRIEND(FieldSet);

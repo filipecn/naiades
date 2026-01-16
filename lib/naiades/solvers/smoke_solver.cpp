@@ -48,39 +48,42 @@ Result<SmokeSolver2> SmokeSolver2::Config::build() const {
   SmokeSolver2 solver;
   solver.grid_ = grid_;
   for (int i = 0; i < 2; ++i) {
-    solver.dynamic_fields_[i].add<f32>(core::Element::Type::U_FACE_CENTER,
-                                       {"u"});
-    solver.dynamic_fields_[i].add<f32>(core::Element::Type::V_FACE_CENTER,
-                                       {"v"});
-    solver.dynamic_fields_[i].add<f32>(core::Element::Type::CELL_CENTER,
+    solver.dynamic_fields_[i].add<f32>(
+        core::Element::Type::U_FACE_CENTER,
+        solver.grid_.flatIndexOffset(core::Element::Type::U_FACE_CENTER),
+        {"u"});
+    solver.dynamic_fields_[i].add<f32>(
+        core::Element::Type::V_FACE_CENTER,
+        solver.grid_.flatIndexOffset(core::Element::Type::V_FACE_CENTER),
+        {"v"});
+    solver.dynamic_fields_[i].add<f32>(core::Element::Type::CELL_CENTER, 0,
                                        {"density"});
     solver.dynamic_fields_[i].setElementCountFrom(&solver.grid_);
   }
-  solver.static_fields_.add<f32>(core::Element::Type::CELL_CENTER,
+  solver.static_fields_.add<f32>(core::Element::Type::CELL_CENTER, 0,
                                  {"p", "div"});
   solver.static_fields_.add<hermes::geo::vec2>(core::Element::Type::CELL_CENTER,
-                                               {"fc"});
-  solver.static_fields_.add<f32>(core::Element::Type::U_FACE_CENTER, {"fu"});
-  solver.static_fields_.add<f32>(core::Element::Type::V_FACE_CENTER, {"fv"});
+                                               0, {"fc"});
+  solver.static_fields_.add<f32>(
+      core::Element::Type::U_FACE_CENTER,
+      solver.grid_.flatIndexOffset(core::Element::Type::U_FACE_CENTER), {"fu"});
+  solver.static_fields_.add<f32>(
+      core::Element::Type::V_FACE_CENTER,
+      solver.grid_.flatIndexOffset(core::Element::Type::V_FACE_CENTER), {"fv"});
   solver.static_fields_.setElementCountFrom(&solver.grid_);
 
   // boundary
 
-  auto boundary_element_types = {
-      core::Element(core::Element::Type::X_FACE_CENTER)
-          .setOrientations(core::element_orientation_bits::y),
-      core::Element(core::Element::Type::X_FACE_CENTER)
-          .setOrientations(core::element_orientation_bits::neg_y),
-      core::Element(core::Element::Type::Y_FACE_CENTER)
-          .setOrientations(core::element_orientation_bits::x),
-      core::Element(core::Element::Type::Y_FACE_CENTER)
-          .setOrientations(core::element_orientation_bits::neg_x)};
+  auto boundary_element_types = {core::Element::Type::DOWN_FACE_CENTER,
+                                 core::Element::Type::RIGHT_FACE_CENTER,
+                                 core::Element::Type::UP_FACE_CENTER,
+                                 core::Element::Type::LEFT_FACE_CENTER};
   for (auto b : boundary_element_types) {
     auto bd = solver.grid_.boundary(b);
-    solver.boundary_.addRegion("p", bd);
-    solver.boundary_.addRegion("v", bd);
-    solver.boundary_.addRegion("u", bd);
-    solver.boundary_.addRegion("density", bd);
+    solver.boundary_.addRegion("p", core::Element::Type::FACE_CENTER, bd);
+    solver.boundary_.addRegion("v", core::Element::Type::FACE_CENTER, bd);
+    solver.boundary_.addRegion("u", core::Element::Type::FACE_CENTER, bd);
+    solver.boundary_.addRegion("density", core::Element::Type::FACE_CENTER, bd);
   }
 
   return Result<SmokeSolver2>(std::move(solver));

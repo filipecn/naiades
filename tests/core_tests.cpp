@@ -83,7 +83,7 @@ TEST_CASE("Element", "[core]") {
     REQUIRE(Element(element_primitive_bits::any, element_alignment_bits::any,
                     element_orientation_bits::any) == Element::Type::ANY);
     REQUIRE(Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::xz) ==
+                    element_orientation_bits::any_y) ==
             Element::Type::XZ_FACE_CENTER);
     REQUIRE(
         Element::Type::CELL_CENTER ==
@@ -101,40 +101,59 @@ TEST_CASE("Element", "[core]") {
                                              element_orientation_bits::custom));
     REQUIRE(Element::Type::HORIZONTAL_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::xz));
+                    element_orientation_bits::any_y));
     REQUIRE(Element::Type::V_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::xz));
+                    element_orientation_bits::any_y));
     REQUIRE(Element::Type::X_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::xz));
+                    element_orientation_bits::any_y));
     REQUIRE(Element::Type::XZ_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::xz));
+                    element_orientation_bits::any_y));
     REQUIRE(Element::Type::VERTICAL_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::yz,
-                    element_orientation_bits::yz));
+                    element_orientation_bits::any_x));
     REQUIRE(Element::Type::U_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::yz,
-                    element_orientation_bits::yz));
+                    element_orientation_bits::any_x));
     REQUIRE(Element::Type::Y_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::yz,
-                    element_orientation_bits::yz));
+                    element_orientation_bits::any_x));
     REQUIRE(Element::Type::YZ_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::yz,
-                    element_orientation_bits::yz));
+                    element_orientation_bits::any_x));
     REQUIRE(Element::Type::DEPTH_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::xy,
-                    element_orientation_bits::xy));
+                    element_orientation_bits::any_z));
     REQUIRE(Element::Type::W_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::xy,
-                    element_orientation_bits::xy));
+                    element_orientation_bits::any_z));
     REQUIRE(Element::Type::Z_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::xy,
-                    element_orientation_bits::xy));
+                    element_orientation_bits::any_z));
     REQUIRE(Element::Type::XY_FACE_CENTER ==
             Element(element_primitive_bits::face, element_alignment_bits::xy,
-                    element_orientation_bits::xy));
+                    element_orientation_bits::any_z));
+
+    REQUIRE(Element::Type::UP_FACE_CENTER ==
+            Element(element_primitive_bits::face, element_alignment_bits::xz,
+                    element_orientation_bits::y));
+    REQUIRE(Element::Type::DOWN_FACE_CENTER ==
+            Element(element_primitive_bits::face, element_alignment_bits::xz,
+                    element_orientation_bits::neg_y));
+    REQUIRE(Element::Type::LEFT_FACE_CENTER ==
+            Element(element_primitive_bits::face, element_alignment_bits::yz,
+                    element_orientation_bits::neg_x));
+    REQUIRE(Element::Type::RIGHT_FACE_CENTER ==
+            Element(element_primitive_bits::face, element_alignment_bits::yz,
+                    element_orientation_bits::x));
+    REQUIRE(Element::Type::FRONT_FACE_CENTER ==
+            Element(element_primitive_bits::face, element_alignment_bits::xy,
+                    element_orientation_bits::z));
+    REQUIRE(Element::Type::BACK_FACE_CENTER ==
+            Element(element_primitive_bits::face, element_alignment_bits::xy,
+                    element_orientation_bits::neg_z));
 
     auto e = Element(
         element_primitive_bits::particle | element_primitive_bits::vertex,
@@ -216,8 +235,8 @@ TEST_CASE("FieldGroup", "[core]") {
 
 TEST_CASE("FieldSet", "[core]") {
   FieldSet field_set;
-  field_set.add<i32>(Element::Type::ANY, {"i32"});
-  field_set.add<hermes::geo::vec2>(Element::Type::ANY, {"vec2"});
+  field_set.add<i32>(Element::Type::ANY, 0, {"i32"});
+  field_set.add<hermes::geo::vec2>(Element::Type::ANY, 0, {"vec2"});
   h_size count = 20;
   REQUIRE(field_set.setElementCount(Element::Type::ANY, count) ==
           NaResult::noError());
@@ -259,52 +278,47 @@ TEST_CASE("Discrete Operator", "[core]") {
                     .setSize({3, 4})
                     .build()
                     .value();
-    core::BoundarySet bs = BoundarySet::Config()
-                               .setElement(core::Element::Type::FACE_CENTER)
-                               .setTopology(&grid)
-                               .build();
+    core::BoundarySet bs = BoundarySet::Config().setTopology(&grid).build();
 
-    auto boundary_element_types = {
-        core::Element(core::Element::Type::X_FACE_CENTER)
-            .setOrientations(core::element_orientation_bits::neg_y),
-        core::Element(core::Element::Type::X_FACE_CENTER)
-            .setOrientations(core::element_orientation_bits::y),
-        core::Element(core::Element::Type::Y_FACE_CENTER)
-            .setOrientations(core::element_orientation_bits::x),
-        core::Element(core::Element::Type::Y_FACE_CENTER)
-            .setOrientations(core::element_orientation_bits::neg_x)};
+    auto boundary_element_types = {core::Element::Type::LEFT_FACE_CENTER,
+                                   core::Element::Type::DOWN_FACE_CENTER,
+                                   core::Element::Type::RIGHT_FACE_CENTER,
+                                   core::Element::Type::UP_FACE_CENTER};
     for (auto b : boundary_element_types)
-      bs.addRegion("p", grid.boundary(b));
+      bs.addRegion("p", core::Element::Type::FACE_CENTER, grid.boundary(b));
 
     auto dirichlet = naiades::core::bc::Dirichlet::Ptr::shared(10);
     auto neumann = naiades::core::bc::Neumann::Ptr::shared();
-    bs.set("p", neumann);
-    bs.set("p", 0, dirichlet);
+    bs.set("p", neumann, core::Element::Type::CELL_CENTER);
+    bs.set("p", 0, dirichlet, core::Element::Type::CELL_CENTER);
 
     REQUIRE(bs["p"].resolve() == NaResult::noError());
 
     SECTION("compute") {
       auto dirichlet_v = naiades::core::bc::Dirichlet::Ptr::shared(10);
       auto dirichlet_u = naiades::core::bc::Dirichlet::Ptr::shared(20);
-      bs.addRegion("u", grid.boundary(core::Element::Type::U_FACE_CENTER));
-      bs.addRegion("v", grid.boundary(core::Element::Type::V_FACE_CENTER));
-      bs.set("u", dirichlet_u);
-      bs.set("v", dirichlet_v);
+      bs.addRegion("u", core::Element::Type::FACE_CENTER,
+                   grid.boundary(core::Element::Type::U_FACE_CENTER));
+      bs.addRegion("v", core::Element::Type::FACE_CENTER,
+                   grid.boundary(core::Element::Type::V_FACE_CENTER));
+      bs.set("u", dirichlet_u, Element::Type::FACE_CENTER);
+      bs.set("v", dirichlet_v, Element::Type::FACE_CENTER);
 
       REQUIRE(bs["u"].resolve() == NaResult::noError());
       REQUIRE(bs["v"].resolve() == NaResult::noError());
 
       FieldSet fields;
-      fields.add<f32>(core::Element::Type::V_FACE_CENTER, {"v"});
-      fields.add<f32>(core::Element::Type::U_FACE_CENTER, {"u"});
+      fields.add<f32>(core::Element::Type::U_FACE_CENTER,
+                      grid.flatIndexOffset(core::Element::Type::U_FACE_CENTER),
+                      {"u"});
+      fields.add<f32>(core::Element::Type::V_FACE_CENTER,
+                      grid.flatIndexOffset(core::Element::Type::V_FACE_CENTER),
+                      {"v"});
       fields.setElementCountFrom(&grid);
       auto v = fields.get<f32>("v").value();
       auto u = fields.get<f32>("u").value();
       v = 0.0f;
       u = 0.0f;
-
-      HERMES_WARN("u:\n{}", naiades::spatialFieldString<f32>(grid, u));
-      HERMES_WARN("v:\n{}", naiades::spatialFieldString<f32>(grid, v));
 
       bs["u"].compute(u, u);
       bs["v"].compute(v, v);
@@ -329,6 +343,12 @@ TEST_CASE("Discrete Operator", "[core]") {
       op = DiscreteOperator::laplacian(
           &grid, bs["p"], core::Element::Type::CELL_CENTER,
           grid.flatIndex(core::Element::Type::CELL_CENTER, {0, 0}),
+          core::Element::Type::FACE_CENTER);
+      HERMES_WARN("{}", naiades::to_string(op));
+
+      op = DiscreteOperator::laplacian(
+          &grid, bs["p"], core::Element::Type::CELL_CENTER,
+          grid.flatIndex(core::Element::Type::CELL_CENTER, {2, 3}),
           core::Element::Type::FACE_CENTER);
       HERMES_WARN("{}", naiades::to_string(op));
     }

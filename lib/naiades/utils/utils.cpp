@@ -224,7 +224,7 @@ h_size IndexSet::operator[](h_size seq_index) const {
       data_);
 }
 
-h_size IndexSet::seqIndex(h_size set_index) const {
+core::Index IndexSet::seqIndex(h_size set_index) const {
   return std::visit(
       IndexSetOverloaded{
           [](std::monostate s) -> core::Index {

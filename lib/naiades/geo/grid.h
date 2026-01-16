@@ -173,10 +173,10 @@ std::string spatialFieldString(const geo::Grid2 &grid,
   auto res = grid.resolution(field.element());
   hermes::cstr s;
   s.appendLine(naiades::to_string(field.element()));
-  for (i32 y = res.height - 1; y != 0; --y) {
+  for (i32 y = res.height - 1; y >= 0; --y) {
     for (i32 x = 0; x < static_cast<i32>(res.width); ++x) {
-      s.append(field[grid.safeFlatIndex(field.element(), {x, y}) -
-                     grid.flatIndexOffset(field.element())],
+      s.append(field.at(core::Index::global(
+                   grid.safeFlatIndex(field.element(), {x, y}))),
                " ");
     }
     s.append("\n");

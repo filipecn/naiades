@@ -437,9 +437,10 @@ std::vector<h_size> Grid2::neighbours(core::Element loc, h_size flat_index,
       auto ij = index(core::Element::Type::X_FACE_CENTER, flat_index);
       if (neighbour_loc.is(core::element_primitive_bits::cell)) {
         if (ij.j > 0)
-          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij));
+          ns.emplace_back(
+              flatIndex(core::Element::Type::CELL_CENTER, ij.down()));
         if (ij.j < static_cast<i32>(res.height) - 1)
-          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij.up()));
+          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij));
       } else {
         HERMES_NOT_IMPLEMENTED
       }
@@ -448,10 +449,10 @@ std::vector<h_size> Grid2::neighbours(core::Element loc, h_size flat_index,
       auto ij = index(core::Element::Type::Y_FACE_CENTER, flat_index);
       if (neighbour_loc.is(core::element_primitive_bits::cell)) {
         if (ij.i > 0)
-          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij));
-        if (ij.i < static_cast<i32>(res.width) - 1)
           ns.emplace_back(
-              flatIndex(core::Element::Type::CELL_CENTER, ij.right()));
+              flatIndex(core::Element::Type::CELL_CENTER, ij.left()));
+        if (ij.i < static_cast<i32>(res.width) - 1)
+          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij));
       } else {
         HERMES_NOT_IMPLEMENTED
       }

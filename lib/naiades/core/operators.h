@@ -66,7 +66,7 @@ public:
   real_t operator()(const FieldType &field) const {
     real_t s = constant_;
     for (const auto &node : nodes_)
-      s += field[node.first] * node.second;
+      s += field[Index::global(node.first)] * node.second;
     return s;
   }
   real_t constant() const;

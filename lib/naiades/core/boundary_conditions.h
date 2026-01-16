@@ -40,7 +40,8 @@ public:
   using Ptr = hermes::Ref<BoundaryCondition>;
 
   virtual DiscreteOperator resolve(DiscretizationTopology::Ptr d_t,
-                                   h_size boundary_index) const = 0;
+                                   h_size boundary_index, Element boundary_loc,
+                                   Element interior_loc) const = 0;
 };
 
 /// Dirichlet
@@ -51,7 +52,8 @@ public:
   Dirichlet(const real_t &fixed_value) : value_(fixed_value) {}
 
   DiscreteOperator resolve(DiscretizationTopology::Ptr d_t,
-                           h_size boundary_index) const override {
+                           h_size boundary_index, Element boundary_loc,
+                           Element interior_loc) const override {
     HERMES_UNUSED_VARIABLE(d_t);
     HERMES_UNUSED_VARIABLE(boundary_index);
     DiscreteOperator op;
@@ -77,11 +79,12 @@ public:
   using Ptr = hermes::Ref<Neumann>;
 
   DiscreteOperator resolve(DiscretizationTopology::Ptr d_t,
-                           h_size boundary_index) const override {
-    HERMES_UNUSED_VARIABLE(d_t);
-    HERMES_UNUSED_VARIABLE(boundary_index);
+                           h_size boundary_index, Element boundary_loc,
+                           Element interior_loc) const override {
     DiscreteOperator op;
-    // op.add(interior_index, 1.0);
+    auto ns = d_t->neighbours(boundary_loc, boundary_index, interior_loc);
+    HERMES_ASSERT(ns.size() == 1);
+    op.add(ns[0], 1.0);
     return op;
   }
 };
