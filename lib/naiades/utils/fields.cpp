@@ -35,7 +35,7 @@ void zalesakVelocityField(const geo::Grid2 &grid,
                           const hermes::geo::point2 &center, f32 omega) {
   for (auto ij : hermes::range2(grid.resolution(field.element()))) {
     auto flat_ij = grid.safeFlatIndex(field.element(), ij);
-    auto wp = grid.position(field.element(), ij);
+    auto wp = grid.center(field.element(), ij);
     field[flat_ij] = zalesak(wp, center, omega);
   }
 }
@@ -44,7 +44,7 @@ void enrightVelocityField(const geo::Grid2 &grid,
                           core::FieldRef<hermes::geo::vec2> &field, f32 t) {
   for (auto ij : hermes::range2(grid.resolution(field.element()))) {
     auto flat_ij = grid.safeFlatIndex(field.element(), ij);
-    auto wp = grid.position(field.element(), ij);
+    auto wp = grid.center(field.element(), ij);
     field[flat_ij] = enright(wp, t);
   }
 }

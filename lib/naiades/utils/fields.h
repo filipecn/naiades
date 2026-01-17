@@ -36,7 +36,7 @@ template <typename FieldType>
 void setField(const geo::Grid2 &grid, core::FieldRef<FieldType> &field,
               const std::function<FieldType(const hermes::geo::point2 &)> &f) {
   for (h_size flat_index = 0; flat_index < field.size(); ++flat_index) {
-    auto position = grid.position(
+    auto position = grid.center(
         field.element(), grid.flatIndexOffset(field.element()) + flat_index);
     field[flat_index] = f(position);
   }

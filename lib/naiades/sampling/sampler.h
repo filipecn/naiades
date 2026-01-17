@@ -268,7 +268,7 @@ sample(const geo::Grid2 &grid, const core::FieldCRef<T> &field,
        const std::vector<hermes::geo::point2> &positions) {
   core::FieldGroup samples;
   samples.pushField<T>();
-  samples.setElement(core::Element::Type::VERTEX_CENTER);
+  samples.setElement(core::Element::Type::VERTEX);
   NAIADES_HE_RETURN_BAD_RESULT(samples.resize(positions.size()));
 
   auto acc = samples.get<T>(0);

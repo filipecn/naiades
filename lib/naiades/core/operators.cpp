@@ -63,20 +63,20 @@ DiscreteOperator DiscreteOperator::divergence(const geo::Grid2 &grid,
                                               h_size index) {
   DiscreteOperator op;
   const auto d = grid.cellSize();
-  const auto ij = grid.index(Element::Type::CELL_CENTER, index);
-  op.add(grid.flatIndex(Element::Type::X_FACE_CENTER, ij.up()), -0.5 * d.y);
-  op.add(grid.flatIndex(Element::Type::X_FACE_CENTER, ij), 0.5 * d.y);
-  op.add(grid.flatIndex(Element::Type::Y_FACE_CENTER, ij.right()), -0.5 * d.x);
-  op.add(grid.flatIndex(Element::Type::Y_FACE_CENTER, ij), 0.5 * d.x);
+  const auto ij = grid.index(Element::Type::CELL, index);
+  op.add(grid.flatIndex(Element::Type::X_FACE, ij.up()), -0.5 * d.y);
+  op.add(grid.flatIndex(Element::Type::X_FACE, ij), 0.5 * d.y);
+  op.add(grid.flatIndex(Element::Type::Y_FACE, ij.right()), -0.5 * d.x);
+  op.add(grid.flatIndex(Element::Type::Y_FACE, ij), 0.5 * d.x);
   return op;
 }
 
 /// Compute divergence field.
 void divergence(const geo::Grid2 &grid, const FieldCRef<f32> &u,
                 const FieldCRef<f32> &v, FieldRef<f32> &f) {
-  HERMES_ASSERT(u.element() == Element::Type::Y_FACE_CENTER);
-  HERMES_ASSERT(v.element() == Element::Type::X_FACE_CENTER);
-  HERMES_ASSERT(f.element() == Element::Type::CELL_CENTER);
+  HERMES_ASSERT(u.element() == Element::Type::Y_FACE);
+  HERMES_ASSERT(v.element() == Element::Type::X_FACE);
+  HERMES_ASSERT(f.element() == Element::Type::CELL);
 
 #define AT(F, IJ)                                                              \
   F[grid.flatIndex(F.element(), IJ) - grid.flatIndexOffset(F.element())]

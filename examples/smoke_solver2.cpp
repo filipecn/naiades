@@ -35,19 +35,14 @@ int main() {
   // setup boundary conditions
 
   auto dirichlet = naiades::core::bc::Dirichlet::Ptr::shared(0);
-  solver.boundary().set("v", 0, dirichlet,
-                        naiades::core::Element::Type::FACE_CENTER);
-  solver.boundary().set("v", 2, dirichlet,
-                        naiades::core::Element::Type::FACE_CENTER);
-  solver.boundary().set("u", 1, dirichlet,
-                        naiades::core::Element::Type::FACE_CENTER);
-  solver.boundary().set("u", 3, dirichlet,
-                        naiades::core::Element::Type::FACE_CENTER);
+  solver.boundary().set("v", 0, dirichlet, naiades::core::Element::Type::FACE);
+  solver.boundary().set("v", 2, dirichlet, naiades::core::Element::Type::FACE);
+  solver.boundary().set("u", 1, dirichlet, naiades::core::Element::Type::FACE);
+  solver.boundary().set("u", 3, dirichlet, naiades::core::Element::Type::FACE);
   solver.boundary().set("density", dirichlet,
-                        naiades::core::Element::Type::CELL_CENTER);
+                        naiades::core::Element::Type::CELL);
   auto neumann = naiades::core::bc::Neumann::Ptr::shared();
-  solver.boundary().set("p", neumann,
-                        naiades::core::Element::Type::CELL_CENTER);
+  solver.boundary().set("p", neumann, naiades::core::Element::Type::CELL);
 
   HERMES_INFO("{}", naiades::to_string(solver.boundary()));
 

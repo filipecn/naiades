@@ -29,8 +29,9 @@
 namespace naiades {
 
 HERMES_TO_STRING_METHOD_BEGIN(core::Neighbour)
-HERMES_TO_STRING_METHOD_LINE("[{} {} {}]", naiades::to_string(object.element),
-                             object.index, object.is_boundary)
+HERMES_TO_STRING_METHOD_LINE("[loc: {} index: {} boundary? {} dist: {}]",
+                             naiades::to_string(object.element), object.index,
+                             object.is_boundary, object.distance)
 HERMES_TO_STRING_METHOD_END
 
 } // namespace naiades

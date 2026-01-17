@@ -45,7 +45,7 @@ void advect(
   auto field_res = grid.resolution(in_field.location());
   for (auto z :
        hermes::math::space_filling::MortonRange(0, field_res.total())) {
-    auto wp = grid.position(in_field.location(), z.coord2());
+    auto wp = grid.center(in_field.location(), z.coord2());
     auto flat_index = grid.safeFlatIndex(in_field.location(), z.coord2());
     // sample velocity components
     auto v = velocity[flat_index];
@@ -74,7 +74,7 @@ NaResult advect(const geo::Grid2 &grid, const core::FieldCRef<f32> &u,
   auto v_v = v_v_field.template get<f32>(0);
   auto v_u = v_u_field.template get<f32>(0);
   for (auto ij : hermes::range2(field_res)) {
-    auto wp = grid.position(in_field_element, ij);
+    auto wp = grid.center(in_field_element, ij);
     auto flat_index = grid.safeFlatIndex(in_field_element, ij);
     // sample velocity components
     hermes::geo::vec2 velocity(v_u[flat_index], v_v[flat_index]);

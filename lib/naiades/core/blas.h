@@ -33,10 +33,11 @@
 namespace naiades::core::blas {
 
 /// a += k * b
-template <typename T> void akb(FieldRef<T> &a, T k, const FieldRef<T> &b) {
+template <typename T> NaResult akb(FieldRef<T> &a, T k, const FieldRef<T> &b) {
   HERMES_ASSERT(a.size() == b.size());
   for (h_size i = 0; i < a.size(); ++i)
     a[i] += k * b[i];
+  return NaResult::noError();
 }
 
 inline NaResult solve(const std::vector<DiscreteOperator> &stencils,

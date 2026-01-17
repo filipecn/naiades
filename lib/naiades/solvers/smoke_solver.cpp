@@ -49,41 +49,37 @@ Result<SmokeSolver2> SmokeSolver2::Config::build() const {
   solver.grid_ = grid_;
   for (int i = 0; i < 2; ++i) {
     solver.dynamic_fields_[i].add<f32>(
-        core::Element::Type::U_FACE_CENTER,
-        solver.grid_.flatIndexOffset(core::Element::Type::U_FACE_CENTER),
-        {"u"});
+        core::Element::Type::U_FACE,
+        solver.grid_.flatIndexOffset(core::Element::Type::U_FACE), {"u"});
     solver.dynamic_fields_[i].add<f32>(
-        core::Element::Type::V_FACE_CENTER,
-        solver.grid_.flatIndexOffset(core::Element::Type::V_FACE_CENTER),
-        {"v"});
-    solver.dynamic_fields_[i].add<f32>(core::Element::Type::CELL_CENTER, 0,
+        core::Element::Type::V_FACE,
+        solver.grid_.flatIndexOffset(core::Element::Type::V_FACE), {"v"});
+    solver.dynamic_fields_[i].add<f32>(core::Element::Type::CELL, 0,
                                        {"density"});
     solver.dynamic_fields_[i].setElementCountFrom(&solver.grid_);
   }
-  solver.static_fields_.add<f32>(core::Element::Type::CELL_CENTER, 0,
-                                 {"p", "div"});
-  solver.static_fields_.add<hermes::geo::vec2>(core::Element::Type::CELL_CENTER,
-                                               0, {"fc"});
+  solver.static_fields_.add<f32>(core::Element::Type::CELL, 0, {"p", "div"});
+  solver.static_fields_.add<hermes::geo::vec2>(core::Element::Type::CELL, 0,
+                                               {"fc"});
   solver.static_fields_.add<f32>(
-      core::Element::Type::U_FACE_CENTER,
-      solver.grid_.flatIndexOffset(core::Element::Type::U_FACE_CENTER), {"fu"});
+      core::Element::Type::U_FACE,
+      solver.grid_.flatIndexOffset(core::Element::Type::U_FACE), {"fu"});
   solver.static_fields_.add<f32>(
-      core::Element::Type::V_FACE_CENTER,
-      solver.grid_.flatIndexOffset(core::Element::Type::V_FACE_CENTER), {"fv"});
+      core::Element::Type::V_FACE,
+      solver.grid_.flatIndexOffset(core::Element::Type::V_FACE), {"fv"});
   solver.static_fields_.setElementCountFrom(&solver.grid_);
 
   // boundary
 
-  auto boundary_element_types = {core::Element::Type::DOWN_FACE_CENTER,
-                                 core::Element::Type::RIGHT_FACE_CENTER,
-                                 core::Element::Type::UP_FACE_CENTER,
-                                 core::Element::Type::LEFT_FACE_CENTER};
+  auto boundary_element_types = {
+      core::Element::Type::DOWN_FACE, core::Element::Type::RIGHT_FACE,
+      core::Element::Type::UP_FACE, core::Element::Type::LEFT_FACE};
   for (auto b : boundary_element_types) {
     auto bd = solver.grid_.boundary(b);
-    solver.boundary_.addRegion("p", core::Element::Type::FACE_CENTER, bd);
-    solver.boundary_.addRegion("v", core::Element::Type::FACE_CENTER, bd);
-    solver.boundary_.addRegion("u", core::Element::Type::FACE_CENTER, bd);
-    solver.boundary_.addRegion("density", core::Element::Type::FACE_CENTER, bd);
+    solver.boundary_.addRegion("p", core::Element::Type::FACE, bd);
+    solver.boundary_.addRegion("v", core::Element::Type::FACE, bd);
+    solver.boundary_.addRegion("u", core::Element::Type::FACE, bd);
+    solver.boundary_.addRegion("density", core::Element::Type::FACE, bd);
   }
 
   return Result<SmokeSolver2>(std::move(solver));

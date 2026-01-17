@@ -128,19 +128,19 @@ public:
   gridPosition(core::Element loc,
                const hermes::geo::point2 &world_position) const;
   /// World position from index
-  hermes::geo::point2 position(core::Element loc,
-                               const hermes::index2 &index) const;
+  hermes::geo::point2 center(core::Element loc,
+                             const hermes::index2 &index) const;
   /// World position from grid position (index space).
-  hermes::geo::point2 position(core::Element loc,
-                               const hermes::geo::point2 &grid_position) const;
+  hermes::geo::point2 center(core::Element loc,
+                             const hermes::geo::point2 &grid_position) const;
 
   // interface
 
   /// Grid location counts
   h_size elementCount(core::Element loc) const override;
-  hermes::geo::point2 position(core::Element loc,
-                               h_size flat_index) const override;
-  std::vector<hermes::geo::point2> positions(core::Element loc) const override;
+  hermes::geo::point2 center(core::Element loc,
+                             h_size flat_index) const override;
+  std::vector<hermes::geo::point2> centers(core::Element loc) const override;
   std::vector<std::vector<h_size>>
   indices(core::Element loc, core::Element sub_loc) const override;
   std::vector<h_size> boundary(core::Element loc) const override;
@@ -151,8 +151,9 @@ public:
   bool isBoundary(core::Element loc, h_size index) const override;
   std::vector<core::Neighbour> star(core::Element loc, h_size index,
                                     core::Element boundary_loc) const override;
-  std::vector<h_size> neighbours(core::Element loc, h_size index,
-                                 core::Element neighbour_loc) const override;
+  std::vector<std::pair<h_size, real_t>>
+  neighbours(core::Element loc, h_size index,
+             core::Element neighbour_loc) const override;
 
 private:
   hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};

@@ -42,6 +42,7 @@ namespace naiades::core {
 struct Neighbour {
   Element element;
   h_size index;
+  real_t distance;
   bool is_boundary;
 
   NAIADES_to_string_FRIEND(Neighbour);
@@ -103,25 +104,25 @@ public:
   /// \param loc Element type.
   /// \param index Center index.
   /// \param neighbour_loc neighbour element type.
-  /// \return List of neighbours of the given element.
-  virtual std::vector<h_size> neighbours(Element loc, h_size index,
-                                         Element neighbour_loc) const = 0;
+  /// \return List of pairs neighbour <index, distance> of the given element.
+  virtual std::vector<std::pair<h_size, real_t>>
+  neighbours(Element loc, h_size index, Element neighbour_loc) const = 0;
 };
 
 class DiscretizationGeometry2 : public DiscretizationTopology {
 public:
   using Ptr = hermes::Ref<DiscretizationGeometry2>;
-  /// Get the position of an element.
+  /// Get the position of an element center.
   /// \note This returns a copy of the position.
   /// \param loc Element.
   /// \param index Element index.
-  /// \return The element position in world coordinates.
-  virtual hermes::geo::point2 position(Element loc, h_size index) const = 0;
-  /// Get the flat list of positions of an element type.
+  /// \return The element center position in world coordinates.
+  virtual hermes::geo::point2 center(Element loc, h_size index) const = 0;
+  /// Get the flat list of center positions of an element type.
   /// \note The indices of the list match the element index.
   /// \note This returns a copy of the list.
   /// \param loc Element.
-  virtual std::vector<hermes::geo::point2> positions(Element loc) const = 0;
+  virtual std::vector<hermes::geo::point2> centers(Element loc) const = 0;
 };
 
 } // namespace naiades::core

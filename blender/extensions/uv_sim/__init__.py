@@ -137,7 +137,7 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
         self.stable_fluids2 = naiades_py.StableFluids2(True)
         context.scene.uv_sim_settings.is_simulating = True
 
-        element = naiades_py.Element.CELL_CENTER
+        element = naiades_py.Element.CELL
         na_mesh = self.stable_fluids2.get_mesh(element)
         self.mesh = mesh_utils.MeshObject(context, na_mesh, "test2")
         return True

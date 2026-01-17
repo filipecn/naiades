@@ -47,23 +47,23 @@ TEST_CASE("Element", "[core]") {
 
     PRINT(Element::Type::NONE)
     PRINT(Element::Type::ANY)
-    PRINT(Element::Type::CELL_CENTER)
-    PRINT(Element::Type::FACE_CENTER)
-    PRINT(Element::Type::VERTEX_CENTER)
+    PRINT(Element::Type::CELL)
+    PRINT(Element::Type::FACE)
+    PRINT(Element::Type::VERTEX)
     PRINT(Element::Type::POINT)
     PRINT(Element::Type::CUSTOM)
-    PRINT(Element::Type::HORIZONTAL_FACE_CENTER)
-    PRINT(Element::Type::V_FACE_CENTER)
-    PRINT(Element::Type::X_FACE_CENTER)
-    PRINT(Element::Type::XZ_FACE_CENTER)
-    PRINT(Element::Type::VERTICAL_FACE_CENTER)
-    PRINT(Element::Type::U_FACE_CENTER)
-    PRINT(Element::Type::Y_FACE_CENTER)
-    PRINT(Element::Type::YZ_FACE_CENTER)
-    PRINT(Element::Type::DEPTH_FACE_CENTER)
-    PRINT(Element::Type::W_FACE_CENTER)
-    PRINT(Element::Type::Z_FACE_CENTER)
-    PRINT(Element::Type::XY_FACE_CENTER)
+    PRINT(Element::Type::HORIZONTAL_FACE)
+    PRINT(Element::Type::V_FACE)
+    PRINT(Element::Type::X_FACE)
+    PRINT(Element::Type::XZ_FACE)
+    PRINT(Element::Type::VERTICAL_FACE)
+    PRINT(Element::Type::U_FACE)
+    PRINT(Element::Type::Y_FACE)
+    PRINT(Element::Type::YZ_FACE)
+    PRINT(Element::Type::DEPTH_FACE)
+    PRINT(Element::Type::W_FACE)
+    PRINT(Element::Type::Z_FACE)
+    PRINT(Element::Type::XY_FACE)
 #undef PRINT
 
     HERMES_INFO(
@@ -83,75 +83,72 @@ TEST_CASE("Element", "[core]") {
     REQUIRE(Element(element_primitive_bits::any, element_alignment_bits::any,
                     element_orientation_bits::any) == Element::Type::ANY);
     REQUIRE(Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::any_y) ==
-            Element::Type::XZ_FACE_CENTER);
-    REQUIRE(
-        Element::Type::CELL_CENTER ==
-        Element(element_primitive_bits::cell, element_alignment_bits::none));
-    REQUIRE(Element::Type::FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::any,
-                    element_orientation_bits::any));
-    REQUIRE(
-        Element::Type::VERTEX_CENTER ==
-        Element(element_primitive_bits::vertex, element_alignment_bits::none));
+                    element_orientation_bits::any_y) == Element::Type::XZ_FACE);
+    REQUIRE(Element::Type::CELL == Element(element_primitive_bits::cell,
+                                           element_alignment_bits::none));
+    REQUIRE(Element::Type::FACE == Element(element_primitive_bits::face,
+                                           element_alignment_bits::any,
+                                           element_orientation_bits::any));
+    REQUIRE(Element::Type::VERTEX == Element(element_primitive_bits::vertex,
+                                             element_alignment_bits::none));
     REQUIRE(Element::Type::POINT == Element(element_primitive_bits::point,
                                             element_alignment_bits::none));
     REQUIRE(Element::Type::CUSTOM == Element(element_primitive_bits::custom,
                                              element_alignment_bits::custom,
                                              element_orientation_bits::custom));
-    REQUIRE(Element::Type::HORIZONTAL_FACE_CENTER ==
+    REQUIRE(Element::Type::HORIZONTAL_FACE ==
             Element(element_primitive_bits::face, element_alignment_bits::xz,
                     element_orientation_bits::any_y));
-    REQUIRE(Element::Type::V_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::any_y));
-    REQUIRE(Element::Type::X_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::any_y));
-    REQUIRE(Element::Type::XZ_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::any_y));
-    REQUIRE(Element::Type::VERTICAL_FACE_CENTER ==
+    REQUIRE(Element::Type::V_FACE == Element(element_primitive_bits::face,
+                                             element_alignment_bits::xz,
+                                             element_orientation_bits::any_y));
+    REQUIRE(Element::Type::X_FACE == Element(element_primitive_bits::face,
+                                             element_alignment_bits::xz,
+                                             element_orientation_bits::any_y));
+    REQUIRE(Element::Type::XZ_FACE == Element(element_primitive_bits::face,
+                                              element_alignment_bits::xz,
+                                              element_orientation_bits::any_y));
+    REQUIRE(Element::Type::VERTICAL_FACE ==
             Element(element_primitive_bits::face, element_alignment_bits::yz,
                     element_orientation_bits::any_x));
-    REQUIRE(Element::Type::U_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::yz,
-                    element_orientation_bits::any_x));
-    REQUIRE(Element::Type::Y_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::yz,
-                    element_orientation_bits::any_x));
-    REQUIRE(Element::Type::YZ_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::yz,
-                    element_orientation_bits::any_x));
-    REQUIRE(Element::Type::DEPTH_FACE_CENTER ==
+    REQUIRE(Element::Type::U_FACE == Element(element_primitive_bits::face,
+                                             element_alignment_bits::yz,
+                                             element_orientation_bits::any_x));
+    REQUIRE(Element::Type::Y_FACE == Element(element_primitive_bits::face,
+                                             element_alignment_bits::yz,
+                                             element_orientation_bits::any_x));
+    REQUIRE(Element::Type::YZ_FACE == Element(element_primitive_bits::face,
+                                              element_alignment_bits::yz,
+                                              element_orientation_bits::any_x));
+    REQUIRE(Element::Type::DEPTH_FACE ==
             Element(element_primitive_bits::face, element_alignment_bits::xy,
                     element_orientation_bits::any_z));
-    REQUIRE(Element::Type::W_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::xy,
-                    element_orientation_bits::any_z));
-    REQUIRE(Element::Type::Z_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::xy,
-                    element_orientation_bits::any_z));
-    REQUIRE(Element::Type::XY_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::xy,
-                    element_orientation_bits::any_z));
+    REQUIRE(Element::Type::W_FACE == Element(element_primitive_bits::face,
+                                             element_alignment_bits::xy,
+                                             element_orientation_bits::any_z));
+    REQUIRE(Element::Type::Z_FACE == Element(element_primitive_bits::face,
+                                             element_alignment_bits::xy,
+                                             element_orientation_bits::any_z));
+    REQUIRE(Element::Type::XY_FACE == Element(element_primitive_bits::face,
+                                              element_alignment_bits::xy,
+                                              element_orientation_bits::any_z));
 
-    REQUIRE(Element::Type::UP_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::xz,
-                    element_orientation_bits::y));
-    REQUIRE(Element::Type::DOWN_FACE_CENTER ==
+    REQUIRE(Element::Type::UP_FACE == Element(element_primitive_bits::face,
+                                              element_alignment_bits::xz,
+                                              element_orientation_bits::y));
+    REQUIRE(Element::Type::DOWN_FACE ==
             Element(element_primitive_bits::face, element_alignment_bits::xz,
                     element_orientation_bits::neg_y));
-    REQUIRE(Element::Type::LEFT_FACE_CENTER ==
+    REQUIRE(Element::Type::LEFT_FACE ==
             Element(element_primitive_bits::face, element_alignment_bits::yz,
                     element_orientation_bits::neg_x));
-    REQUIRE(Element::Type::RIGHT_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::yz,
-                    element_orientation_bits::x));
-    REQUIRE(Element::Type::FRONT_FACE_CENTER ==
-            Element(element_primitive_bits::face, element_alignment_bits::xy,
-                    element_orientation_bits::z));
-    REQUIRE(Element::Type::BACK_FACE_CENTER ==
+    REQUIRE(Element::Type::RIGHT_FACE == Element(element_primitive_bits::face,
+                                                 element_alignment_bits::yz,
+                                                 element_orientation_bits::x));
+    REQUIRE(Element::Type::FRONT_FACE == Element(element_primitive_bits::face,
+                                                 element_alignment_bits::xy,
+                                                 element_orientation_bits::z));
+    REQUIRE(Element::Type::BACK_FACE ==
             Element(element_primitive_bits::face, element_alignment_bits::xy,
                     element_orientation_bits::neg_z));
 
@@ -280,40 +277,37 @@ TEST_CASE("Discrete Operator", "[core]") {
                     .value();
     core::BoundarySet bs = BoundarySet::Config().setTopology(&grid).build();
 
-    auto boundary_element_types = {core::Element::Type::LEFT_FACE_CENTER,
-                                   core::Element::Type::DOWN_FACE_CENTER,
-                                   core::Element::Type::RIGHT_FACE_CENTER,
-                                   core::Element::Type::UP_FACE_CENTER};
+    auto boundary_element_types = {
+        core::Element::Type::LEFT_FACE, core::Element::Type::DOWN_FACE,
+        core::Element::Type::RIGHT_FACE, core::Element::Type::UP_FACE};
     for (auto b : boundary_element_types)
-      bs.addRegion("p", core::Element::Type::FACE_CENTER, grid.boundary(b));
+      bs.addRegion("p", core::Element::Type::FACE, grid.boundary(b));
 
     auto dirichlet = naiades::core::bc::Dirichlet::Ptr::shared(10);
     auto neumann = naiades::core::bc::Neumann::Ptr::shared();
-    bs.set("p", neumann, core::Element::Type::CELL_CENTER);
-    bs.set("p", 0, dirichlet, core::Element::Type::CELL_CENTER);
+    bs.set("p", neumann, core::Element::Type::CELL);
+    bs.set("p", 0, dirichlet, core::Element::Type::CELL);
 
     REQUIRE(bs["p"].resolve() == NaResult::noError());
 
     SECTION("compute") {
       auto dirichlet_v = naiades::core::bc::Dirichlet::Ptr::shared(10);
       auto dirichlet_u = naiades::core::bc::Dirichlet::Ptr::shared(20);
-      bs.addRegion("u", core::Element::Type::FACE_CENTER,
-                   grid.boundary(core::Element::Type::U_FACE_CENTER));
-      bs.addRegion("v", core::Element::Type::FACE_CENTER,
-                   grid.boundary(core::Element::Type::V_FACE_CENTER));
-      bs.set("u", dirichlet_u, Element::Type::FACE_CENTER);
-      bs.set("v", dirichlet_v, Element::Type::FACE_CENTER);
+      bs.addRegion("u", core::Element::Type::FACE,
+                   grid.boundary(core::Element::Type::U_FACE));
+      bs.addRegion("v", core::Element::Type::FACE,
+                   grid.boundary(core::Element::Type::V_FACE));
+      bs.set("u", dirichlet_u, Element::Type::FACE);
+      bs.set("v", dirichlet_v, Element::Type::FACE);
 
       REQUIRE(bs["u"].resolve() == NaResult::noError());
       REQUIRE(bs["v"].resolve() == NaResult::noError());
 
       FieldSet fields;
-      fields.add<f32>(core::Element::Type::U_FACE_CENTER,
-                      grid.flatIndexOffset(core::Element::Type::U_FACE_CENTER),
-                      {"u"});
-      fields.add<f32>(core::Element::Type::V_FACE_CENTER,
-                      grid.flatIndexOffset(core::Element::Type::V_FACE_CENTER),
-                      {"v"});
+      fields.add<f32>(core::Element::Type::U_FACE,
+                      grid.flatIndexOffset(core::Element::Type::U_FACE), {"u"});
+      fields.add<f32>(core::Element::Type::V_FACE,
+                      grid.flatIndexOffset(core::Element::Type::V_FACE), {"v"});
       fields.setElementCountFrom(&grid);
       auto v = fields.get<f32>("v").value();
       auto u = fields.get<f32>("u").value();
@@ -329,27 +323,27 @@ TEST_CASE("Discrete Operator", "[core]") {
 
     SECTION("Laplacian") {
       auto op = DiscreteOperator::laplacian(
-          &grid, bs["p"], core::Element::Type::CELL_CENTER,
-          grid.flatIndex(core::Element::Type::CELL_CENTER, {1, 1}),
-          core::Element::Type::FACE_CENTER);
+          &grid, bs["p"], core::Element::Type::CELL,
+          grid.flatIndex(core::Element::Type::CELL, {1, 1}),
+          core::Element::Type::FACE);
       HERMES_WARN("{}", naiades::to_string(op));
 
       op = DiscreteOperator::laplacian(
-          &grid, bs["p"], core::Element::Type::CELL_CENTER,
-          grid.flatIndex(core::Element::Type::CELL_CENTER, {0, 1}),
-          core::Element::Type::FACE_CENTER);
+          &grid, bs["p"], core::Element::Type::CELL,
+          grid.flatIndex(core::Element::Type::CELL, {0, 1}),
+          core::Element::Type::FACE);
       HERMES_WARN("{}", naiades::to_string(op));
 
       op = DiscreteOperator::laplacian(
-          &grid, bs["p"], core::Element::Type::CELL_CENTER,
-          grid.flatIndex(core::Element::Type::CELL_CENTER, {0, 0}),
-          core::Element::Type::FACE_CENTER);
+          &grid, bs["p"], core::Element::Type::CELL,
+          grid.flatIndex(core::Element::Type::CELL, {0, 0}),
+          core::Element::Type::FACE);
       HERMES_WARN("{}", naiades::to_string(op));
 
       op = DiscreteOperator::laplacian(
-          &grid, bs["p"], core::Element::Type::CELL_CENTER,
-          grid.flatIndex(core::Element::Type::CELL_CENTER, {2, 3}),
-          core::Element::Type::FACE_CENTER);
+          &grid, bs["p"], core::Element::Type::CELL,
+          grid.flatIndex(core::Element::Type::CELL, {2, 3}),
+          core::Element::Type::FACE);
       HERMES_WARN("{}", naiades::to_string(op));
     }
   }

@@ -120,15 +120,15 @@ hermes::geo::point2 Grid2::origin(core::Element loc) const {
 
 hermes::geo::vec2 Grid2::gridOffset(core::Element loc) const {
   switch (loc) {
-  case core::Element::Type::CELL_CENTER:
+  case core::Element::Type::CELL:
     return {0.5f, 0.5f};
-  case core::Element::Type::FACE_CENTER:
+  case core::Element::Type::FACE:
     return {0.f, 0.f};
-  case core::Element::Type::HORIZONTAL_FACE_CENTER:
+  case core::Element::Type::HORIZONTAL_FACE:
     return {0.5f, 0.f};
-  case core::Element::Type::VERTICAL_FACE_CENTER:
+  case core::Element::Type::VERTICAL_FACE:
     return {0.f, 0.5f};
-  case core::Element::Type::VERTEX_CENTER:
+  case core::Element::Type::VERTEX:
     return {0.f, 0.f};
   default:
     return {0, 0};
@@ -137,16 +137,16 @@ hermes::geo::vec2 Grid2::gridOffset(core::Element loc) const {
 
 h_size Grid2::elementCount(core::Element loc) const {
   switch (loc) {
-  case core::Element::Type::CELL_CENTER:
+  case core::Element::Type::CELL:
     return (resolution_.width + 0) * (resolution_.height + 0);
-  case core::Element::Type::FACE_CENTER:
+  case core::Element::Type::FACE:
     return (resolution_.width + 1) * (resolution_.height + 0) +
            (resolution_.width + 0) * (resolution_.height + 1);
-  case core::Element::Type::HORIZONTAL_FACE_CENTER:
+  case core::Element::Type::HORIZONTAL_FACE:
     return (resolution_.width + 0) * (resolution_.height + 1);
-  case core::Element::Type::VERTICAL_FACE_CENTER:
+  case core::Element::Type::VERTICAL_FACE:
     return (resolution_.width + 1) * (resolution_.height + 0);
-  case core::Element::Type::VERTEX_CENTER:
+  case core::Element::Type::VERTEX:
     return (resolution_.width + 1) * (resolution_.height + 1);
   default:
     return 0;
@@ -155,16 +155,16 @@ h_size Grid2::elementCount(core::Element loc) const {
 
 hermes::size2 Grid2::resolution(core::Element loc) const {
   switch (loc) {
-  case core::Element::Type::CELL_CENTER:
+  case core::Element::Type::CELL:
     return resolution_;
-  case core::Element::Type::FACE_CENTER:
+  case core::Element::Type::FACE:
     HERMES_WARN("Getting face resolution!");
     return resolution_ + hermes::size2(1, 1);
-  case core::Element::Type::HORIZONTAL_FACE_CENTER:
+  case core::Element::Type::HORIZONTAL_FACE:
     return resolution_ + hermes::size2(0, 1);
-  case core::Element::Type::VERTICAL_FACE_CENTER:
+  case core::Element::Type::VERTICAL_FACE:
     return resolution_ + hermes::size2(1, 0);
-  case core::Element::Type::VERTEX_CENTER:
+  case core::Element::Type::VERTEX:
     return resolution_ + hermes::size2(1, 1);
   default:
     return hermes::size2(0, 0);
@@ -177,18 +177,18 @@ h_size Grid2::flatIndex(core::Element loc, const hermes::index2 &index) const {
 }
 
 h_size Grid2::flatIndexOffset(core::Element loc) const {
-  if (loc == core::Element::Type::Y_FACE_CENTER)
-    return resolution(core::Element::Type::X_FACE_CENTER).total();
+  if (loc == core::Element::Type::Y_FACE)
+    return resolution(core::Element::Type::X_FACE).total();
   return 0;
 }
 
 hermes::index2 Grid2::index(core::Element loc, h_size flat_index) const {
   // force face alignment based on index
   if (loc.is(core::element_primitive_bits::face)) {
-    if (flat_index >= flatIndexOffset(core::Element::Y_FACE_CENTER))
-      loc = core::Element::Y_FACE_CENTER;
+    if (flat_index >= flatIndexOffset(core::Element::Y_FACE))
+      loc = core::Element::Y_FACE;
     else
-      loc = core::Element::X_FACE_CENTER;
+      loc = core::Element::X_FACE;
   }
   auto res = resolution(loc);
   auto local_flat_index = flat_index - flatIndexOffset(loc);
@@ -196,15 +196,15 @@ hermes::index2 Grid2::index(core::Element loc, h_size flat_index) const {
                         local_flat_index / res.width);
 }
 
-hermes::geo::point2 Grid2::position(core::Element loc,
-                                    const hermes::index2 &index) const {
+hermes::geo::point2 Grid2::center(core::Element loc,
+                                  const hermes::index2 &index) const {
   auto io = gridOffset(loc);
   return {(index.i + io.x) * cell_size_.x, (index.j + io.y) * cell_size_.y};
 }
 
 hermes::geo::point2
-Grid2::position(core::Element loc,
-                const hermes::geo::point2 &grid_position) const {
+Grid2::center(core::Element loc,
+              const hermes::geo::point2 &grid_position) const {
   auto io = gridOffset(loc);
   return {(grid_position.x + io.x) * cell_size_.x,
           (grid_position.y + io.y) * cell_size_.y};
@@ -234,38 +234,37 @@ Grid2::gridPosition(core::Element loc,
           (world_position.y - o.y) / cell_size_.y};
 }
 
-hermes::geo::point2 Grid2::position(core::Element loc,
-                                    h_size flat_index) const {
-  return position(loc, index(loc, flat_index));
+hermes::geo::point2 Grid2::center(core::Element loc, h_size flat_index) const {
+  return center(loc, index(loc, flat_index));
 }
 
-std::vector<hermes::geo::point2> Grid2::positions(core::Element loc) const {
+std::vector<hermes::geo::point2> Grid2::centers(core::Element loc) const {
   std::vector<hermes::geo::point2> ps;
-  if (loc == core::Element::FACE_CENTER) {
-    const core::Element x_element(core::Element::X_FACE_CENTER);
+  if (loc == core::Element::FACE) {
+    const core::Element x_element(core::Element::X_FACE);
     const hermes::range2 x_range(resolution(x_element));
-    const core::Element y_element(core::Element::Y_FACE_CENTER);
+    const core::Element y_element(core::Element::Y_FACE);
     const hermes::range2 y_range(resolution(y_element));
 
     ps.resize(x_range.area() + y_range.area());
     h_size flat_ij = 0;
     for (auto ij : x_range)
-      ps[flat_ij++] = position(x_element, ij);
+      ps[flat_ij++] = center(x_element, ij);
     for (auto ij : y_range)
-      ps[flat_ij++] = position(y_element, ij);
+      ps[flat_ij++] = center(y_element, ij);
   } else {
     const hermes::range2 range(resolution(loc));
     ps.resize(range.area());
     for (auto ij : range)
-      ps[range.flatIndex(ij)] = position(loc, ij);
+      ps[range.flatIndex(ij)] = center(loc, ij);
   }
   return ps;
 }
 
 std::vector<std::vector<h_size>> Grid2::indices(core::Element loc,
                                                 core::Element sub_loc) const {
-  HERMES_ASSERT(loc == core::Element::Type::CELL_CENTER);
-  HERMES_ASSERT(sub_loc == core::Element::Type::VERTEX_CENTER);
+  HERMES_ASSERT(loc == core::Element::Type::CELL);
+  HERMES_ASSERT(sub_loc == core::Element::Type::VERTEX);
   const hermes::range2 range(resolution(loc));
   const hermes::range2 sub_range(resolution(sub_loc));
   std::vector<std::vector<h_size>> is(range.area());
@@ -284,7 +283,7 @@ std::vector<h_size> Grid2::boundary(core::Element loc) const {
 
     // x faces
 
-    core::Element h_face_e(core::Element::Type::X_FACE_CENTER);
+    core::Element h_face_e(core::Element::Type::X_FACE);
     auto h_face_res = resolution(h_face_e);
     if (loc.has(core::element_orientation_bits::neg_y))
       for (h_size i = 0; i < h_face_res.width; ++i)
@@ -296,7 +295,7 @@ std::vector<h_size> Grid2::boundary(core::Element loc) const {
 
     // y faces
 
-    core::Element v_face_e(core::Element::Type::Y_FACE_CENTER);
+    core::Element v_face_e(core::Element::Type::Y_FACE);
     auto v_face_res = resolution(v_face_e);
     if (loc.has(core::element_orientation_bits::neg_x))
       for (h_size i = 0; i < v_face_res.height; ++i)
@@ -317,7 +316,7 @@ std::vector<h_size> Grid2::boundary(core::Element loc) const {
 core::element_alignments Grid2::elementAlignment(core ::Element loc,
                                                  h_size index) const {
   if (loc.is(core::element_primitive_bits::face)) {
-    return index < elementCount(core::Element::Type::X_FACE_CENTER)
+    return index < elementCount(core::Element::Type::X_FACE)
                ? core::element_alignment_bits::x
                : core::element_alignment_bits::y;
   }
@@ -327,8 +326,8 @@ core::element_alignments Grid2::elementAlignment(core ::Element loc,
 core::element_orientations Grid2::elementOrientation(core ::Element loc,
                                                      h_size index) const {
   if (loc.is(core::element_primitive_bits::face)) {
-    if (index < elementCount(core::Element::Type::X_FACE_CENTER)) {
-      auto res = resolution(core::Element::Type::X_FACE_CENTER);
+    if (index < elementCount(core::Element::Type::X_FACE)) {
+      auto res = resolution(core::Element::Type::X_FACE);
       // x alignment
       if (index < res.width)
         return core::element_orientation_bits::neg_y;
@@ -336,8 +335,8 @@ core::element_orientations Grid2::elementOrientation(core ::Element loc,
         return core::element_orientation_bits::y;
       return core::element_orientation_bits::any_y;
     } else {
-      auto res = resolution(core::Element::Type::Y_FACE_CENTER);
-      auto i = index - flatIndexOffset(core::Element::Y_FACE_CENTER);
+      auto res = resolution(core::Element::Type::Y_FACE);
+      auto i = index - flatIndexOffset(core::Element::Y_FACE);
       // y alignment
       if (i % res.width == 0)
         return core::element_orientation_bits::neg_x;
@@ -359,10 +358,33 @@ bool Grid2::isBoundary(core::Element loc, h_size i) const {
 std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size flat_index,
                                          core::Element boundary_loc) const {
   std::vector<core::Neighbour> neighbours;
+  auto addNeighbour = [&](const core::Element &element,
+                          const hermes::index2 &ij,
+                          const hermes::geo::point2 &position, bool boundary) {
+    auto element_index = safeFlatIndex(element, ij);
+    auto element_center = center(element, element_index);
+    neighbours.push_back(
+        {.element = element,
+         .index = element_index,
+         .distance = hermes::geo::distance(position, element_center),
+         .is_boundary = boundary});
+  };
+  auto addNeighbour2 = [&](const core::Element &element,
+                           const hermes::index2 &ij, real_t distance,
+                           bool boundary) {
+    auto element_index = safeFlatIndex(element, ij);
+    neighbours.push_back({.element = element,
+                          .index = element_index,
+                          .distance = distance,
+                          .is_boundary = boundary});
+  };
+  auto res = resolution(loc);
+  auto ij = index(loc, flat_index);
+  auto loc_center = center(loc, flat_index);
+  auto half_dx = cell_size_.x * 0.5;
+  auto half_dy = cell_size_.y * 0.5;
   if (loc.is(core::element_primitive_bits::cell)) {
     bool include_boundary = boundary_loc.is(core::element_primitive_bits::face);
-    auto res = resolution(loc);
-    auto ij = index(loc, flat_index);
     //
     //            (i,j+1)
     //           -------
@@ -376,83 +398,78 @@ std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size flat_index,
     // bottom
     if (ij.j == 0) {
       if (include_boundary)
-        neighbours.push_back(
-            {.element = core::Element::Type::FACE_CENTER,
-             .index = safeFlatIndex(core::Element::Type::X_FACE_CENTER, ij),
-             .is_boundary = true});
+        addNeighbour2(core::Element::Type::X_FACE, ij, half_dy, true);
     } else
-      neighbours.push_back({.element = loc,
-                            .index = safeFlatIndex(loc, ij.down()),
-                            .is_boundary = false});
+      addNeighbour2(loc, ij.down(), cell_size_.y, false);
 
     // right
     if (ij.i == static_cast<i32>(res.width) - 1) {
       if (include_boundary)
-        neighbours.push_back(
-            {.element = core::Element::Type::FACE_CENTER,
-             .index =
-                 safeFlatIndex(core::Element::Type::Y_FACE_CENTER, ij.right()),
-             .is_boundary = true});
+        addNeighbour2(core::Element::Type::Y_FACE, ij.right(), half_dx, true);
     } else
-      neighbours.push_back({.element = loc,
-                            .index = safeFlatIndex(loc, ij.right()),
-                            .is_boundary = false});
+      addNeighbour2(loc, ij.right(), cell_size_.x, false);
 
     // top
     if (ij.j == static_cast<i32>(res.height) - 1) {
       if (include_boundary)
-        neighbours.push_back({.element = core::Element::Type::FACE_CENTER,
-                              .index = safeFlatIndex(
-                                  core::Element::Type::X_FACE_CENTER, ij.up()),
-                              .is_boundary = true});
+        addNeighbour2(core::Element::Type::X_FACE, ij.up(), half_dy, true);
     } else
-      neighbours.push_back({.element = loc,
-                            .index = safeFlatIndex(loc, ij.up()),
-                            .is_boundary = false});
+      addNeighbour2(loc, ij.up(), cell_size_.y, false);
 
     // left
     if (ij.i == 0) {
       if (include_boundary)
-        neighbours.push_back(
-            {.element = core::Element::Type::FACE_CENTER,
-             .index =
-                 safeFlatIndex(core::Element::Type::Y_FACE_CENTER, ij.left()),
-             .is_boundary = true});
+        addNeighbour2(core::Element::Type::Y_FACE, ij.left(), half_dx, true);
     } else
-      neighbours.push_back({.element = loc,
-                            .index = safeFlatIndex(loc, ij.left()),
-                            .is_boundary = false});
+      addNeighbour2(loc, ij.left(), cell_size_.x, false);
   } else {
     HERMES_NOT_IMPLEMENTED;
   }
   return neighbours;
 }
 
-std::vector<h_size> Grid2::neighbours(core::Element loc, h_size flat_index,
-                                      core::Element neighbour_loc) const {
-  std::vector<h_size> ns;
+std::vector<std::pair<h_size, real_t>>
+Grid2::neighbours(core::Element loc, h_size flat_index,
+                  core::Element neighbour_loc) const {
+  std::vector<std::pair<h_size, real_t>> ns;
+  auto addElement = [&](const core::Element &element, const hermes::index2 &ij,
+                        const hermes::geo::point2 &position) {
+    auto element_index = flatIndex(element, ij);
+    auto element_distance =
+        hermes::geo::distance(position, center(element, element_index));
+    ns.emplace_back(std::make_pair(element_index, element_distance));
+  };
+  auto addElement2 = [&](const core::Element &element, const hermes::index2 &ij,
+                         real_t element_distance) {
+    auto element_index = flatIndex(element, ij);
+    ns.emplace_back(std::make_pair(element_index, element_distance));
+  };
   if (loc.is(core::element_primitive_bits::face)) {
-    if (flat_index < flatIndexOffset(core::Element::Type::Y_FACE_CENTER)) {
-      auto res = resolution(core::Element::Type::X_FACE_CENTER);
-      auto ij = index(core::Element::Type::X_FACE_CENTER, flat_index);
+    if (flat_index < flatIndexOffset(core::Element::Type::Y_FACE)) {
+      const auto face_element = core::Element::Type::X_FACE;
+      const auto res = resolution(face_element);
+      const auto ij = index(face_element, flat_index);
       if (neighbour_loc.is(core::element_primitive_bits::cell)) {
+        const auto half_dy = cell_size_.y * 0.5;
+        const auto cell_element = core::Element::Type::CELL;
         if (ij.j > 0)
-          ns.emplace_back(
-              flatIndex(core::Element::Type::CELL_CENTER, ij.down()));
+          addElement2(cell_element, ij.down(), half_dy);
         if (ij.j < static_cast<i32>(res.height) - 1)
-          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij));
+          addElement2(cell_element, ij, half_dy);
       } else {
         HERMES_NOT_IMPLEMENTED
       }
     } else {
-      auto res = resolution(core::Element::Type::Y_FACE_CENTER);
-      auto ij = index(core::Element::Type::Y_FACE_CENTER, flat_index);
+      const auto face_element = core::Element::Type::Y_FACE;
+      const auto res = resolution(face_element);
+      const auto ij = index(face_element, flat_index);
       if (neighbour_loc.is(core::element_primitive_bits::cell)) {
+        const auto half_dx = cell_size_.x * 0.5;
+        auto cell_element = core::Element::Type::CELL;
         if (ij.i > 0)
-          ns.emplace_back(
-              flatIndex(core::Element::Type::CELL_CENTER, ij.left()));
+          addElement2(cell_element, ij.left(), half_dx);
         if (ij.i < static_cast<i32>(res.width) - 1)
-          ns.emplace_back(flatIndex(core::Element::Type::CELL_CENTER, ij));
+          addElement2(cell_element, ij, half_dx);
       } else {
         HERMES_NOT_IMPLEMENTED
       }

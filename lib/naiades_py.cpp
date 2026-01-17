@@ -108,17 +108,16 @@ struct py_Mesh {
     py_Mesh mesh;
 
     mesh.face_centers =
-        vector_pyarray(grid.positions(naiades::core::Element::FACE_CENTER));
+        vector_pyarray(grid.positions(naiades::core::Element::FACE));
     mesh.cell_centers =
-        vector_pyarray(grid.positions(naiades::core::Element::CELL_CENTER));
+        vector_pyarray(grid.positions(naiades::core::Element::CELL));
     mesh.vertex_centers =
-        vector_pyarray(grid.positions(naiades::core::Element::VERTEX_CENTER));
+        vector_pyarray(grid.positions(naiades::core::Element::VERTEX));
 
-    auto g_indices =
-        grid.indices(element, naiades::core::Element::VERTEX_CENTER);
+    auto g_indices = grid.indices(element, naiades::core::Element::VERTEX);
     std::vector<u32> data(g_indices.size() * 4);
     std::vector<h_size> shape = {
-        grid.elementCount(naiades::core::Element::CELL_CENTER), 4};
+        grid.elementCount(naiades::core::Element::CELL), 4};
     std::vector<h_size> strides = {4 * sizeof(u32), sizeof(u32)};
     for (h_size i = 0; i < g_indices.size(); ++i)
       for (h_size j = 0; j < 4; ++j)
@@ -159,13 +158,13 @@ struct StableFluids2_py {
         });
 
     HERMES_UNUSED_VARIABLE(verbose);
-    fields_.add<hermes::geo::vec2>(naiades::core::Element::CELL_CENTER,
+    fields_.add<hermes::geo::vec2>(naiades::core::Element::CELL,
                                    {"cell_velocity"});
-    fields_.add<f32>(naiades::core::Element::CELL_CENTER,
+    fields_.add<f32>(naiades::core::Element::CELL,
                      {"density_0", "density_1", "cell_R", "cell_G", "cell_B"});
-    fields_.add<f32>(naiades::core::Element::VERTEX_CENTER, {"gaussian"});
-    fields_.add<f32>(naiades::core::Element::X_FACE_CENTER, {"v"});
-    fields_.add<f32>(naiades::core::Element::Y_FACE_CENTER, {"u"});
+    fields_.add<f32>(naiades::core::Element::VERTEX, {"gaussian"});
+    fields_.add<f32>(naiades::core::Element::X_FACE, {"v"});
+    fields_.add<f32>(naiades::core::Element::Y_FACE, {"u"});
 
     fields_.setElementCountFrom(&grid_);
 
@@ -246,19 +245,17 @@ struct StableFluids2_py {
     auto v = solver_.v();
 
     std::vector<hermes::geo::vec2> data(
-        grid_.elementCount(naiades::core::Element::Type::FACE_CENTER));
+        grid_.elementCount(naiades::core::Element::Type::FACE));
 
     for (h_size i = 0; i < v.size(); ++i) {
       auto flat_index =
-          grid_.flatIndexOffset(naiades::core::Element::Type::X_FACE_CENTER) +
-          i;
+          grid_.flatIndexOffset(naiades::core::Element::Type::X_FACE) + i;
       data[flat_index].x = 0;
       data[flat_index].y = v[i];
     }
     for (h_size i = 0; i < u.size(); ++i) {
       auto flat_index =
-          grid_.flatIndexOffset(naiades::core::Element::Type::Y_FACE_CENTER) +
-          i;
+          grid_.flatIndexOffset(naiades::core::Element::Type::Y_FACE) + i;
       data[flat_index].x = u[i];
       data[flat_index].y = 0;
     }
@@ -371,9 +368,9 @@ PYBIND11_MODULE(naiades_py, m) {
   m.doc() = "Naiades module";
 
   py_Element(m, "Element", "enum.IntEnum")
-      PY_ENUM_VALUE(naiades::core::Element::Type, CELL_CENTER)   //
-      PY_ENUM_VALUE(naiades::core::Element::Type, U_FACE_CENTER) //
-      PY_ENUM_VALUE(naiades::core::Element::Type, V_FACE_CENTER) //
+      PY_ENUM_VALUE(naiades::core::Element::Type, CELL)   //
+      PY_ENUM_VALUE(naiades::core::Element::Type, U_FACE) //
+      PY_ENUM_VALUE(naiades::core::Element::Type, V_FACE) //
           .finalize();
 
   py::class_<py_Mesh>(m, "Mesh")

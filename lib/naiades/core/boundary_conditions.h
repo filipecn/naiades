@@ -84,7 +84,7 @@ public:
     DiscreteOperator op;
     auto ns = d_t->neighbours(boundary_loc, boundary_index, interior_loc);
     HERMES_ASSERT(ns.size() == 1);
-    op.add(ns[0], 1.0);
+    op.add(ns[0].first, 1.0);
     return op;
   }
 };
