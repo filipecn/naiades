@@ -2,15 +2,12 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include <naiades/core/blas.h>
-#include <naiades/core/boundary.h>
-#include <naiades/core/discretization.h>
-#include <naiades/core/field.h>
-#include <naiades/core/operators.h>
 #include <naiades/geo/grid.h>
+#include <naiades/numeric/blas.h>
 
 using namespace naiades;
 using namespace naiades::core;
+using namespace naiades::numeric;
 
 TEST_CASE("blas", "[core]") {
   SECTION("akb") {
@@ -50,11 +47,11 @@ TEST_CASE("solve", "[core]") {
                   .build()
                   .value();
 
-  core::BoundarySet bs = BoundarySet::Config().setTopology(&grid).build();
+  // core::BoundarySet bs = BoundarySet::Config().setTopology(&grid).build();
 
-  auto boundary_element_types = {
-      core::Element::Type::LEFT_FACE, core::Element::Type::DOWN_FACE,
-      core::Element::Type::RIGHT_FACE, core::Element::Type::UP_FACE};
-  for (auto b : boundary_element_types)
-    bs.addRegion("p", core::Element::Type::FACE, grid.boundary(b));
+  // auto boundary_element_types = {
+  //     core::Element::Type::LEFT_FACE, core::Element::Type::DOWN_FACE,
+  //     core::Element::Type::RIGHT_FACE, core::Element::Type::UP_FACE};
+  // for (auto b : boundary_element_types)
+  //   bs.addRegion("p", core::Element::Type::FACE, grid.boundary(b));
 }

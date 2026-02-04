@@ -27,8 +27,11 @@
 
 #pragma once
 
-#include <naiades/core/discretization.h>
 #include <naiades/core/field.h>
+#include <naiades/core/geometry.h>
+#include <naiades/core/neighbourhood.h>
+#include <naiades/core/topology.h>
+#include <naiades/numeric/spatial_discretization.h>
 
 #include <hermes/base/size.h>
 #include <hermes/geometry/bounds.h>
@@ -83,8 +86,10 @@ namespace naiades::geo {
 ///   - flat x-face index (i, j): j * M + i
 ///   - flat y-face index (i, j): M * (N + 1) + j * (M + 1) + i
 ///
-class Grid2 : public core::DiscretizationGeometry2 {
+class Grid2 : public core::Topology, public core::Geometry2 {
 public:
+  using Ptr = hermes::Ref<Grid2>;
+
   struct Config {
     Config &setSize(const hermes::size2 &size);
     Config &setDomain(const hermes::geo::bounds::bbox2 &region);
@@ -133,6 +138,10 @@ public:
   /// World position from grid position (index space).
   hermes::geo::point2 center(core::Element loc,
                              const hermes::geo::point2 &grid_position) const;
+  /// The directional neighbour of an element.
+  core::Neighbour neighbour(core::Element loc, const hermes::index2 &index,
+                            core::element_orientation_bits orientation,
+                            core::Element boundary_loc) const;
 
   // interface
 
@@ -149,13 +158,12 @@ public:
   core::element_orientations elementOrientation(core::Element loc,
                                                 h_size index) const override;
   bool isBoundary(core::Element loc, h_size index) const override;
-  std::vector<core::Neighbour> star(core::Element loc, h_size index,
-                                    core::Element boundary_loc) const override;
-  std::vector<std::pair<h_size, real_t>>
-  neighbours(core::Element loc, h_size index,
-             core::Element neighbour_loc) const override;
+  h_size interiorNeighbour(const core::ElementIndex &boundary_element,
+                           const core::Element &interior_loc) const override;
 
 private:
+  core::Element faceType(h_size flat_index) const;
+
   hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};
   hermes::size2 resolution_{100, 100};
   hermes::geo::vec2 cell_size_{0.01};
@@ -164,6 +172,46 @@ private:
 };
 
 } // namespace naiades::geo
+
+namespace naiades::numeric {
+
+class Grid2FD : public SpatialDiscretization {
+public:
+  Grid2FD(geo::Grid2::Ptr mesh);
+  NaResult resolveBoundary(const std::string &field_name) override;
+  /// Compute the derivative operator centered at the given element.
+  /// \param d Derivative direction.
+  /// \param loc
+  /// \param index
+  /// \param boundary_loc
+  /// \param boundary
+  virtual DiscreteOperator derivative(derivative_bits d,
+                                      const core::Element &loc, h_size index,
+                                      core::Element boundary_loc,
+                                      const Boundary &boundary) const override;
+  /// Compute the discrete Laplacian operator centered at the given element.
+  /// \param loc
+  /// \param index
+  /// \param boundary_loc
+  /// \param boundary
+  virtual DiscreteOperator laplacian(const core::Element &loc, h_size index,
+                                     core::Element boundary_loc,
+                                     const Boundary &boundary) const override;
+  /// Compute the discrete Divergence operator centered at the given element.
+  /// \tparam DiscretizationType Discretization type.
+  /// \param boundary
+  /// \param loc
+  /// \param index
+  /// \param staggered
+  virtual DiscreteOperator divergence(const core::Element &loc, h_size index,
+                                      const core::Element &vector_loc,
+                                      bool staggered) const override;
+
+private:
+  geo::Grid2::Ptr mesh_;
+};
+
+} // namespace naiades::numeric
 
 namespace naiades {
 

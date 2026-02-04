@@ -20,20 +20,46 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   spatial_discretization.cpp
+/// \file   blas.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
+/// \brief  BLAS
 
-#include <naiades/core/discretization.h>
+#pragma once
 
-namespace naiades {
+#include <naiades/core/field.h>
+#include <naiades/numeric/discrete_operator.h>
 
-HERMES_TO_STRING_METHOD_BEGIN(core::Neighbour)
-HERMES_TO_STRING_METHOD_LINE("[loc: {} index: {} boundary? {} dist: {}]",
-                             naiades::to_string(object.element), object.index,
-                             object.is_boundary, object.distance)
-HERMES_TO_STRING_METHOD_END
+namespace naiades::numeric {
 
-} // namespace naiades
+namespace blas {
 
-namespace naiades::core {} // namespace naiades::core
+/// a += k * b
+template <typename T>
+NaResult akb(core::FieldRef<T> &a, T k, const core::FieldRef<T> &b) {
+  HERMES_ASSERT(a.size() == b.size());
+  for (h_size i = 0; i < a.size(); ++i)
+    a[i] += k * b[i];
+  return NaResult::noError();
+}
+
+} // namespace blas
+
+inline NaResult solve(const std::vector<DiscreteOperator> &stencils,
+                      const Boundary &boundary, core::FieldRef<f32> &x,
+                      const core::FieldRef<f32> &x0, f32 a, f32 c) {
+  HERMES_UNUSED_VARIABLE(a);
+  HERMES_UNUSED_VARIABLE(boundary);
+  const h_size iter = 4;
+  const f32 inv_c = 1.f / c;
+  const auto x_element = x.element();
+  HERMES_UNUSED_VARIABLE(x_element);
+  for (h_size k = 0; k < iter; ++k) {
+    for (h_size i = 0; i < stencils.size(); ++i) {
+      x[i] = (x0[i] + stencils[i](x)) * inv_c;
+    }
+  }
+  return NaResult::noError();
+}
+
+} // namespace naiades::numeric

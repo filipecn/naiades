@@ -24,14 +24,13 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
-#include "hermes/core/debug.h"
-#include <naiades/core/operators.h>
+#include <naiades/numeric/discrete_operator.h>
 
-#include <naiades/core/boundary.h>
+#include <naiades/numeric/boundary.h>
 
 namespace naiades {
 
-HERMES_TO_STRING_METHOD_BEGIN(core::DiscreteOperator)
+HERMES_TO_STRING_METHOD_BEGIN(numeric::DiscreteOperator)
 HERMES_TO_STRING_METHOD_MAP_FIELD_BEGIN(nodes_, index, weight)
 HERMES_TO_STRING_METHOD_LINE("({}: {})\n", index, weight)
 HERMES_TO_STRING_METHOD_MAP_FIELD_END
@@ -40,69 +39,43 @@ HERMES_TO_STRING_METHOD_END
 
 } // namespace naiades
 
-namespace naiades::core {
+namespace naiades::numeric {
 
-DiscreteOperator
-DiscreteOperator::laplacian(DiscretizationGeometry2::Ptr discretization,
-                            const Boundary &boundary, Element loc, h_size index,
-                            Element boundary_loc) {
-  DiscreteOperator op;
-  // build stencil
-  auto neighbours = discretization->star(loc, index, boundary_loc);
-  op.add(index, -(int)neighbours.size());
-  // resolve stencil
-  for (const auto &n : neighbours)
-    if (n.is_boundary)
-      op += boundary.stencil(core::Index::global(n.index)) * 1.0;
-    else
-      op.add(n.index, 1.0);
-  return op;
-}
+DiscreteOperator::DiscreteOperator(h_size center_index)
+    : center_index_{center_index} {}
 
-DiscreteOperator DiscreteOperator::divergence(const geo::Grid2 &grid,
-                                              h_size index) {
-  DiscreteOperator op;
-  const auto d = grid.cellSize();
-  const auto ij = grid.index(Element::Type::CELL, index);
-  op.add(grid.flatIndex(Element::Type::X_FACE, ij.up()), -0.5 * d.y);
-  op.add(grid.flatIndex(Element::Type::X_FACE, ij), 0.5 * d.y);
-  op.add(grid.flatIndex(Element::Type::Y_FACE, ij.right()), -0.5 * d.x);
-  op.add(grid.flatIndex(Element::Type::Y_FACE, ij), 0.5 * d.x);
-  return op;
-}
-
-/// Compute divergence field.
-void divergence(const geo::Grid2 &grid, const FieldCRef<f32> &u,
-                const FieldCRef<f32> &v, FieldRef<f32> &f) {
-  HERMES_ASSERT(u.element() == Element::Type::Y_FACE);
-  HERMES_ASSERT(v.element() == Element::Type::X_FACE);
-  HERMES_ASSERT(f.element() == Element::Type::CELL);
-
-#define AT(F, IJ)                                                              \
-  F[grid.flatIndex(F.element(), IJ) - grid.flatIndexOffset(F.element())]
-
-  const auto d = grid.cellSize();
-  for (auto ij : hermes::range2(grid.resolution(f.element()))) {
-    AT(f, ij) = -0.5 * (d.y * (AT(v, ij.up()) - AT(v, ij)) +
-                        d.x * (AT(u, ij.right()) - AT(u, ij)));
-  }
-#undef AT
-}
-
-DiscreteOperator::DiscreteOperator(const std::vector<h_size> &indices,
-                                   const std::vector<real_t> &weights) {
+DiscreteOperator::DiscreteOperator(h_size center_index,
+                                   const std::vector<h_size> &indices,
+                                   const std::vector<real_t> &weights)
+    : center_index_{center_index} {
   HERMES_ASSERT(indices.size() == weights.size());
   for (h_size i = 0; i < indices.size(); ++i)
     nodes_[indices[i]] = weights[i];
 }
 
+void DiscreteOperator::setCenterIndex(h_size index) { center_index_ = index; }
+
 void DiscreteOperator::add(h_size index, real_t weight) {
   nodes_[index] += weight;
+}
+
+void DiscreteOperator::addUnresolved(const core::ElementIndex &element,
+                                     real_t weight) {
+  boundary_nodes_[*element.index] += weight;
+}
+
+NaResult DiscreteOperator::resolve(const Boundary &boundary) {
+  for (const auto &item : boundary_nodes_) {
+    *this += boundary.stencil(core::Index::global(item.first)) * item.second;
+  }
+  return NaResult::noError();
 }
 
 void DiscreteOperator::setConstant(real_t s) { constant_ = s; }
 
 real_t DiscreteOperator::constant() const { return constant_; }
+
+h_size DiscreteOperator::centerIndex() const { return center_index_; }
 
 real_t DiscreteOperator::operator[](h_size index) const {
   auto it = nodes_.find(index);
@@ -134,6 +107,13 @@ DiscreteOperator DiscreteOperator::operator*(real_t s) const {
   return op;
 }
 
+DiscreteOperator &DiscreteOperator::operator*=(real_t s) {
+  constant_ *= s;
+  for (auto &node : nodes_)
+    node.second *= s;
+  return *this;
+}
+
 h_size DiscreteOperator::size() const { return nodes_.size(); }
 
-} // namespace naiades::core
+} // namespace naiades::numeric

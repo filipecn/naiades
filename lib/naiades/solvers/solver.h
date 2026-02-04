@@ -20,33 +20,22 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   sim_control.h
+/// \file   solver.h
 /// \author FilipeCN (filipedecn@gmail.com)
-/// \date   2025-06-07
+/// \date   2026-17-01
+/// \brief  Solver Interface.
 
 #pragma once
 
-#include <naiades/base/result.h>
-#include <naiades/solvers/solver.h>
+#include <hermes/core/ref.h>
 
 namespace naiades::solvers {
 
-struct SimControl {
+class Solver {
+public:
+  using Ptr = hermes::Ref<Solver>;
 
-  SimControl &setCFL(f32 value);
-  SimControl &setTimestep(f32 timestep);
-  SimControl &setWriteTimestep(f32 write_timestep);
-  SimControl &setStartTime(f32 start_time);
-  SimControl &setEndTime(f32 end_time);
-
-  NaResult run(Solver::Ptr solver);
-
-private:
-  f32 start_time_{0};
-  f32 end_time_{1};
-  f32 cfl_{1};
-  f32 dt_{0.01};
-  f32 wdt_{0.01};
+  virtual void step(f32 dt) = 0;
 };
 
 } // namespace naiades::solvers

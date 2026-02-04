@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include <naiades/geo/grid.h>
+#include <naiades/core/element.h>
 
-namespace naiades::core {
+namespace naiades::numeric {
 
 class Boundary;
 
@@ -38,54 +38,51 @@ class Boundary;
 /// systems, while explicit forms can be computed from fields.
 class DiscreteOperator {
 public:
-  /// Compute the discrete Laplacian operator centered at the given element.
-  /// \param discretization
-  /// \param boundary
-  /// \param loc
-  /// \param index
-  static DiscreteOperator laplacian(DiscretizationGeometry2::Ptr discretization,
-                                    const Boundary &boundary, Element loc,
-                                    h_size index, Element boundary_loc);
-  /// Compute the discrete Divergence operator centered at the given element.
-  /// \param grid
-  /// \param boundary
-  /// \param loc
-  /// \param index
-  static DiscreteOperator divergence(const geo::Grid2 &grid, h_size index);
-
   DiscreteOperator() = default;
-  DiscreteOperator(const std::vector<h_size> &indices,
+  DiscreteOperator(h_size center_index);
+  DiscreteOperator(h_size center_index, const std::vector<h_size> &indices,
                    const std::vector<real_t> &weights);
+  /// Set central element index
+  void setCenterIndex(h_size index);
   /// Add element to this operator.
   /// \param index
   /// \param weight
   void add(h_size index, real_t weight);
+  /// Add unresolved element to this operator.
+  void addUnresolved(const core::ElementIndex &element, real_t weight);
+  /// Resolve boundary elements by expanding their terms in the operator.
+  /// \note Once resolved, the original unresolved terms are lost.
+  NaResult resolve(const Boundary &boundary);
+  /// Checks if there are any unresolved terms in this operator.
+  bool isUnresolved() const;
+  /// Set constant term.
   void setConstant(real_t s);
   /// Computes this operator for the given field.
   template <typename FieldType>
   real_t operator()(const FieldType &field) const {
     real_t s = constant_;
     for (const auto &node : nodes_)
-      s += field[Index::global(node.first)] * node.second;
+      s += field[core::Index::global(node.first)] * node.second;
     return s;
   }
   real_t constant() const;
+  h_size centerIndex() const;
 
   real_t operator[](h_size index) const;
   real_t &operator[](h_size index);
   DiscreteOperator &operator+=(const DiscreteOperator &rhs);
   DiscreteOperator operator*(real_t s) const;
+  DiscreteOperator &operator*=(real_t s);
   /// \return the diagonal size (element count).
   h_size size() const;
 
 private:
   std::unordered_map<h_size, real_t> nodes_;
+  std::unordered_map<h_size, real_t> boundary_nodes_;
   real_t constant_{0};
+  h_size center_index_{0};
 
   NAIADES_to_string_FRIEND(DiscreteOperator);
 };
 
-void divergence(const geo::Grid2 &grid, const FieldCRef<f32> &u,
-                const FieldCRef<f32> &v, FieldRef<f32> &f);
-
-} // namespace naiades::core
+} // namespace naiades::numeric

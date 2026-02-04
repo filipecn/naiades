@@ -2,6 +2,7 @@ add_executable(naiades_tests
   blas_tests.cpp
   core_tests.cpp
   geo_tests.cpp
+  numeric_tests.cpp
   sampling_tests.cpp
   utils_tests.cpp
 )

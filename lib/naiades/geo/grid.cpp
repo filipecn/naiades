@@ -24,10 +24,9 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
-#include "hermes/core/debug.h"
-#include "naiades/core/discretization.h"
-#include "naiades/core/element.h"
 #include <naiades/geo/grid.h>
+
+#include <naiades/numeric/boundary.h>
 
 #include <hermes/math/space_filling.h>
 
@@ -184,12 +183,8 @@ h_size Grid2::flatIndexOffset(core::Element loc) const {
 
 hermes::index2 Grid2::index(core::Element loc, h_size flat_index) const {
   // force face alignment based on index
-  if (loc.is(core::element_primitive_bits::face)) {
-    if (flat_index >= flatIndexOffset(core::Element::Y_FACE))
-      loc = core::Element::Y_FACE;
-    else
-      loc = core::Element::X_FACE;
-  }
+  if (loc.is(core::element_primitive_bits::face))
+    loc = faceType(flat_index);
   auto res = resolution(loc);
   auto local_flat_index = flat_index - flatIndexOffset(loc);
   return hermes::index2(local_flat_index % res.width,
@@ -355,129 +350,187 @@ bool Grid2::isBoundary(core::Element loc, h_size i) const {
          ij.j >= static_cast<i32>(res.height) - 1;
 }
 
-std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size flat_index,
-                                         core::Element boundary_loc) const {
-  std::vector<core::Neighbour> neighbours;
-  auto addNeighbour = [&](const core::Element &element,
-                          const hermes::index2 &ij,
-                          const hermes::geo::point2 &position, bool boundary) {
-    auto element_index = safeFlatIndex(element, ij);
-    auto element_center = center(element, element_index);
-    neighbours.push_back(
-        {.element = element,
-         .index = element_index,
-         .distance = hermes::geo::distance(position, element_center),
-         .is_boundary = boundary});
-  };
-  auto addNeighbour2 = [&](const core::Element &element,
-                           const hermes::index2 &ij, real_t distance,
-                           bool boundary) {
-    auto element_index = safeFlatIndex(element, ij);
-    neighbours.push_back({.element = element,
-                          .index = element_index,
-                          .distance = distance,
-                          .is_boundary = boundary});
-  };
+h_size Grid2::interiorNeighbour(const core::ElementIndex &boundary_element,
+                                const core::Element &interior_loc) const {
+  HERMES_ASSERT(
+      boundary_element.element.is(core::element_primitive_bits::face));
+  HERMES_ASSERT(interior_loc.is(core::element_primitive_bits::cell));
+  auto loc = faceType(*boundary_element.index);
+  auto flat_index =
+      *boundary_element.index +
+      (boundary_element.index.isLocal() ? flatIndexOffset(loc) : 0);
+  auto bij = index(loc, flat_index);
   auto res = resolution(loc);
-  auto ij = index(loc, flat_index);
-  auto loc_center = center(loc, flat_index);
-  auto half_dx = cell_size_.x * 0.5;
-  auto half_dy = cell_size_.y * 0.5;
-  if (loc.is(core::element_primitive_bits::cell)) {
-    bool include_boundary = boundary_loc.is(core::element_primitive_bits::face);
-    //
-    //            (i,j+1)
-    //           -------
-    //         |         |
-    //   (i,j) |  [ij]   | (i+1,j)
-    //         |         |
-    //           -------
-    //            (i,j)
-    //
-
-    // bottom
-    if (ij.j == 0) {
-      if (include_boundary)
-        addNeighbour2(core::Element::Type::X_FACE, ij, half_dy, true);
-    } else
-      addNeighbour2(loc, ij.down(), cell_size_.y, false);
-
-    // right
-    if (ij.i == static_cast<i32>(res.width) - 1) {
-      if (include_boundary)
-        addNeighbour2(core::Element::Type::Y_FACE, ij.right(), half_dx, true);
-    } else
-      addNeighbour2(loc, ij.right(), cell_size_.x, false);
-
-    // top
-    if (ij.j == static_cast<i32>(res.height) - 1) {
-      if (include_boundary)
-        addNeighbour2(core::Element::Type::X_FACE, ij.up(), half_dy, true);
-    } else
-      addNeighbour2(loc, ij.up(), cell_size_.y, false);
-
-    // left
-    if (ij.i == 0) {
-      if (include_boundary)
-        addNeighbour2(core::Element::Type::Y_FACE, ij.left(), half_dx, true);
-    } else
-      addNeighbour2(loc, ij.left(), cell_size_.x, false);
-  } else {
-    HERMES_NOT_IMPLEMENTED;
-  }
-  return neighbours;
+  if (bij.i == 0 || bij.j == 0)
+    return safeFlatIndex(interior_loc, bij);
+  if (bij.i == static_cast<i32>(res.width) - 1)
+    return safeFlatIndex(interior_loc, bij.left());
+  if (bij.j == static_cast<i32>(res.height) - 1)
+    return safeFlatIndex(interior_loc, bij.down());
+  HERMES_ASSERT(false);
+  return 0;
 }
 
-std::vector<std::pair<h_size, real_t>>
-Grid2::neighbours(core::Element loc, h_size flat_index,
-                  core::Element neighbour_loc) const {
-  std::vector<std::pair<h_size, real_t>> ns;
-  auto addElement = [&](const core::Element &element, const hermes::index2 &ij,
-                        const hermes::geo::point2 &position) {
-    auto element_index = flatIndex(element, ij);
-    auto element_distance =
-        hermes::geo::distance(position, center(element, element_index));
-    ns.emplace_back(std::make_pair(element_index, element_distance));
+core::Neighbour Grid2::neighbour(core::Element loc, const hermes::index2 &index,
+                                 core::element_orientation_bits orientation,
+                                 core::Element boundary_loc) const {
+  auto buildNeighbour = [&](core::Element element, const hermes::index2 &ij,
+                            real_t distance) -> core::Neighbour {
+    auto flat_index = safeFlatIndex(element, ij);
+    return {.element_index = core::ElementIndex::global(element, flat_index),
+            .distance = distance};
   };
-  auto addElement2 = [&](const core::Element &element, const hermes::index2 &ij,
-                         real_t element_distance) {
-    auto element_index = flatIndex(element, ij);
-    ns.emplace_back(std::make_pair(element_index, element_distance));
-  };
-  if (loc.is(core::element_primitive_bits::face)) {
-    if (flat_index < flatIndexOffset(core::Element::Type::Y_FACE)) {
-      const auto face_element = core::Element::Type::X_FACE;
-      const auto res = resolution(face_element);
-      const auto ij = index(face_element, flat_index);
-      if (neighbour_loc.is(core::element_primitive_bits::cell)) {
-        const auto half_dy = cell_size_.y * 0.5;
-        const auto cell_element = core::Element::Type::CELL;
-        if (ij.j > 0)
-          addElement2(cell_element, ij.down(), half_dy);
-        if (ij.j < static_cast<i32>(res.height) - 1)
-          addElement2(cell_element, ij, half_dy);
-      } else {
-        HERMES_NOT_IMPLEMENTED
-      }
-    } else {
-      const auto face_element = core::Element::Type::Y_FACE;
-      const auto res = resolution(face_element);
-      const auto ij = index(face_element, flat_index);
-      if (neighbour_loc.is(core::element_primitive_bits::cell)) {
-        const auto half_dx = cell_size_.x * 0.5;
-        auto cell_element = core::Element::Type::CELL;
-        if (ij.i > 0)
-          addElement2(cell_element, ij.left(), half_dx);
-        if (ij.i < static_cast<i32>(res.width) - 1)
-          addElement2(cell_element, ij, half_dx);
-      } else {
-        HERMES_NOT_IMPLEMENTED
-      }
-    }
-  } else {
-    HERMES_NOT_IMPLEMENTED
-  }
-  return ns;
+  auto half_dx = cell_size_.x * 0.5;
+  auto half_dy = cell_size_.y * 0.5;
+  //
+  //            (i,j+1)
+  //           -------
+  //         |         |
+  //   (i,j) |  [ij]   | (i+1,j)
+  //         |         |
+  //           -------
+  //            (i,j)
+  //
+  auto res = resolution(loc);
+  auto flat_index = safeFlatIndex(loc, index);
+  if (loc.is(core::element_primitive_bits::cell) &&
+      boundary_loc.is(core::element_primitive_bits::face)) {
+    if (orientation == core::element_orientation_bits::down) {
+      if (index.j > 0)
+        return buildNeighbour(loc, index.down(), cell_size_.y);
+      else
+        return buildNeighbour(core::Element::Type::X_FACE, index, half_dy);
+    } else if (orientation == core::element_orientation_bits::up) {
+      if (index.j < static_cast<i32>(res.height) - 1)
+        return buildNeighbour(loc, index.up(), cell_size_.y);
+      else
+        return buildNeighbour(core::Element::Type::X_FACE, index.up(), half_dy);
+    } else if (orientation == core::element_orientation_bits::left) {
+      if (index.i > 0)
+        return buildNeighbour(loc, index.left(), cell_size_.x);
+      else
+        return buildNeighbour(core::Element::Type::Y_FACE, index, half_dy);
+    } else if (orientation == core::element_orientation_bits::right) {
+      if (index.i < static_cast<i32>(res.width) - 1)
+        return buildNeighbour(loc, index.right(), cell_size_.x);
+      else
+        return buildNeighbour(core::Element::Type::Y_FACE, index.right(),
+                              half_dy);
+    } else
+      HERMES_ERROR("Invalid neighbour direction {}.",
+                   naiades::to_string(orientation));
+  } else
+    HERMES_ERROR("Invalid neighbour direction pair {} {}.",
+                 naiades::to_string(loc), naiades::to_string(boundary_loc));
+  return {};
+}
+
+core::Element Grid2::faceType(h_size flat_index) const {
+  if (flat_index >= flatIndexOffset(core::Element::Y_FACE))
+    return core::Element::Y_FACE;
+  return core::Element::X_FACE;
 }
 
 } // namespace naiades::geo
+
+namespace naiades::numeric {
+
+Grid2FD::Grid2FD(geo::Grid2::Ptr mesh) : mesh_{mesh} {}
+
+NaResult Grid2FD::resolveBoundary(const std::string &field_name) {
+  auto it = boundaries_.find(field_name);
+  if (it == boundaries_.end())
+    return NaResult::notFound();
+  NAIADES_RETURN_BAD_RESULT(it->second.resolve(mesh_));
+  return NaResult::noError();
+}
+
+DiscreteOperator Grid2FD::derivative(derivative_bits d,
+                                     const core::Element &loc, h_size index,
+                                     core::Element boundary_loc,
+                                     const Boundary &boundary) const {
+  DiscreteOperator op(index);
+
+  auto addNeighbour = [&](const core::Neighbour &n, real_t k) {
+    if (n.element_index.element != loc)
+      op += boundary.stencil(n.element_index.index) * k;
+    else
+      op.add(*n.element_index.index, k);
+  };
+  auto ij = mesh_->index(loc, index);
+  if (d == derivative_bits::x) {
+    auto left = mesh_->neighbour(loc, ij, core::element_orientation_bits::left,
+                                 boundary_loc);
+    auto right = mesh_->neighbour(
+        loc, ij, core::element_orientation_bits::right, boundary_loc);
+    // TODO assuming ghost point, so boundary distance is hx
+    // TODO if we want to allow non-uniform distances we need to consider hx/2
+    auto hx = mesh_->cellSize().x;
+    auto k = 1 / (hx * hx);
+    addNeighbour(left, k);
+    addNeighbour(right, k);
+    op.add(index, -2 * k);
+  } else if (d == derivative_bits::y) {
+    auto down = mesh_->neighbour(loc, ij, core::element_orientation_bits::down,
+                                 boundary_loc);
+    auto up = mesh_->neighbour(loc, ij, core::element_orientation_bits::up,
+                               boundary_loc);
+    // TODO assuming ghost point, so boundary distance is hx
+    // TODO if we want to allow non-uniform distances we need to consider hx/2
+    auto hy = mesh_->cellSize().y;
+    auto k = 1 / (hy * hy);
+    addNeighbour(down, k);
+    addNeighbour(up, k);
+    op.add(index, -2 * k);
+  }
+  return op;
+}
+
+DiscreteOperator Grid2FD::laplacian(const core::Element &loc, h_size index,
+                                    core::Element boundary_loc,
+                                    const Boundary &boundary) const {
+  DiscreteOperator op;
+  op += derivative(derivative_bits::x, loc, index, boundary_loc, boundary);
+  op += derivative(derivative_bits::y, loc, index, boundary_loc, boundary);
+  return op;
+}
+
+DiscreteOperator Grid2FD::divergence(const core::Element &loc, h_size index,
+                                     const core::Element &vector_loc,
+                                     bool staggered) const {
+  DiscreteOperator op;
+  if (staggered && loc.is(core::element_primitive_bits::cell) &&
+      vector_loc.is(core::element_primitive_bits::face)) {
+    const auto d = mesh_->cellSize();
+    const auto ij = mesh_->index(core::Element::Type::CELL, index);
+    op.add(mesh_->flatIndex(core::Element::Type::X_FACE, ij.up()), -d.y);
+    op.add(mesh_->flatIndex(core::Element::Type::X_FACE, ij), d.y);
+    op.add(mesh_->flatIndex(core::Element::Type::Y_FACE, ij.right()), -d.x);
+    op.add(mesh_->flatIndex(core::Element::Type::Y_FACE, ij), d.x);
+    op *= 0.5;
+  } else {
+    HERMES_ERROR("divergence for {} and {} not supported!",
+                 naiades::to_string(loc), naiades::to_string(vector_loc));
+  }
+  return op;
+}
+
+/// Compute divergence field.
+// void divergence(const geo::Grid2 &grid, const FieldCRef<f32> &u,
+//                 const FieldCRef<f32> &v, FieldRef<f32> &f) {
+//   HERMES_ASSERT(u.element() == Element::Type::Y_FACE);
+//   HERMES_ASSERT(v.element() == Element::Type::X_FACE);
+//   HERMES_ASSERT(f.element() == Element::Type::CELL);
+//
+// #d efine AT(F, IJ) \
+//  F[grid.flatIndex(F.element(), IJ) - grid.flatIndexOffset(F.element())]
+//
+//   const auto d = grid.cellSize();
+//   for (auto ij : hermes::range2(grid.resolution(f.element()))) {
+//     AT(f, ij) = -0.5 * (d.y * (AT(v, ij.up()) - AT(v, ij)) +
+//                         d.x * (AT(u, ij.right()) - AT(u, ij)));
+//   }
+// #undef AT
+// }
+
+} // namespace naiades::numeric

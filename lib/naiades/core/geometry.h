@@ -20,41 +20,42 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   blas.h
+/// \file   geometry.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
-/// \brief  BLAS
+/// \brief  Geometry interface.
 
 #pragma once
 
-#include <naiades/core/field.h>
-#include <naiades/core/operators.h>
+#include <naiades/base/result.h>
+#include <naiades/core/element.h>
 
-namespace naiades::core::blas {
+#include <hermes/core/ref.h>
+#include <hermes/geometry/point.h>
 
-/// a += k * b
-template <typename T> NaResult akb(FieldRef<T> &a, T k, const FieldRef<T> &b) {
-  HERMES_ASSERT(a.size() == b.size());
-  for (h_size i = 0; i < a.size(); ++i)
-    a[i] += k * b[i];
-  return NaResult::noError();
-}
+#include <vector>
 
-inline NaResult solve(const std::vector<DiscreteOperator> &stencils,
-                      const Boundary &boundary, FieldRef<f32> &x,
-                      const FieldRef<f32> &x0, f32 a, f32 c) {
-  HERMES_UNUSED_VARIABLE(a);
-  HERMES_UNUSED_VARIABLE(boundary);
-  const h_size iter = 4;
-  const f32 inv_c = 1.f / c;
-  const auto x_element = x.element();
-  HERMES_UNUSED_VARIABLE(x_element);
-  for (h_size k = 0; k < iter; ++k) {
-    for (h_size i = 0; i < stencils.size(); ++i) {
-      x[i] = (x0[i] + stencils[i](x)) * inv_c;
-    }
-  }
-  return NaResult::noError();
-}
+namespace naiades::core {
 
-} // namespace naiades::core::blas
+/// \brief Interface for discretization 2-dimensional geometries.
+/// A derived discretization geometry holds the geometry of a discretization
+/// that is commonly required by simulation algorithms. The discretization
+/// geometry may have the positions of different discretization elements, such
+/// as centers of cells and faces.
+class Geometry2 {
+public:
+  using Ptr = hermes::Ref<Geometry2>;
+  /// Get the position of an element center.
+  /// \note This returns a copy of the position.
+  /// \param loc Element.
+  /// \param index Element index.
+  /// \return The element center position in world coordinates.
+  virtual hermes::geo::point2 center(Element loc, h_size index) const = 0;
+  /// Get the flat list of center positions of an element type.
+  /// \note The indices of the list match the element index.
+  /// \note This returns a copy of the list.
+  /// \param loc Element.
+  virtual std::vector<hermes::geo::point2> centers(Element loc) const = 0;
+};
+
+} // namespace naiades::core

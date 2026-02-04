@@ -55,7 +55,7 @@ endif (NAIADES_BUILD_TESTS)
 # try_run(RUN_TEST_RESULT bindr SOURCES source.cpp)
 
 if (NAIADES_BUILD_EXAMPLES)
-  add_subdirectory(examples)
+  # add_subdirectory(examples)
 endif (NAIADES_BUILD_EXAMPLES)
 
 # ##############################################################################

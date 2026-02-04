@@ -5,21 +5,26 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/base/debug.h
   ${NAIADES_SOURCE_DIR}/naiades/base/result.h
 
-  ${NAIADES_SOURCE_DIR}/naiades/core/boundary.h
-  ${NAIADES_SOURCE_DIR}/naiades/core/boundary_conditions.h
   ${NAIADES_SOURCE_DIR}/naiades/core/element.h
   ${NAIADES_SOURCE_DIR}/naiades/core/field.h
-  ${NAIADES_SOURCE_DIR}/naiades/core/operators.h
-  ${NAIADES_SOURCE_DIR}/naiades/core/discretization.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/geometry.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/neighbourhood.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/topology.h
 
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.h
+
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/blas.h
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/boundary.h
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/boundary_conditions.h
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_operator.h
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/spatial_discretization.h
 
   ${NAIADES_SOURCE_DIR}/naiades/sampling/sampler.h
   ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.h
   
   ${NAIADES_SOURCE_DIR}/naiades/solvers/convection.h
   ${NAIADES_SOURCE_DIR}/naiades/solvers/sim_control.h
-  ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.h
+  # ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.h
 
   ${NAIADES_SOURCE_DIR}/naiades/utils/fields.h
   ${NAIADES_SOURCE_DIR}/naiades/utils/math.h
@@ -27,18 +32,20 @@ set(NAIADES_HEADERS
 )
 
 set(NAIADES_SOURCES
-  ${NAIADES_SOURCE_DIR}/naiades/core/boundary.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/element.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp
-  ${NAIADES_SOURCE_DIR}/naiades/core/operators.cpp
-  ${NAIADES_SOURCE_DIR}/naiades/core/discretization.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/core/neighbourhood.cpp
   
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
+
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/boundary.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_operator.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/spatial_discretization.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/solvers/sim_control.cpp
-  ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.cpp
+  # ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.cpp
   
   ${NAIADES_SOURCE_DIR}/naiades/utils/fields.cpp
   ${NAIADES_SOURCE_DIR}/naiades/utils/math.cpp

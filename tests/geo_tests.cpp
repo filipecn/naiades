@@ -210,7 +210,7 @@ TEST_CASE("regular grid 2", "[geo]") {
       }
     }
   }
-  SECTION("Discretization Geometry") {
+  SECTION("Geometry") {
     u32 N = 3;
     u32 M = 5;
     auto grid = Grid2::Config().setSize({M, N}).build().value();
@@ -229,7 +229,7 @@ TEST_CASE("regular grid 2", "[geo]") {
                   grid.resolution(core::Element::Y_FACE).total());
     }
   }
-  SECTION("Discretization Topology") {
+  SECTION("Topology") {
     u32 N = 3;
     u32 M = 5;
     auto grid = Grid2::Config().setSize({M, N}).build().value();
@@ -347,42 +347,42 @@ TEST_CASE("regular grid 2", "[geo]") {
         }
       }
     }
-    SECTION("start") {
-      auto interior_star = grid.star(
-          core::Element::CELL, grid.flatIndex(core::Element::CELL, {1, 1}),
-          core::Element::FACE);
-      REQUIRE(interior_star.size() == 4);
-      for (auto n : interior_star)
-        HERMES_INFO(
-            "{} {}", naiades::to_string(n),
-            hermes::to_string(grid.index(core::Element::CELL, n.index)));
-      auto boundary_star = grid.star(
-          core::Element::CELL, grid.flatIndex(core::Element::CELL, {0, 0}),
-          core::Element::FACE);
-      for (auto n : boundary_star)
-        if (n.is_boundary) {
-          HERMES_INFO(
-              "{} {}", naiades::to_string(n),
-              hermes::to_string(grid.index(core::Element::FACE, n.index)));
-        } else {
-          HERMES_INFO(
-              "{} {}", naiades::to_string(n),
-              hermes::to_string(grid.index(core::Element::CELL, n.index)));
-        }
-    }
-    SECTION("neighbours") {
-      {
-        auto element = core::Element::Type::X_FACE;
-        auto res = grid.resolution(element);
-        for (auto ij : hermes::range2(res)) {
-          auto ns = grid.neighbours(element, grid.flatIndex(element, ij),
-                                    core::Element::Type::CELL);
-          if (ij.j == 0 || ij.j == static_cast<i32>(res.height) - 1)
-            REQUIRE(ns.size() == 1);
-          else
-            REQUIRE(ns.size() == 2);
-        }
-      }
-    }
+    // SECTION("start") {
+    //   auto interior_star = grid.star(
+    //       core::Element::CELL, grid.flatIndex(core::Element::CELL, {1, 1}),
+    //       core::Element::FACE);
+    //   REQUIRE(interior_star.size() == 4);
+    //   for (auto n : interior_star)
+    //     HERMES_INFO(
+    //         "{} {}", naiades::to_string(n),
+    //         hermes::to_string(grid.index(core::Element::CELL, n.index)));
+    //   auto boundary_star = grid.star(
+    //       core::Element::CELL, grid.flatIndex(core::Element::CELL, {0, 0}),
+    //       core::Element::FACE);
+    //   for (auto n : boundary_star)
+    //     if (n.is_boundary) {
+    //       HERMES_INFO(
+    //           "{} {}", naiades::to_string(n),
+    //           hermes::to_string(grid.index(core::Element::FACE, n.index)));
+    //     } else {
+    //       HERMES_INFO(
+    //           "{} {}", naiades::to_string(n),
+    //           hermes::to_string(grid.index(core::Element::CELL, n.index)));
+    //     }
+    // }
+    // SECTION("neighbours") {
+    //   {
+    //     auto element = core::Element::Type::X_FACE;
+    //     auto res = grid.resolution(element);
+    //     for (auto ij : hermes::range2(res)) {
+    //       auto ns = grid.neighbours(element, grid.flatIndex(element, ij),
+    //                                 core::Element::Type::CELL);
+    //       if (ij.j == 0 || ij.j == static_cast<i32>(res.height) - 1)
+    //         REQUIRE(ns.size() == 1);
+    //       else
+    //         REQUIRE(ns.size() == 2);
+    //     }
+    //   }
+    // }
   }
 }

@@ -28,20 +28,19 @@
 #pragma once
 
 #include <naiades/core/field.h>
-
-#include <naiades/core/operators.h>
+#include <naiades/numeric/discrete_operator.h>
 
 #include <variant>
 
-namespace naiades::core::bc {
+namespace naiades::numeric::bc {
 
 class BoundaryCondition {
 public:
   using Ptr = hermes::Ref<BoundaryCondition>;
 
-  virtual DiscreteOperator resolve(DiscretizationTopology::Ptr d_t,
-                                   h_size boundary_index, Element boundary_loc,
-                                   Element interior_loc) const = 0;
+  virtual DiscreteOperator
+  resolve(const core::ElementIndex &boundary_element,
+          const core::ElementIndex &interior_element) const = 0;
 };
 
 /// Dirichlet
@@ -51,11 +50,11 @@ public:
 
   Dirichlet(const real_t &fixed_value) : value_(fixed_value) {}
 
-  DiscreteOperator resolve(DiscretizationTopology::Ptr d_t,
-                           h_size boundary_index, Element boundary_loc,
-                           Element interior_loc) const override {
-    HERMES_UNUSED_VARIABLE(d_t);
-    HERMES_UNUSED_VARIABLE(boundary_index);
+  DiscreteOperator
+  resolve(const core::ElementIndex &boundary_element,
+          const core::ElementIndex &interior_element) const override {
+    HERMES_UNUSED_VARIABLE(boundary_element);
+    HERMES_UNUSED_VARIABLE(interior_element);
     DiscreteOperator op;
     std::visit(
         [&](auto &&arg) {
@@ -78,15 +77,14 @@ class Neumann : public BoundaryCondition {
 public:
   using Ptr = hermes::Ref<Neumann>;
 
-  DiscreteOperator resolve(DiscretizationTopology::Ptr d_t,
-                           h_size boundary_index, Element boundary_loc,
-                           Element interior_loc) const override {
+  DiscreteOperator
+  resolve(const core::ElementIndex &boundary_element,
+          const core::ElementIndex &interior_element) const override {
+    HERMES_UNUSED_VARIABLE(boundary_element);
     DiscreteOperator op;
-    auto ns = d_t->neighbours(boundary_loc, boundary_index, interior_loc);
-    HERMES_ASSERT(ns.size() == 1);
-    op.add(ns[0].first, 1.0);
+    op.add(*interior_element.index, 1.0);
     return op;
   }
 };
 
-} // namespace naiades::core::bc
+} // namespace naiades::numeric::bc

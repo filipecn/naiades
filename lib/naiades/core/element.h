@@ -90,6 +90,12 @@ enum class element_orientation_bits : u32 {
   xy = x | y | neg_x | neg_y,
   xz = x | z | neg_x | neg_z,
   yz = y | z | neg_y | neg_z,
+  right = x,
+  left = neg_x,
+  up = y,
+  down = neg_y,
+  front = z,
+  back = neg_z,
   any = 0xff,
 };
 
@@ -164,6 +170,8 @@ struct Index {
 
   h_size operator*() const { return value_; };
   bool isValid() const { return value_ != s_invalid_value_; }
+  bool isLocal() const { return space_ == IndexSpace::LOCAL; }
+  bool isGlobal() const { return space_ == IndexSpace::GLOBAL; }
 
   IndexSpace space() const { return space_; }
 
@@ -345,6 +353,14 @@ private:
 
   NAIADES_to_string_FRIEND(Element);
   friend class std::hash<naiades::core::Element>;
+};
+
+struct ElementIndex {
+  static ElementIndex global(Element loc, h_size i);
+  Index index{Index::invalid()};
+  Element element{Element::Type::ANY};
+
+  NAIADES_to_string_FRIEND(ElementIndex);
 };
 
 #undef NAIADES_ELEMENT_MASK

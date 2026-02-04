@@ -24,6 +24,7 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
+#include "naiades/base/debug.h"
 #include <naiades/core/element.h>
 
 namespace naiades {
@@ -55,6 +56,11 @@ if (object) {
   HERMES_TO_STRING_METHOD_LINE("[invalid - ]", *object,
                                naiades::to_string(object.space()));
 }
+HERMES_TO_STRING_METHOD_END
+
+HERMES_TO_STRING_METHOD_BEGIN(core::ElementIndex)
+HERMES_TO_STRING_METHOD_NAIADES_FIELD(index)
+HERMES_TO_STRING_METHOD_NAIADES_FIELD(element)
 HERMES_TO_STRING_METHOD_END
 
 HERMES_TO_STRING_METHOD_BEGIN(core::element_primitives)
@@ -170,6 +176,12 @@ switch (object) {
   NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, XZ_FACE)
   NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, YZ_FACE)
   NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, XY_FACE)
+  NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, RIGHT_FACE)
+  NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, LEFT_FACE)
+  NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, BACK_FACE)
+  NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, FRONT_FACE)
+  NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, UP_FACE)
+  NAIADES_ENUM_TO_STRING_CASE(core::Element::Type, DOWN_FACE)
 }
 HERMES_TO_STRING_METHOD_LINE(s.c_str())
 HERMES_TO_STRING_METHOD_END
@@ -188,5 +200,9 @@ HERMES_TO_STRING_METHOD_END
 namespace naiades::core {
 
 h_size Index::s_invalid_value_ = 1 << 30;
+
+ElementIndex ElementIndex::global(Element loc, h_size i) {
+  return {.index = Index::global(i), .element = loc};
+}
 
 } // namespace naiades::core

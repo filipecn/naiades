@@ -27,13 +27,11 @@
 
 #pragma once
 
-#include <naiades/core/boundary_conditions.h>
-#include <naiades/core/discretization.h>
 #include <naiades/core/field.h>
-#include <naiades/core/operators.h>
+#include <naiades/numeric/boundary_conditions.h>
 #include <naiades/utils/utils.h>
 
-namespace naiades::core {
+namespace naiades::numeric {
 
 /// The BoundaryField object holds the boundary topology and numerical
 /// information of a simulation setting for a specific field.
@@ -50,107 +48,63 @@ class Boundary {
 public:
   class Region {
   public:
-    Region(core::DiscretizationTopology::Ptr discretization,
-           Element element_type, const std::vector<h_size> &indices);
+    Region(core::Element element_type, const std::vector<h_size> &indices);
 
     /// Set the boundary condition for this field.
     void setCondition(bc::BoundaryCondition::Ptr condition,
-                      Element interior_field_loc);
+                      core::Element interior_field_loc);
     ///
-    bool contains(const Index &index) const;
-    /// Update/build boundary stencils.
-    NaResult resolve();
+    bool contains(const core::Index &index) const;
+    /// Build boundary stencils.
+    NaResult resolve(core::Topology::Ptr topology);
     ///
-    const DiscreteOperator &stencil(const Index &index) const;
+    const DiscreteOperator &stencil(const core::Index &index) const;
     ///
-    NaResult compute(FieldCRef<f32> interior_field, FieldRef<f32> field) const;
+    NaResult compute(core::FieldCRef<f32> interior_field,
+                     core::FieldRef<f32> field) const;
+    /// Set of boundary element indices of this region.
+    const utils::IndexSet &indices() const;
 
   private:
     friend class Boundary;
 
     utils::IndexSet index_set_;
     bc::BoundaryCondition::Ptr condition_;
-    DiscretizationTopology::Ptr discretization_;
-    Element boundary_element_type_;
-    Element interior_element_type_;
-    // TODO make it variant:
-    // std::variant<DiscreteOperator, std::vector<DiscreteOperator>> stencils_;
+    core::Element boundary_element_type_;
+    core::Element interior_element_type_;
     std::vector<DiscreteOperator> stencils_;
 
     NAIADES_to_string_FRIEND(Region);
   };
 
-  Boundary &set(DiscretizationTopology::Ptr d_t);
   /// Defines a boundary region from the given boundary element index set.
   /// \param loc Boundary element type
   /// \param indices Boundary element indices.
   /// \param [out] The index of the newly created region.
-  Boundary &addRegion(Element loc, const std::vector<h_size> &indices,
+  Boundary &addRegion(core::Element loc, const std::vector<h_size> &indices,
                       h_size *region_index = nullptr);
   /// Set the boundary condition for this field.
   Boundary &setCondition(h_size region_index,
                          bc::BoundaryCondition::Ptr condition,
-                         Element interior_field_loc);
+                         core::Element interior_field_loc);
   /// Set the same boundary condition in all regions.
   Boundary &setCondition(bc::BoundaryCondition::Ptr condition,
-                         Element interior_field_loc);
+                         core::Element interior_field_loc);
 
   /// Correct fields boundary elements by explicitly updating their values.
   /// \note This only updates values at elements located at the boundary, such
   ///       as faces.
-  NaResult compute(FieldCRef<f32> interior_field,
-                   FieldRef<f32> boundary_field) const;
-  /// Update/build boundary stencils of all regions.
-  NaResult resolve();
-  ///
-  const DiscreteOperator &stencil(const Index &index) const;
+  NaResult compute(core::FieldCRef<f32> interior_field,
+                   core::FieldRef<f32> boundary_field) const;
+
+  NaResult resolve(core::Topology::Ptr topology);
+
+  const DiscreteOperator &stencil(const core::Index &index) const;
 
 private:
   std::vector<Region> regions_;
-  DiscretizationTopology::Ptr discretization_;
 
   NAIADES_to_string_FRIEND(Boundary);
 };
 
-class BoundarySet {
-public:
-  struct Config {
-    Config &setTopology(DiscretizationTopology::Ptr d_t);
-    BoundarySet build() const;
-
-  private:
-    DiscretizationTopology::Ptr d_t_;
-  };
-  /// Defines a boundary region from the given boundary element index set.
-  /// \param indices
-  /// \return The index of the newly created region.
-  BoundarySet &addRegion(const std::string &field_name, Element loc,
-                         const std::vector<h_size> &indices,
-                         h_size *region_index = nullptr);
-  /// Set a boundary condition of a field for a given region index.
-  /// \param field_name
-  /// \param region_index
-  /// \param condition
-  /// \param interior_field_loc
-  BoundarySet &set(const std::string &field_name, h_size region_index,
-                   bc::BoundaryCondition::Ptr condition,
-                   Element interior_field_loc);
-  /// Set the same boundary condition of a field in all regions.
-  /// \param field_name
-  /// \param condition
-  /// \param interior_field_loc
-  BoundarySet &set(const std::string &field_name,
-                   bc::BoundaryCondition::Ptr condition,
-                   Element interior_field_loc);
-  ///
-  const Boundary &operator[](const std::string &field_name) const;
-  Boundary &operator[](const std::string &field_name);
-
-private:
-  std::unordered_map<std::string, Boundary> boundaries_;
-  DiscretizationTopology::Ptr discretization_;
-
-  NAIADES_to_string_FRIEND(BoundarySet);
-};
-
-} // namespace naiades::core
+} // namespace naiades::numeric

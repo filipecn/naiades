@@ -20,10 +20,10 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   spatial_discretization.h
+/// \file   topology.h
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
-/// \brief  Spatial Discretization interface.
+/// \brief  Topology interface.
 
 #pragma once
 
@@ -37,26 +37,16 @@
 
 namespace naiades::core {
 
-/// A Stencil is a set of elements that connect to a center element by some
-/// criteria.
-struct Neighbour {
-  Element element;
-  h_size index;
-  real_t distance;
-  bool is_boundary;
-
-  NAIADES_to_string_FRIEND(Neighbour);
-};
-
-/// A simulation mesh holds the geometry and topology of the discretization and
-/// other information required by simulation algorithms.
-/// \note Mesh can only be setup by friend GeometryType classes.
-class DiscretizationTopology {
+/// \brief Interface for discretization topologies.
+/// A derived topology holds the topology of a discretization that is commonly
+/// required by simulation algorithms. The discretization topology may have the
+/// relationship of different element types.
+class Topology {
 public:
-  using Ptr = hermes::Ref<DiscretizationTopology>;
+  using Ptr = hermes::Ref<Topology>;
 
-  DiscretizationTopology() noexcept {}
-  virtual ~DiscretizationTopology() noexcept {}
+  Topology() noexcept {}
+  virtual ~Topology() noexcept {}
 
   /// \param loc
   /// \return Total number of locations of a given element.
@@ -93,36 +83,10 @@ public:
   /// \param index Element index.
   /// \return True if this is the index of a boundary element.
   virtual bool isBoundary(Element loc, h_size index) const = 0;
-  /// The star neighbourhood of a given element.
-  /// \param loc Element type.
-  /// \param index Center index.
-  /// \param boundary_loc Boundary elements included in the star.
-  /// \return List of neighbours of the given element.
-  virtual std::vector<Neighbour> star(Element loc, h_size index,
-                                      Element boundary_loc) const = 0;
-  /// The direct neighbourhood of elements for a given element.
-  /// \param loc Element type.
-  /// \param index Center index.
-  /// \param neighbour_loc neighbour element type.
-  /// \return List of pairs neighbour <index, distance> of the given element.
-  virtual std::vector<std::pair<h_size, real_t>>
-  neighbours(Element loc, h_size index, Element neighbour_loc) const = 0;
-};
-
-class DiscretizationGeometry2 : public DiscretizationTopology {
-public:
-  using Ptr = hermes::Ref<DiscretizationGeometry2>;
-  /// Get the position of an element center.
-  /// \note This returns a copy of the position.
-  /// \param loc Element.
-  /// \param index Element index.
-  /// \return The element center position in world coordinates.
-  virtual hermes::geo::point2 center(Element loc, h_size index) const = 0;
-  /// Get the flat list of center positions of an element type.
-  /// \note The indices of the list match the element index.
-  /// \note This returns a copy of the list.
-  /// \param loc Element.
-  virtual std::vector<hermes::geo::point2> centers(Element loc) const = 0;
+  /// \param boundary_element
+  /// \param interior_loc
+  virtual h_size interiorNeighbour(const ElementIndex &boundary_element,
+                                   const Element &interior_loc) const = 0;
 };
 
 } // namespace naiades::core

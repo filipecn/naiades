@@ -20,33 +20,18 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   sim_control.h
+/// \file   stencil.cpp
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
-#pragma once
+#include <naiades/core/neighbourhood.h>
 
-#include <naiades/base/result.h>
-#include <naiades/solvers/solver.h>
+namespace naiades {
 
-namespace naiades::solvers {
+HERMES_TO_STRING_METHOD_BEGIN(core::Neighbour)
+HERMES_TO_STRING_METHOD_LINE("[{} dist: {}]",
+                             naiades::to_string(object.element_index),
+                             object.distance)
+HERMES_TO_STRING_METHOD_END
 
-struct SimControl {
-
-  SimControl &setCFL(f32 value);
-  SimControl &setTimestep(f32 timestep);
-  SimControl &setWriteTimestep(f32 write_timestep);
-  SimControl &setStartTime(f32 start_time);
-  SimControl &setEndTime(f32 end_time);
-
-  NaResult run(Solver::Ptr solver);
-
-private:
-  f32 start_time_{0};
-  f32 end_time_{1};
-  f32 cfl_{1};
-  f32 dt_{0.01};
-  f32 wdt_{0.01};
-};
-
-} // namespace naiades::solvers
+} // namespace naiades
