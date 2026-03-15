@@ -41,8 +41,6 @@ namespace naiades::core {
 struct Neighbour {
   ElementIndex element_index;
   real_t distance;
-
-  NAIADES_to_string_FRIEND(Neighbour);
 };
 
 /// \brief Interface for discretization neighbourhoods.
@@ -67,3 +65,19 @@ public:
 };
 
 } // namespace naiades::core
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::core::Neighbour> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::Neighbour &data) {
+    return DebugMessage().addFmt(
+        "[{} dist: {}]", hermes::to_string(data.element_index), data.distance);
+  }
+};
+
+} // namespace hermes
+
+#endif

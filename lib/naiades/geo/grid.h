@@ -168,7 +168,9 @@ private:
   hermes::size2 resolution_{100, 100};
   hermes::geo::vec2 cell_size_{0.01};
 
-  NAIADES_to_string_FRIEND(Grid2);
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<Grid2>;
+#endif
 };
 
 } // namespace naiades::geo
@@ -213,15 +215,16 @@ private:
 
 } // namespace naiades::numeric
 
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
 namespace naiades {
 
-#ifdef NAIADES_INCLUDE_TO_STRING
 template <typename T>
 std::string spatialFieldString(const geo::Grid2 &grid,
                                const core::FieldCRef<T> &field) {
   auto res = grid.resolution(field.element());
   hermes::cstr s;
-  s.appendLine(naiades::to_string(field.element()));
+  s.appendLine(hermes::to_string(field.element()));
   for (i32 y = res.height - 1; y >= 0; --y) {
     for (i32 x = 0; x < static_cast<i32>(res.width); ++x) {
       s.append(field.at(core::Index::global(
@@ -232,6 +235,22 @@ std::string spatialFieldString(const geo::Grid2 &grid,
   }
   return s.str();
 }
-#endif
 
 } // namespace naiades
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::geo::Grid2> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::geo::Grid2 &data) {
+    auto m = DebugMessage();
+    m.add("boounds", data.bounds_);
+    m.add("resolution", data.resolution_);
+    m.add("cell size", data.cell_size_);
+    return m;
+  }
+};
+
+} // namespace hermes
+
+#endif

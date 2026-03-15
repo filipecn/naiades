@@ -1,6 +1,6 @@
 include(FetchContent)
 
-set(PYBIND11_PYTHON_VERSION 3.13.7 CACHE STRING "")
+set(PYBIND11_PYTHON_VERSION 3.14.3 CACHE STRING "")
 
 FetchContent_Declare(
         pybind11

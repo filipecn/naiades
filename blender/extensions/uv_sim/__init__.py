@@ -13,7 +13,6 @@ import sys
 sys.path.insert(0, "/home/filipecn/dev/naiades/build/Release/lib")  # noqa
 import naiades_py  # noqa
 
-
 bl_info = {
     "name": "UVSim",
     "author": "Filipe CN",
@@ -34,7 +33,7 @@ class VectorFieldShader:
         if self.shader is None:
             self.init()
 
-        assert (len(origins) == len(vecs))
+        assert len(origins) == len(vecs)
 
         self.verts = []
         for i in range(len(origins)):
@@ -42,8 +41,7 @@ class VectorFieldShader:
             end = start + Vector((vecs[i][0], vecs[i][1], vecs[i][2]))
             self.verts.extend([start, end])
 
-        self.batch = batch_for_shader(
-            self.shader, 'LINES', {"pos": self.verts})
+        self.batch = batch_for_shader(self.shader, "LINES", {"pos": self.verts})
 
     def draw(self):
         if self.shader is None or self.batch is None:
@@ -60,7 +58,7 @@ class VectorFieldShader:
         self.batch = None
         self.shader = None
         if self.shader is None:
-            self.shader = gpu.shader.from_builtin('UNIFORM_COLOR')
+            self.shader = gpu.shader.from_builtin("UNIFORM_COLOR")
 
 
 vector_field_shader = VectorFieldShader()
@@ -154,8 +152,7 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
         stag_velocity = self.stable_fluids2.get_stag_velocity_field()
 
         global vector_field_shader
-        vector_field_shader.setVectors(
-            self.mesh.mesh_data.face_centers, stag_velocity)
+        vector_field_shader.setVectors(self.mesh.mesh_data.face_centers, stag_velocity)
 
     def invoke(self, context, event):
         if context.scene.uv_sim_settings.is_simulating:
@@ -170,8 +167,7 @@ class OBJECT_OT_uv_sim(bpy.types.Operator):
         self._timer = context.window_manager.event_timer_add(
             self.check_interval, window=context.window
         )
-        self.report(
-            {"INFO"}, "Physics Simulation Started (Initial Kick: 5m/s in X)")
+        self.report({"INFO"}, "Physics Simulation Started (Initial Kick: 5m/s in X)")
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
@@ -232,30 +228,26 @@ class VIEW3D_PT_uv_sim_panel(bpy.types.Panel):
             layout.label(text="Press ESC to Stop", icon="CANCEL")
 
 
-classes = (
-    UVSimSettings,
-    OBJECT_OT_uv_sim,
-    VIEW3D_PT_uv_sim_panel
-)
+classes = (UVSimSettings, OBJECT_OT_uv_sim, VIEW3D_PT_uv_sim_panel)
 
 
 def register():
     """Called by Blender when the add-on is enabled."""
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.uv_sim_settings = bpy.props.PointerProperty(
-        type=UVSimSettings)
+    bpy.types.Scene.uv_sim_settings = bpy.props.PointerProperty(type=UVSimSettings)
 
     global vector_field_shader
     vector_field_shader.init()
 
     global draw_handler
     if draw_handler:
-        bpy.types.SpaceView3D.draw_handler_remove(draw_handler, 'WINDOW')
+        bpy.types.SpaceView3D.draw_handler_remove(draw_handler, "WINDOW")
         draw_handler = None
 
     draw_handler = bpy.types.SpaceView3D.draw_handler_add(
-        draw_vectors, (), 'WINDOW', 'POST_VIEW')
+        draw_vectors, (), "WINDOW", "POST_VIEW"
+    )
 
     # bpy.app.handlers.persistent(draw_vectors)
 
@@ -269,7 +261,7 @@ def unregister():
 
     global draw_handler
     if draw_handler:
-        bpy.types.SpaceView3D.draw_handler_remove(draw_handler, 'WINDOW')
+        bpy.types.SpaceView3D.draw_handler_remove(draw_handler, "WINDOW")
         draw_handler = None
 
     # if draw_vectors in bpy.app.handlers.persistent:

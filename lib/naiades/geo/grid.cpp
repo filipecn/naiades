@@ -30,15 +30,6 @@
 
 #include <hermes/math/space_filling.h>
 
-namespace naiades {
-HERMES_TO_STRING_METHOD_BEGIN(geo::Grid2)
-HERMES_TO_STRING_METHOD_TITLE
-HERMES_TO_STRING_METHOD_HERMES_FIELD(bounds_)
-HERMES_TO_STRING_METHOD_HERMES_FIELD(resolution_)
-HERMES_TO_STRING_METHOD_HERMES_FIELD(cell_size_)
-HERMES_TO_STRING_METHOD_END
-} // namespace naiades
-
 namespace naiades::geo {
 Grid2::Config &Grid2::Config::setSize(const hermes::size2 &size) {
   resolution_ = size;
@@ -418,10 +409,10 @@ core::Neighbour Grid2::neighbour(core::Element loc, const hermes::index2 &index,
                               half_dy);
     } else
       HERMES_ERROR("Invalid neighbour direction {}.",
-                   naiades::to_string(orientation));
+                   hermes::to_string(orientation));
   } else
     HERMES_ERROR("Invalid neighbour direction pair {} {}.",
-                 naiades::to_string(loc), naiades::to_string(boundary_loc));
+                 hermes::to_string(loc), hermes::to_string(boundary_loc));
   return {};
 }
 
@@ -510,7 +501,7 @@ DiscreteOperator Grid2FD::divergence(const core::Element &loc, h_size index,
     op *= 0.5;
   } else {
     HERMES_ERROR("divergence for {} and {} not supported!",
-                 naiades::to_string(loc), naiades::to_string(vector_loc));
+                 hermes::to_string(loc), hermes::to_string(vector_loc));
   }
   return op;
 }

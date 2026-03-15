@@ -12,10 +12,10 @@ target_include_directories(smoke_solver2 PUBLIC
 
 setup_target(smoke_solver2)
 
-if(NAIADES_INCLUDE_TO_STRING_METHODS)
-  target_compile_definitions(smoke_solver2 PUBLIC NAIADES_INCLUDE_TO_STRING)
-  target_compile_definitions(smoke_solver2 PUBLIC HERMES_INCLUDE_TO_STRING)
-endif(NAIADES_INCLUDE_TO_STRING_METHODS)
+if(NAIADES_INCLUDE_DEBUG_TRAITS)
+  target_compile_definitions(smoke_solver2 PUBLIC NAIADES_INCLUDE_DEBUG_TRAITS)
+  target_compile_definitions(smoke_solver2 PUBLIC HERMES_INCLUDE_DEBUG_TRAITS)
+endif(NAIADES_INCLUDE_DEBUG_TRAITS)
 
 target_link_libraries(smoke_solver2 PRIVATE 
   naiades

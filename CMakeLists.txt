@@ -22,7 +22,7 @@ option(NAIADES_BUILD_ALL "build all targets" OFF)
 option(NAIADES_BUILD_TESTS "build tests" OFF)
 option(NAIADES_BUILD_EXAMPLES "build examples" OFF)
 option(NAIADES_BUILD_DOCS "build library documentation" OFF)
-option(NAIADES_INCLUDE_TO_STRING_METHODS "enable naiades::to_string methods" ON)
+option(NAIADES_INCLUDE_DEBUG_TRAITS "enable naiades::to_string methods" ON)
 
 # ##############################################################################
 # COMPILATION                                                                  #

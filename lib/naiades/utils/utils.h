@@ -91,7 +91,9 @@ private:
   // total index count
   h_size index_count_;
 
-  NAIADES_to_string_FRIEND(IndexSet);
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<IndexSet>;
+#endif
 };
 
 /// Auxiliary class for looping over step indices keeping a time statistics
@@ -134,7 +136,9 @@ public:
     bool is_end_{false};
     Step step_;
 
-    NAIADES_to_string_FRIEND(Iteration);
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+    friend struct hermes::DebugTraits<Iteration>;
+#endif
   };
 
   Iteration begin();
@@ -147,4 +151,62 @@ private:
   std::chrono::microseconds fps_period_{16666};
   u32 max_step_count_{0};
 };
+
 } // namespace naiades::utils
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::utils::StepLoop::Iteration> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::utils::StepLoop::Iteration &data) {
+    auto m = DebugMessage();
+    m.add("iteration index", data.step_.iteration_index);
+    m.add("last step duration", data.step_.last_step_duration.count());
+    m.add("current fps period", data.step_.current_fps_period.count());
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::utils::IndexInterval> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::utils::IndexInterval &data) {
+    auto m = DebugMessage();
+    m.addFmt("[{}, {})", data.start, data.end);
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::utils::IndexSet> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::utils::IndexSet &data) {
+    auto m = DebugMessage();
+    m.add("index count", data.index_count_);
+    m.add("set indices",
+          std::visit(
+              naiades::utils::IndexSetOverloaded{
+                  [](std::monostate s) {
+                    HERMES_UNUSED_VARIABLE(s);
+                    return std::string();
+                  },
+                  [](const std::vector<h_size> &indices) -> std::string {
+                    return hermes::cstr::join(indices, ", ", 10);
+                  },
+                  [](const std::vector<naiades::utils::IndexInterval> &indices)
+                      -> std::string {
+                    auto f = [](const naiades::utils::IndexInterval &interval)
+                        -> std::string { return hermes::to_string(interval); };
+                    return hermes::cstr::join<
+                        std::vector<naiades::utils::IndexInterval>,
+                        naiades::utils::IndexInterval>(indices, f, ", ", 10);
+                  }},
+              data.data_));
+    m.add("index offsets:", hermes::cstr::join(data.index_offset_, ", ", 10));
+    return m;
+  }
+};
+
+} // namespace hermes
+
+#endif

@@ -28,48 +28,6 @@
 
 #include <algorithm>
 
-namespace naiades {
-
-HERMES_TO_STRING_METHOD_BEGIN(naiades::utils::StepLoop::Iteration)
-HERMES_TO_STRING_METHOD_FIELD(step_.iteration_index);
-HERMES_TO_STRING_METHOD_FIELD(step_.last_step_duration.count());
-HERMES_TO_STRING_METHOD_FIELD(step_.current_fps_period.count());
-HERMES_TO_STRING_METHOD_END
-
-HERMES_TO_STRING_METHOD_BEGIN(utils::IndexInterval)
-HERMES_TO_STRING_METHOD_LINE("[{}, {})", object.start, object.end);
-HERMES_TO_STRING_METHOD_END
-
-HERMES_TO_STRING_METHOD_BEGIN(utils::IndexSet)
-HERMES_TO_STRING_METHOD_LINE(
-    "set indices: {}\n",
-    std::visit(
-        utils::IndexSetOverloaded{
-            [](std::monostate s) {
-              HERMES_UNUSED_VARIABLE(s);
-              return std::string();
-            },
-            [](const std::vector<h_size> &indices) -> std::string {
-              return hermes::cstr::join(indices, ", ", 10);
-            },
-            [](const std::vector<utils::IndexInterval> &indices)
-                -> std::string {
-              auto f = [](const utils::IndexInterval &interval) -> std::string {
-                return naiades::to_string(interval);
-              };
-              return hermes::cstr::join<std::vector<utils::IndexInterval>,
-                                        utils::IndexInterval>(indices, f, ", ",
-                                                              10);
-            }},
-        object.data_));
-HERMES_TO_STRING_METHOD_FIELD(index_count_);
-HERMES_TO_STRING_METHOD_LINE("index offsets: {}\n",
-                             hermes::cstr::join(object.index_offset_, ", ",
-                                                10));
-HERMES_TO_STRING_METHOD_END
-
-} // namespace naiades
-
 namespace naiades::utils {
 
 IndexSet::iterator::iterator(const IndexSet &index_set, h_size flat_index)

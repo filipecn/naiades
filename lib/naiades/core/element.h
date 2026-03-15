@@ -179,8 +179,6 @@ private:
   IndexSpace space_{IndexSpace::GLOBAL};
   h_size value_;
   static h_size s_invalid_value_;
-
-  NAIADES_to_string_FRIEND(Index);
 };
 
 class Element {
@@ -351,7 +349,6 @@ public:
 private:
   u32 mask_{};
 
-  NAIADES_to_string_FRIEND(Element);
   friend class std::hash<naiades::core::Element>;
 };
 
@@ -359,8 +356,6 @@ struct ElementIndex {
   static ElementIndex global(Element loc, h_size i);
   Index index{Index::invalid()};
   Element element{Element::Type::ANY};
-
-  NAIADES_to_string_FRIEND(ElementIndex);
 };
 
 #undef NAIADES_ELEMENT_MASK
@@ -372,20 +367,6 @@ struct ElementIndex {
 #undef NAIADES_ELEMENT_MASK_GET_orientation
 
 } // namespace naiades::core
-
-namespace naiades {
-
-HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::IndexSpace)
-HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::element_primitive_bits)
-HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::element_alignment_bits)
-HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::element_orientation_bits)
-HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::element_primitives)
-HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::element_alignments)
-HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::element_orientations)
-HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::Element::Type)
-HERMES_DECLARE_TO_STRING_DEBUG_METHOD(core::Element)
-
-} // namespace naiades
 
 namespace std {
 template <> struct hash<naiades::core::Element> {
@@ -407,3 +388,223 @@ template <> struct hash<naiades::core::element_orientations> {
 };
 
 } // namespace std
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+#define NAIADES_ENUM_TO_STRING_CASE(TYPE, NAME)                                \
+  case TYPE::NAME: {                                                           \
+    m.addFmt(#NAME);                                                           \
+    break;                                                                     \
+  }
+
+#define NAIADES_ENUM_TO_STRING_APPEND(TYPE, NAME)                              \
+  if (data.contain(TYPE::NAME))                                                \
+    ss.emplace_back(#NAME);
+
+template <> struct DebugTraits<naiades::core::IndexSpace> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::IndexSpace &data) {
+    auto m = DebugMessage();
+    switch (data) {
+      NAIADES_ENUM_TO_STRING_CASE(naiades::core::IndexSpace, GLOBAL)
+      NAIADES_ENUM_TO_STRING_CASE(naiades::core::IndexSpace, LOCAL)
+      NAIADES_ENUM_TO_STRING_CASE(naiades::core::IndexSpace, CUSTOM)
+    }
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::core::Index> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::Index &data) {
+    auto m = DebugMessage();
+    if (data) {
+      m.addFmt("{}", *data);
+    } else {
+      m.addFmt("[invalid - ]", *data, to_string(data.space()));
+    }
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::core::element_primitives> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::element_primitives &data) {
+    using namespace naiades::core;
+    std::vector<std::string> ss;
+    NAIADES_ENUM_TO_STRING_APPEND(element_primitive_bits, any)
+    NAIADES_ENUM_TO_STRING_APPEND(element_primitive_bits, vertex)
+    NAIADES_ENUM_TO_STRING_APPEND(element_primitive_bits, face)
+    NAIADES_ENUM_TO_STRING_APPEND(element_primitive_bits, cell)
+    NAIADES_ENUM_TO_STRING_APPEND(element_primitive_bits, particle)
+    NAIADES_ENUM_TO_STRING_APPEND(element_primitive_bits, point)
+    NAIADES_ENUM_TO_STRING_APPEND(element_primitive_bits, custom)
+    if (data == element_primitive_bits::none)
+      ss.emplace_back("none");
+    return DebugMessage().addFmt("{}", hermes::cstr::join(ss, "|"));
+  }
+};
+
+template <> struct DebugTraits<naiades::core::element_alignments> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::element_alignments &data) {
+    using namespace naiades::core;
+    std::vector<std::string> ss;
+    NAIADES_ENUM_TO_STRING_APPEND(element_alignment_bits, any)
+    NAIADES_ENUM_TO_STRING_APPEND(element_alignment_bits, x)
+    NAIADES_ENUM_TO_STRING_APPEND(element_alignment_bits, y)
+    NAIADES_ENUM_TO_STRING_APPEND(element_alignment_bits, z)
+    NAIADES_ENUM_TO_STRING_APPEND(element_alignment_bits, custom)
+    NAIADES_ENUM_TO_STRING_APPEND(element_alignment_bits, xy)
+    NAIADES_ENUM_TO_STRING_APPEND(element_alignment_bits, xz)
+    NAIADES_ENUM_TO_STRING_APPEND(element_alignment_bits, yz)
+    if (data == element_alignment_bits::none)
+      ss.emplace_back("none");
+    return DebugMessage().addFmt("{}", hermes::cstr::join(ss, "|"));
+  }
+};
+
+template <> struct DebugTraits<naiades::core::element_orientations> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::element_orientations &data) {
+    using namespace naiades::core;
+    std::vector<std::string> ss;
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, any)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, x)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, y)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, z)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, neg_x)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, neg_y)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, neg_z)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, custom)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, xy)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, xz)
+    NAIADES_ENUM_TO_STRING_APPEND(element_orientation_bits, yz)
+    if (data == element_orientation_bits::none)
+      ss.emplace_back("none");
+    return DebugMessage().addFmt("{}", hermes::cstr::join(ss, "|"));
+  }
+};
+
+template <> struct DebugTraits<naiades::core::element_primitive_bits> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage
+  message(const naiades::core::element_primitive_bits &data) {
+    using namespace naiades::core;
+    auto m = DebugMessage();
+    switch (data) {
+      NAIADES_ENUM_TO_STRING_CASE(element_primitive_bits, none)
+      NAIADES_ENUM_TO_STRING_CASE(element_primitive_bits, any)
+      NAIADES_ENUM_TO_STRING_CASE(element_primitive_bits, vertex)
+      NAIADES_ENUM_TO_STRING_CASE(element_primitive_bits, face)
+      NAIADES_ENUM_TO_STRING_CASE(element_primitive_bits, cell)
+      NAIADES_ENUM_TO_STRING_CASE(element_primitive_bits, particle)
+      NAIADES_ENUM_TO_STRING_CASE(element_primitive_bits, point)
+      NAIADES_ENUM_TO_STRING_CASE(element_primitive_bits, custom)
+    }
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::core::element_alignment_bits> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage
+  message(const naiades::core::element_alignment_bits &data) {
+    using namespace naiades::core;
+    auto m = DebugMessage();
+    switch (data) {
+      NAIADES_ENUM_TO_STRING_CASE(element_alignment_bits, none)
+      NAIADES_ENUM_TO_STRING_CASE(element_alignment_bits, any)
+      NAIADES_ENUM_TO_STRING_CASE(element_alignment_bits, x)
+      NAIADES_ENUM_TO_STRING_CASE(element_alignment_bits, y)
+      NAIADES_ENUM_TO_STRING_CASE(element_alignment_bits, z)
+      NAIADES_ENUM_TO_STRING_CASE(element_alignment_bits, custom)
+      NAIADES_ENUM_TO_STRING_CASE(element_alignment_bits, xy)
+      NAIADES_ENUM_TO_STRING_CASE(element_alignment_bits, xz)
+      NAIADES_ENUM_TO_STRING_CASE(element_alignment_bits, yz)
+    }
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::core::element_orientation_bits> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage
+  message(const naiades::core::element_orientation_bits &data) {
+    using namespace naiades::core;
+    auto m = DebugMessage();
+    switch (data) {
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, none)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, any)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, any_x)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, any_y)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, any_z)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, x)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, y)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, z)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, neg_x)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, neg_y)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, neg_z)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, custom)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, xy)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, xz)
+      NAIADES_ENUM_TO_STRING_CASE(element_orientation_bits, yz)
+    }
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::core::Element::Type> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::Element::Type &data) {
+    using namespace naiades::core;
+    auto m = DebugMessage();
+    switch (data) {
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, NONE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, ANY)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, CELL)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, VERTEX)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, POINT)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, CUSTOM)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, XZ_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, YZ_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, XY_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, RIGHT_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, LEFT_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, BACK_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, FRONT_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, UP_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, DOWN_FACE)
+    }
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::core::Element> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::Element &data) {
+    return DebugMessage().addFmt("[{},{},{}]",
+                                 hermes::to_string(data.primitives()),
+                                 hermes::to_string(data.alignments()),
+                                 hermes::to_string(data.orientations()));
+  }
+};
+
+template <> struct DebugTraits<naiades::core::ElementIndex> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::ElementIndex &data) {
+    auto m = DebugMessage();
+    m.add("index", data.index);
+    m.add("element", data.element);
+    return m;
+  }
+};
+
+#undef NAIADES_ENUM_TO_STRING_CASE
+#undef NAIADES_ENUM_TO_STRING_APPEND
+
+} // namespace hermes
+
+#endif

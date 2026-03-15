@@ -74,7 +74,9 @@ public:
     core::Element interior_element_type_;
     std::vector<DiscreteOperator> stencils_;
 
-    NAIADES_to_string_FRIEND(Region);
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+    friend struct hermes::DebugTraits<Region>;
+#endif
   };
 
   /// Defines a boundary region from the given boundary element index set.
@@ -104,7 +106,36 @@ public:
 private:
   std::vector<Region> regions_;
 
-  NAIADES_to_string_FRIEND(Boundary);
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<Boundary>;
+#endif
 };
 
 } // namespace naiades::numeric
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::numeric::Boundary::Region> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::numeric::Boundary::Region &data) {
+    auto m = DebugMessage();
+    m.add("index set", hermes::to_string(data.index_set_));
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::numeric::Boundary> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::numeric::Boundary &data) {
+    auto m = DebugMessage();
+    m.addTitle("Boundary");
+    m.addArray("regions", data.regions_);
+    return m;
+  }
+};
+
+} // namespace hermes
+
+#endif

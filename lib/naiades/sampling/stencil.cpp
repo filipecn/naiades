@@ -27,19 +27,6 @@
 #include <hermes/numeric/numeric.h>
 #include <naiades/sampling/stencil.h>
 
-namespace naiades {
-
-HERMES_TO_STRING_METHOD_BEGIN(sampling::Stencil)
-HERMES_TO_STRING_METHOD_TITLE
-HERMES_TO_STRING_METHOD_LINE("size {}\n", object.indices_.size());
-HERMES_TO_STRING_METHOD_LINE("indices: {}\n",
-                             hermes::cstr::join(object.indices_, " "));
-HERMES_TO_STRING_METHOD_LINE("weights: {}\n",
-                             hermes::cstr::join(object.weights_, " "));
-HERMES_TO_STRING_METHOD_END
-
-} // namespace naiades
-
 namespace naiades::sampling {
 
 Stencil Stencil::nearest(const geo::Grid2 &grid, core::Element loc,

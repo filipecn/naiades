@@ -82,7 +82,30 @@ private:
   real_t constant_{0};
   h_size center_index_{0};
 
-  NAIADES_to_string_FRIEND(DiscreteOperator);
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<DiscreteOperator>;
+#endif
 };
 
 } // namespace naiades::numeric
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::numeric::DiscreteOperator> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::numeric::DiscreteOperator &data) {
+    auto m = DebugMessage();
+    // m.addMap("nodes", data.nodes_);
+    // HERMES_TO_STRING_METHOD_MAP_FIELD_BEGIN(nodes_, index, weight)
+    // HERMES_TO_STRING_METHOD_LINE("({}: {})\n", index, weight)
+    // HERMES_TO_STRING_METHOD_MAP_FIELD_END
+    m.add("constant", data.constant_);
+    return m;
+  }
+};
+
+} // namespace hermes
+
+#endif

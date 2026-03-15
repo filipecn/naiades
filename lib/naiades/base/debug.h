@@ -32,35 +32,6 @@
 
 #include <hermes/core/debug.h>
 
-#ifdef NAIADES_INCLUDE_TO_STRING
-
-namespace naiades {
-HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
-} // namespace naiades
-#define NAIADES_to_string_FRIEND(A)                                            \
-  friend std::string naiades::to_string(const A &, u32)
-#define NAIADES_VIRTUAL_toString_METHOD                                        \
-  virtual std::string toString(u32 tab_size = 0) const;
-#define NAIADES_VIRTUAL_toString_METHOD_OVERRIDE                               \
-  virtual std::string toString(u32 tab_size = 0) const override;
-
-#ifndef HERMES_TO_STRING_METHOD_NAIADES_FIELD
-#define HERMES_TO_STRING_METHOD_NAIADES_FIELD(F)                               \
-  debug_fields.add(HERMES_DebugFields::Type::Inline, #F,                       \
-                   naiades::to_string(object.F));
-#endif
-
-#ifndef HERMES_TO_STRING_METHOD_NAIADES_PTR_FIELD
-#define HERMES_TO_STRING_METHOD_NAIADES_PTR_FIELD(F)                           \
-  debug_fields.add(HERMES_DebugFields::Type::Inline, #F,                       \
-                   object.F ? naiades::to_string(*object.F) : "NULL");
-#endif
-
-#else
-#define NAIADES_to_string_FRIEND
-#define HERMES_TO_STRING_METHOD_NAIADES_FIELD
-#endif
-
 #ifndef NAIADES_CHECK_NA_RESULT
 #define NAIADES_CHECK_NA_RESULT(A)                                             \
   {                                                                            \
@@ -68,7 +39,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
     if (!_naiades_check_na_error_) {                                           \
       HERMES_ERROR("Error at: {}", #A);                                        \
       HERMES_ERROR("  w/ err: {}",                                             \
-                   naiades::to_string(_naiades_check_na_error_));              \
+                   hermes::to_string(_naiades_check_na_error_));               \
     }                                                                          \
   }
 #endif
@@ -88,7 +59,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
     if (!_naiades_return_na_error_) {                                          \
       HERMES_ERROR("Error at: {}", #A);                                        \
       HERMES_ERROR("  w/ err: {}",                                             \
-                   naiades::to_string(_naiades_return_na_error_));             \
+                   hermes::to_string(_naiades_return_na_error_));              \
       return _naiades_return_na_error_;                                        \
     }                                                                          \
   }
@@ -101,7 +72,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
     if (!_naiades_return_na_error_) {                                          \
       HERMES_ERROR("Error at: {}", #A);                                        \
       HERMES_ERROR("  w/ err: {}",                                             \
-                   naiades::to_string(_naiades_return_na_error_));             \
+                   hermes::to_string(_naiades_return_na_error_));              \
       return R;                                                                \
     }                                                                          \
   }
@@ -110,7 +81,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
 #define NAIADES_HE_RETURN_BAD_RESULT(A)                                        \
   {                                                                            \
     HeError _naiades_return_na_error_ = (A);                                   \
-    if (_naiades_return_na_error_ != HeError::NO_ERROR) {                      \
+    if (_naiades_return_na_error_ != HeError::None) {                          \
       HERMES_ERROR("Error at: {}", #A);                                        \
       HERMES_ERROR("  w/ err: {}",                                             \
                    hermes::to_string(_naiades_return_na_error_));              \
@@ -126,7 +97,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
   else {                                                                       \
     HERMES_ERROR("Error at: {} = {}", #R, #V);                                 \
     HERMES_ERROR("  w/ err: {}",                                               \
-                 naiades::to_string(_naiades_result_.status()));               \
+                 hermes::to_string(_naiades_result_.status()));                \
   }
 #endif
 
@@ -137,7 +108,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
   else {                                                                       \
     HERMES_ERROR("Error at: {} = {}", #R, #V);                                 \
     HERMES_ERROR("  w/ err: {}",                                               \
-                 naiades::to_string(_naiades_result_.status()));               \
+                 hermes::to_string(_naiades_result_.status()));                \
     O;                                                                         \
   }
 #endif
@@ -149,7 +120,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
   else {                                                                       \
     HERMES_ERROR("Error at: {} = {}", #R, #V);                                 \
     HERMES_ERROR("  w/ err: {}",                                               \
-                 naiades::to_string(_naiades_result_.status()));               \
+                 hermes::to_string(_naiades_result_.status()));                \
     return _naiades_result_.status();                                          \
   }
 
@@ -161,7 +132,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
   if (!_naiades_result_##VAR) {                                                \
     HERMES_ERROR("Error at: auto {} = {}", #VAR, #V);                          \
     HERMES_ERROR("  w/ err: {}",                                               \
-                 naiades::to_string(_naiades_result_##VAR.status()));          \
+                 hermes::to_string(_naiades_result_##VAR.status()));           \
     return _naiades_result_##VAR.status();                                     \
   }                                                                            \
   auto VAR = std::move(*_naiades_result_##VAR);
@@ -177,7 +148,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
   } else {                                                                     \
     HERMES_ERROR("Error at: {}::Ptr {} = {}", #TYPE, #PTR, #V);                \
     HERMES_ERROR("  w/ err: {}",                                               \
-                 naiades::to_string(_naiades_result_.status()));               \
+                 hermes::to_string(_naiades_result_.status()));                \
     return _naiades_result_.status();                                          \
   }
 
@@ -190,7 +161,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
   else {                                                                       \
     HERMES_ERROR("Error at: {} = {}", #R, #V);                                 \
     HERMES_ERROR("  w/ err: {}",                                               \
-                 naiades::to_string(_naiades_result_.status()));               \
+                 hermes::to_string(_naiades_result_.status()));                \
     return B;                                                                  \
   }
 #endif
@@ -202,7 +173,7 @@ HERMES_TEMPLATE_TO_STRING_DEBUG_METHOD;
   else {                                                                       \
     HERMES_ERROR("Error at: {} = {}", #R, #V);                                 \
     HERMES_ERROR("  w/ err: {}",                                               \
-                 naiades::to_string(_naiades_result_.status()));               \
+                 hermes::to_string(_naiades_result_.status()));                \
     return;                                                                    \
   }
 #endif

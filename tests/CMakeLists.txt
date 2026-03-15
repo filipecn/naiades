@@ -19,10 +19,10 @@ target_include_directories(naiades_tests PUBLIC
 
 setup_target(naiades_tests)
 
-if(NAIADES_INCLUDE_TO_STRING_METHODS)
-  target_compile_definitions(naiades_tests PUBLIC NAIADES_INCLUDE_TO_STRING)
-  target_compile_definitions(naiades_tests PUBLIC HERMES_INCLUDE_TO_STRING)
-endif(NAIADES_INCLUDE_TO_STRING_METHODS)
+if(NAIADES_INCLUDE_DEBUG_TRAITS)
+  target_compile_definitions(naiades_tests PUBLIC NAIADES_INCLUDE_DEBUG_TRAITS)
+  target_compile_definitions(naiades_tests PUBLIC HERMES_INCLUDE_DEBUG_TRAITS)
+endif(NAIADES_INCLUDE_DEBUG_TRAITS)
 
 target_link_libraries(naiades_tests PRIVATE 
   naiades

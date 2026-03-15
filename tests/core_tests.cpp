@@ -9,7 +9,7 @@ using namespace naiades::core;
 
 TEST_CASE("Element", "[core]") {
   SECTION("print") {
-#define PRINT(E) HERMES_INFO("{}", naiades::to_string(E));
+#define PRINT(E) HERMES_INFO("{}", hermes::to_string(E));
     PRINT(element_primitive_bits::none)
     PRINT(element_primitive_bits::any)
     PRINT(element_primitive_bits::vertex)
@@ -65,16 +65,16 @@ TEST_CASE("Element", "[core]") {
 
     HERMES_INFO(
         "{}",
-        naiades::to_string(Element(
+        hermes::to_string(Element(
             element_primitive_bits::particle | element_primitive_bits::vertex,
             element_alignment_bits::xz | element_alignment_bits::custom)));
 
     Element e(element_primitive_bits::particle | element_primitive_bits::vertex,
               element_alignment_bits::xz | element_alignment_bits::custom);
     HERMES_INFO("{}", hermes::cstr::bits(static_cast<u32>(e)));
-    HERMES_INFO("{}", naiades::to_string(e.primitives()));
-    HERMES_INFO("{}", naiades::to_string(e.alignments()));
-    HERMES_INFO("{}", naiades::to_string(e.orientations()));
+    HERMES_INFO("{}", hermes::to_string(e.primitives()));
+    HERMES_INFO("{}", hermes::to_string(e.alignments()));
+    HERMES_INFO("{}", hermes::to_string(e.orientations()));
   }
   SECTION("sanity") {
     REQUIRE(Element(element_primitive_bits::any, element_alignment_bits::any,
@@ -209,7 +209,7 @@ TEST_CASE("Element", "[core]") {
 TEST_CASE("FieldGroup", "[core]") {
   FieldGroup field_group;
   field_group.pushField<i32>();
-  REQUIRE(field_group.resize(20) == HeError::NO_ERROR);
+  REQUIRE(field_group.resize(20) == HeError::None);
   auto acc = field_group.get<i32>(0);
   for (int i = 0; i < 20; ++i)
     acc[i] = i;
@@ -224,7 +224,7 @@ TEST_CASE("FieldGroup", "[core]") {
   for (int i = 0; i < 20; ++i)
     REQUIRE(c_ptr[i] == i);
 
-  HERMES_INFO("{}", naiades::to_string(field_group));
+  HERMES_INFO("{}", hermes::to_string(field_group));
 }
 
 TEST_CASE("FieldSet", "[core]") {

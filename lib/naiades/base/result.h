@@ -27,13 +27,11 @@
 
 #include <hermes/core/result.h>
 
+#include <sstream>
+
 #pragma once
 
 #define NAIADES_DEBUG
-
-#ifdef NAIADES_INCLUDE_TO_STRING
-#include <sstream>
-#endif
 
 struct NaResult;
 namespace naiades {
@@ -42,70 +40,62 @@ template <typename T> using Result = hermes::Result<T, NaResult>;
 
 struct NaResult {
   enum class Type {
-    NO_ERROR = 0,    //!< success
-    NOT_FOUND = 1,   //!< data not found
-    EXT_ERROR = 2,   //!< third party lib error
-    CHECK_ERROR = 3, //!< a check error ocurred
-    IO_ERROR = 4,    //!< an io error ocurred
+    NoError = 0,    //!< success
+    NotFound = 1,   //!< data not found
+    ExtError = 2,   //!< third party lib error
+    CheckError = 3, //!< a check error ocurred
+    IOError = 4,    //!< an io error ocurred
   };
 
-  static NaResult noError() { return {HeError::NO_ERROR, Type::NO_ERROR}; }
-  static NaResult notFound() {
-    return {HeError::CUSTOM_ERROR, Type::NOT_FOUND};
-  }
+  static NaResult noError() { return {HeError::None, Type::NoError}; }
+  static NaResult notFound() { return {HeError::Custom, Type::NotFound}; }
   static NaResult outOfBounds() {
-    return {HeError::OUT_OF_BOUNDS, Type::NO_ERROR};
+    return {HeError::OutOfBounds, Type::NoError};
   }
-  static NaResult error() { return {HeError::UNKNOWN_ERROR, Type::NO_ERROR}; }
-  static NaResult extError() {
-    return {HeError::CUSTOM_ERROR, Type::EXT_ERROR};
-  }
-  static NaResult checkError() {
-    return {HeError::CUSTOM_ERROR, Type::CHECK_ERROR};
-  }
+  static NaResult error() { return {HeError::Unknown, Type::NoError}; }
+  static NaResult extError() { return {HeError::Custom, Type::ExtError}; }
+  static NaResult checkError() { return {HeError::Custom, Type::CheckError}; }
   static NaResult inputError() {
-    return {HeError::INVALID_INPUT, Type::NO_ERROR};
+    return {HeError::InvalidInput, Type::NoError};
   }
   static NaResult badAllocation() {
-    return {HeError::BAD_ALLOCATION, Type::NO_ERROR};
+    return {HeError::BadAllocation, Type::NoError};
   }
-  static NaResult ioError() { return {HeError::CUSTOM_ERROR, Type::IO_ERROR}; }
-  static NaResult heError(HeError he) { return {he, Type::NO_ERROR}; }
+  static NaResult ioError() { return {HeError::Custom, Type::IOError}; }
+  static NaResult heError(HeError he) { return {he, Type::NoError}; }
 
   NaResult() = default;
-  NaResult(Type type) : base_type(HeError::UNKNOWN_ERROR), type(type) {}
+  NaResult(Type type) : base_type(HeError::Unknown), type(type) {}
   NaResult(HeError base_type, Type type) : base_type(base_type), type(type) {}
 
-  /// \return True if NO_ERROR
-  operator bool() const { return base_type == HeError::NO_ERROR; }
+  /// \return True if NoError
+  operator bool() const { return base_type == HeError::None; }
   template <typename T> operator naiades::Result<T>() const {
     return naiades::Result<T>::error(*this);
   }
 
-  HeError base_type{HeError::NO_ERROR};
-  Type type{Type::NO_ERROR};
+  HeError base_type{HeError::None};
+  Type type{Type::NoError};
 };
 
-namespace naiades {
+namespace hermes {
 
-#ifdef NAIADES_INCLUDE_TO_STRING
 inline std::string to_string(const NaResult &err) {
   std::stringstream ss;
-  if (err.base_type != HeError::CUSTOM_ERROR)
+  if (err.base_type != HeError::Custom)
     ss << hermes::to_string(err.base_type);
-  if (err.base_type != HeError::NO_ERROR) {
+  if (err.base_type != HeError::None) {
 #define VE_ERROR_TYPE_NAME(E)                                                  \
   if (err.type == NaResult::Type::E)                                           \
   ss << " | " << #E
-    VE_ERROR_TYPE_NAME(NO_ERROR);
-    VE_ERROR_TYPE_NAME(NOT_FOUND);
-    VE_ERROR_TYPE_NAME(EXT_ERROR);
-    VE_ERROR_TYPE_NAME(CHECK_ERROR);
-    VE_ERROR_TYPE_NAME(IO_ERROR);
+    VE_ERROR_TYPE_NAME(NoError);
+    VE_ERROR_TYPE_NAME(NotFound);
+    VE_ERROR_TYPE_NAME(ExtError);
+    VE_ERROR_TYPE_NAME(CheckError);
+    VE_ERROR_TYPE_NAME(IOError);
 #undef VE_ERROR_TYPE_NAME
   }
   return ss.str();
 }
-#endif
 
-} // namespace naiades
+} // namespace hermes

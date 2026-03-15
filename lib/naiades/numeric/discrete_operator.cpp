@@ -28,17 +28,6 @@
 
 #include <naiades/numeric/boundary.h>
 
-namespace naiades {
-
-HERMES_TO_STRING_METHOD_BEGIN(numeric::DiscreteOperator)
-HERMES_TO_STRING_METHOD_MAP_FIELD_BEGIN(nodes_, index, weight)
-HERMES_TO_STRING_METHOD_LINE("({}: {})\n", index, weight)
-HERMES_TO_STRING_METHOD_MAP_FIELD_END
-HERMES_TO_STRING_METHOD_FIELD(constant_);
-HERMES_TO_STRING_METHOD_END
-
-} // namespace naiades
-
 namespace naiades::numeric {
 
 DiscreteOperator::DiscreteOperator(h_size center_index)

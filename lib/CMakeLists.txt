@@ -34,7 +34,6 @@ set(NAIADES_HEADERS
 set(NAIADES_SOURCES
   ${NAIADES_SOURCE_DIR}/naiades/core/element.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp
-  ${NAIADES_SOURCE_DIR}/naiades/core/neighbourhood.cpp
   
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
 
@@ -60,10 +59,10 @@ target_include_directories(
   ${NAIADES_SOURCE_DIR}
 )
 
-if(NAIADES_INCLUDE_TO_STRING_METHODS)
-  target_compile_definitions(naiades PUBLIC NAIADES_INCLUDE_TO_STRING)
-  target_compile_definitions(naiades PUBLIC HERMES_INCLUDE_TO_STRING)
-endif(NAIADES_INCLUDE_TO_STRING_METHODS)
+if(NAIADES_INCLUDE_DEBUG_TRAITS)
+  target_compile_definitions(naiades PUBLIC NAIADES_INCLUDE_DEBUG_TRAITS)
+  target_compile_definitions(naiades PUBLIC HERMES_INCLUDE_DEBUG_TRAITS)
+endif(NAIADES_INCLUDE_DEBUG_TRAITS)
 
   set_target_properties(
     naiades
@@ -106,7 +105,7 @@ endif(NAIADES_INCLUDE_TO_STRING_METHODS)
 #  ${DEPS_INCLUDE_DIRS}
 #  ${NAIADES_SOURCE_DIR})
 #
-#if(NAIADES_INCLUDE_TO_STRING_METHODS)
-#  target_compile_definitions(naiades_py PUBLIC NAIADES_INCLUDE_TO_STRING)
-#  target_compile_definitions(naiades_py PUBLIC HERMES_INCLUDE_TO_STRING)
-#endif(NAIADES_INCLUDE_TO_STRING_METHODS)
+#if(NAIADES_INCLUDE_DEBUG_TRAITS)
+#  target_compile_definitions(naiades_py PUBLIC NAIADES_INCLUDE_DEBUG_TRAITS)
+#  target_compile_definitions(naiades_py PUBLIC HERMES_INCLUDE_DEBUG_TRAITS)
+#endif(NAIADES_INCLUDE_DEBUG_TRAITS)

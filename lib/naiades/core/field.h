@@ -142,7 +142,10 @@ private:
 
   Element element_{Element::Type::NONE};
   h_size index_offset_{0};
-  NAIADES_to_string_FRIEND(FieldGroup);
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<FieldGroup>;
+#endif
 };
 
 class FieldSet {
@@ -194,19 +197,48 @@ private:
   std::unordered_map<Element, h_size> field_sizes_by_type_;
   std::unordered_map<std::string, FieldGroup> fields_;
 
-  NAIADES_to_string_FRIEND(FieldSet);
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<FieldSet>;
+#endif
 };
 
 } // namespace naiades::core
 
-namespace naiades {
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
 
-HERMES_TO_STRING_TEMPLATED_METHOD_BEGIN(core::FieldRef<T>, typename T)
-HERMES_TO_STRING_METHOD_TITLE
-HERMES_TO_STRING_METHOD_LINE("loc: {}\n", naiades::to_string(object.element()));
-HERMES_TO_STRING_METHOD_LINE("size: {}\n", object.size());
-HERMES_TO_STRING_METHOD_LINE("values: {}",
-                             hermes::cstr::join(object, ", ", 10));
-HERMES_TO_STRING_METHOD_END
+namespace hermes {
 
-} // namespace naiades
+template <typename T> struct DebugTraits<naiades::core::FieldRef<T>> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::FieldRef<T> &data) {
+    return DebugMessage()
+        .addTitle("Field Ref")
+        .add("loc", data.element())
+        .add("size", data.size())
+        .add("values: {}", hermes::cstr::join(data, ", ", 10));
+  }
+};
+
+template <> struct DebugTraits<naiades::core::FieldGroup> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::FieldGroup &data) {
+    return DebugMessage()
+        .addTitle("Field Group")
+        .add("element", data.element_)
+        .add("index offset", data.index_offset_)
+        .add("size", data.size())
+        .add("values", hermes::to_string(static_cast<hermes::mem::AoS>(data)));
+  }
+};
+
+template <> struct DebugTraits<naiades::core::FieldSet> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::FieldSet &data) {
+    return DebugMessage().addTitle("Field Set");
+    //.addMap("fields", data.fields_);
+  }
+};
+
+} // namespace hermes
+
+#endif

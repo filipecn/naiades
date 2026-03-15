@@ -26,22 +26,6 @@
 
 #include <naiades/numeric/boundary.h>
 
-namespace naiades {
-
-HERMES_TO_STRING_METHOD_BEGIN(numeric::Boundary::Region)
-HERMES_TO_STRING_METHOD_NAIADES_FIELD(index_set_);
-HERMES_TO_STRING_METHOD_END
-
-HERMES_TO_STRING_METHOD_BEGIN(numeric::Boundary)
-HERMES_TO_STRING_METHOD_TITLE
-HERMES_TO_STRING_METHOD_LINE("regions [{}]", object.regions_.size());
-HERMES_TO_STRING_METHOD_ARRAY_FIELD_BEGIN(regions_, region)
-HERMES_TO_STRING_METHOD_LINE("{}\n", naiades::to_string(region));
-HERMES_TO_STRING_METHOD_MAP_FIELD_END
-HERMES_TO_STRING_METHOD_END
-
-} // namespace naiades
-
 namespace naiades::numeric {
 
 Boundary::Region::Region(core::Element element_type,
@@ -136,7 +120,7 @@ const DiscreteOperator &Boundary::stencil(const core::Index &index) const {
   for (const auto &region : regions_)
     if (region.contains(index))
       return region.stencil(index);
-  HERMES_WARN("Index {} not found in boundary.", naiades::to_string(index));
+  HERMES_WARN("Index {} not found in boundary.", hermes::to_string(index));
   static DiscreteOperator s_dop;
   return s_dop;
 }

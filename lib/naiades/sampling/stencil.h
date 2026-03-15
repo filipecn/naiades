@@ -57,7 +57,29 @@ private:
   std::vector<h_size> indices_;
   std::vector<f32> weights_;
 
-  NAIADES_to_string_FRIEND(Stencil);
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<Stencil>;
+#endif
 };
 
 } // namespace naiades::sampling
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::sampling::Stencil> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::sampling::Stencil &data) {
+    auto m = DebugMessage();
+    m.addTitle("Stencil");
+    m.add("size", data.indices_.size());
+    m.add("indices", hermes::cstr::join(data.indices_, " "));
+    m.add("weights", hermes::cstr::join(data.weights_, " "));
+    return m;
+  }
+};
+
+} // namespace hermes
+
+#endif

@@ -28,28 +28,6 @@
 
 #include <naiades/base/debug.h>
 
-namespace naiades {
-
-HERMES_TO_STRING_METHOD_BEGIN(core::FieldGroup)
-HERMES_TO_STRING_METHOD_TITLE
-HERMES_TO_STRING_METHOD_NAIADES_FIELD(element_);
-HERMES_TO_STRING_METHOD_FIELD(index_offset_);
-HERMES_TO_STRING_METHOD_LINE("size: {}\n", object.size());
-HERMES_TO_STRING_METHOD_LINE(
-    "values: {}", hermes::to_string(static_cast<hermes::mem::AoS>(object)));
-HERMES_TO_STRING_METHOD_END
-
-HERMES_TO_STRING_METHOD_BEGIN(core::FieldSet)
-HERMES_TO_STRING_METHOD_TITLE
-HERMES_TO_STRING_METHOD_LINE("fields [{}]", object.fields_.size());
-HERMES_TO_STRING_METHOD_MAP_FIELD_BEGIN(fields_, name, field)
-HERMES_TO_STRING_METHOD_LINE("name: {}", name);
-HERMES_TO_STRING_METHOD_LINE("{}", to_string(field));
-HERMES_TO_STRING_METHOD_MAP_FIELD_END
-HERMES_TO_STRING_METHOD_END
-
-} // namespace naiades
-
 namespace naiades::core {
 
 void FieldGroup::setElement(Element loc) { element_ = loc; }
