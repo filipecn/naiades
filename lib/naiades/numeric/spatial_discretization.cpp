@@ -71,4 +71,9 @@ Boundary &SpatialDiscretization::boundary(const std::string &field_name) {
   return it->second;
 }
 
+std::unordered_map<std::string, Boundary>
+SpatialDiscretization::boundaries() const {
+  return boundaries_;
+}
+
 } // namespace naiades::numeric

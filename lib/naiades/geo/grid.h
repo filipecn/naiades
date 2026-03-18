@@ -91,7 +91,7 @@ public:
   using Ptr = hermes::Ref<Grid2>;
 
   struct Config {
-    Config &setSize(const hermes::size2 &size);
+    Config &setResolution(const hermes::size2 &size);
     Config &setDomain(const hermes::geo::bounds::bbox2 &region);
     Config &setCellSize(float dx);
     Config &setCellSize(const hermes::geo::vec2 &d);
@@ -211,6 +211,10 @@ public:
 
 private:
   geo::Grid2::Ptr mesh_;
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<Grid2FD>;
+#endif
 };
 
 } // namespace naiades::numeric
@@ -244,9 +248,19 @@ template <> struct DebugTraits<naiades::geo::Grid2> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
   static DebugMessage message(const naiades::geo::Grid2 &data) {
     auto m = DebugMessage();
-    m.add("boounds", data.bounds_);
+    m.add("bounds", data.bounds_);
     m.add("resolution", data.resolution_);
     m.add("cell size", data.cell_size_);
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::numeric::Grid2FD> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::numeric::Grid2FD &data) {
+    auto m = DebugMessage();
+    m.add("mesh", *data.mesh_);
+    m.addMap("discretization", data.boundaries());
     return m;
   }
 };

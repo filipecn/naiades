@@ -10,8 +10,11 @@ TEST_CASE("regular grid 2", "[geo]") {
     u32 H = 3;  // y
     u32 V = 10; // x
     hermes::geo::vec2 cell_size(20, 10);
-    auto grid =
-        Grid2::Config().setCellSize(cell_size).setSize({V, H}).build().value();
+    auto grid = Grid2::Config()
+                    .setCellSize(cell_size)
+                    .setResolution({V, H})
+                    .build()
+                    .value();
     SECTION("index offset") {
       REQUIRE(grid.flatIndexOffset(core::Element::Type::CELL) == 0);
       REQUIRE(grid.flatIndexOffset(core::Element::Type::VERTEX) == 0);
@@ -188,7 +191,7 @@ TEST_CASE("regular grid 2", "[geo]") {
   SECTION("faces") {
     u32 N = 3;
     u32 M = 5;
-    auto grid = Grid2::Config().setSize({M, N}).build().value();
+    auto grid = Grid2::Config().setResolution({M, N}).build().value();
     SECTION("flat index") {
       { // x-faces
         h_size i = 0;
@@ -213,7 +216,7 @@ TEST_CASE("regular grid 2", "[geo]") {
   SECTION("Geometry") {
     u32 N = 3;
     u32 M = 5;
-    auto grid = Grid2::Config().setSize({M, N}).build().value();
+    auto grid = Grid2::Config().setResolution({M, N}).build().value();
     SECTION("positions") {
       auto elements = {core::Element::Type::CELL, core::Element::Type::VERTEX,
                        core::Element::Type::X_FACE,
@@ -232,7 +235,7 @@ TEST_CASE("regular grid 2", "[geo]") {
   SECTION("Topology") {
     u32 N = 3;
     u32 M = 5;
-    auto grid = Grid2::Config().setSize({M, N}).build().value();
+    auto grid = Grid2::Config().setResolution({M, N}).build().value();
     SECTION("indices") {
       auto indices =
           grid.indices(core::Element::Type::CELL, core::Element::Type::VERTEX);

@@ -122,6 +122,9 @@ template <> struct DebugTraits<naiades::numeric::Boundary::Region> {
   static DebugMessage message(const naiades::numeric::Boundary::Region &data) {
     auto m = DebugMessage();
     m.add("index set", hermes::to_string(data.index_set_));
+    m.add("boundary element type", data.boundary_element_type_);
+    m.add("interior element type", data.interior_element_type_);
+    m.addArray("stencils", data.stencils_);
     return m;
   }
 };

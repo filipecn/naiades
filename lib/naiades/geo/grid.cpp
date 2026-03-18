@@ -31,7 +31,7 @@
 #include <hermes/math/space_filling.h>
 
 namespace naiades::geo {
-Grid2::Config &Grid2::Config::setSize(const hermes::size2 &size) {
+Grid2::Config &Grid2::Config::setResolution(const hermes::size2 &size) {
   resolution_ = size;
   bounds_.upper.x = resolution_.width * cell_size_.x;
   bounds_.upper.y = resolution_.height * cell_size_.y;

@@ -1,25 +1,28 @@
-add_executable(smoke_solver2
-  smoke_solver2.cpp
-)
+function(build_example EXAMPLE_NAME)
 
-target_link_options(smoke_solver2 INTERFACE --coverage)
+  add_executable(${EXAMPLE_NAME} ${EXAMPLE_NAME}.cpp)
 
-target_include_directories(smoke_solver2 PUBLIC 
+  target_link_options(${EXAMPLE_NAME} INTERFACE --coverage)
+
+  target_include_directories(${EXAMPLE_NAME} PUBLIC 
   ${CATCH2_INCLUDES} 
   ${NAIADES_SOURCE_DIR}
   ${DEPS_INCLUDE_DIRS}
-)
+  )
 
-setup_target(smoke_solver2)
+  setup_target(${EXAMPLE_NAME})
 
-if(NAIADES_INCLUDE_DEBUG_TRAITS)
-  target_compile_definitions(smoke_solver2 PUBLIC NAIADES_INCLUDE_DEBUG_TRAITS)
-  target_compile_definitions(smoke_solver2 PUBLIC HERMES_INCLUDE_DEBUG_TRAITS)
-endif(NAIADES_INCLUDE_DEBUG_TRAITS)
+  if(NAIADES_INCLUDE_DEBUG_TRAITS)
+    target_compile_definitions(${EXAMPLE_NAME} PUBLIC NAIADES_INCLUDE_DEBUG_TRAITS)
+    target_compile_definitions(${EXAMPLE_NAME} PUBLIC HERMES_INCLUDE_DEBUG_TRAITS)
+  endif(NAIADES_INCLUDE_DEBUG_TRAITS)
 
-target_link_libraries(smoke_solver2 PRIVATE 
+  target_link_libraries(${EXAMPLE_NAME} PRIVATE 
   naiades
   hermes
   gcov
-)
+  )
 
+endfunction(build_example)
+
+build_example(poisson)

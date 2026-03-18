@@ -25,7 +25,7 @@ TEST_CASE("Discrete Operator", "[numeric]") {
 TEST_CASE("Grid2FD", "[numeric]") {
   auto grid = geo::Grid2::Config()
                   .setCellSize({0.1, 0.2})
-                  .setSize({3, 4})
+                  .setResolution({3, 4})
                   .build()
                   .value();
   auto grid_fd = numeric::Grid2FD(&grid);

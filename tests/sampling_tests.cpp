@@ -17,7 +17,7 @@ TEST_CASE("stencil", "[sampling]") {
   hermes::geo::vec2 cell_size(0.2, 0.1);
   auto grid = geo::Grid2::Config()
                   .setCellSize(cell_size)
-                  .setSize({V, H})
+                  .setResolution({V, H})
                   .build()
                   .value();
   SECTION("bilinear - regular grid 2") {
@@ -182,7 +182,7 @@ TEST_CASE("sample", "[sampling]") {
 
   auto grid = geo::Grid2::Config()
                   .setCellSize({param.dx, param.dx})
-                  .setSize({10, 10})
+                  .setResolution({10, 10})
                   .build()
                   .value();
   core::FieldSet fields;
@@ -272,7 +272,7 @@ TEST_CASE("sample vectors", "[sampling]") {
 
   auto grid = geo::Grid2::Config()
                   .setCellSize({param.dx, param.dx})
-                  .setSize({10, 10})
+                  .setResolution({10, 10})
                   .build()
                   .value();
   core::FieldSet fields;

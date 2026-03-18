@@ -144,6 +144,8 @@ public:
   const Boundary &boundary(const std::string &field_name) const;
   ///
   Boundary &boundary(const std::string &field_name);
+  ///
+  std::unordered_map<std::string, Boundary> boundaries() const;
 
 protected:
   std::unordered_map<std::string, Boundary> boundaries_;

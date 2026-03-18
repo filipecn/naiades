@@ -43,7 +43,7 @@ TEST_CASE("solve", "[core]") {
 
   auto grid = geo::Grid2::Config()
                   .setCellSize({param.dx, param.dx})
-                  .setSize({10, 10})
+                  .setResolution({10, 10})
                   .build()
                   .value();
 

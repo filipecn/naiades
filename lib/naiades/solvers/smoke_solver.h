@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include <naiades/core/boundary.h>
 #include <naiades/core/field.h>
 #include <naiades/geo/grid.h>
+#include <naiades/numeric/boundary.h>
 
 namespace naiades::solvers {
 
@@ -66,7 +66,7 @@ public:
   core::FieldRef<f32> density();
   core::FieldRef<f32> u();
   core::FieldRef<f32> v();
-  core::BoundarySet &boundary();
+  numeric::BoundarySet &boundary();
 
 private:
   core::FieldSet &current();
