@@ -54,5 +54,7 @@ int main() {
 
   HERMES_WARN("{}", na::spatialFieldString(grid, na::core::FieldCRef<f32>(f)));
 
-  return 0;
+  -L(u) = f
+
+      return 0;
 }
