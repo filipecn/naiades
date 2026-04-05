@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include <naiades/core/element.h>
+#include <naiades/core/symbol.h>
 #include <naiades/numeric/boundary.h>
-#include <naiades/numeric/discrete_operator.h>
+#include <naiades/numeric/discrete_expression.h>
 
 #include <hermes/core/ref.h>
 #include <hermes/geometry/point.h>
@@ -86,27 +86,114 @@ namespace naiades::numeric {
 class Boundary;
 
 /// \brief Spatial discretization.
+/// The spatial discretization provides the setup of fields and discrete
+/// operators over a numeric geometry/topology.
 class SpatialDiscretization {
 public:
   using Ptr = hermes::Ref<SpatialDiscretization>;
+
+  // fields
+
+  template <typename T>
+  NaResult addFields(const core::Element &loc,
+                     const std::vector<std::string> &field_names) {
+    for (const auto &name : field_names)
+      NAIADES_RETURN_BAD_RESULT(addField<T>({.name = name, .loc = loc}));
+    return NaResult::noError();
+  }
+
+  template <typename T>
+  NaResult addFields(const std::vector<core::Symbol> &symbols) {
+    for (const auto &symbol : symbols)
+      NAIADES_RETURN_BAD_RESULT(addField<T>(symbol));
+    return NaResult::noError();
+  }
+
+  template <typename T> NaResult addField(const core::Symbol &symbol) {
+    core::FieldGroup field_group;
+    field_group.setElement(symbol.loc);
+    field_group.setIndexOffset(topology_->elementIndexOffset(symbol.loc));
+    field_group.pushField<T>("value");
+    NAIADES_HE_RETURN_BAD_RESULT(
+        field_group.resize(topology_->elementCount(symbol.loc)));
+    if (fields_.count(symbol))
+      HERMES_WARN("Overwriting field {} in field set.", symbol.name);
+    fields_[symbol] = std::move(field_group);
+    return NaResult::noError();
+  }
+
+  /// \param name Field group name.
+  /// \return Field reference or NOT_FOUND error.
+  template <typename T>
+  Result<core::FieldRef<T>> getField(const core::Symbol &symbol) {
+    auto it = fields_.find(symbol);
+    if (it != fields_.end())
+      return Result<core::FieldRef<T>>(it->second.get<T>(0));
+    return NaResult::notFound();
+  }
+
+  /// \param name Field group name.
+  /// \return Field const reference or NOT_FOUND error.
+  template <typename T>
+  Result<core::FieldCRef<T>> getField(const core::Symbol &symbol) const {
+    auto it = fields_.find(symbol);
+    if (it != fields_.end())
+      return Result<core::FieldCRef<T>>(it->second.get<T>(0));
+    return NaResult::notFound();
+  }
+
+  // boundaries
+
+  /// Compute boundary stencils for all boundaries.
+  NaResult resolveBoundaries();
+  /// Compute boundary stencils for the boundaries of the given field.
+  NaResult resolveBoundary(const core::Symbol &symbol);
+  /// Defines a boundary region from the given boundary element index set.
+  /// \param symbol
+  /// \param indices
+  /// \return The index of the newly created region.
+  void addBoundary(const core::Symbol &symbol,
+                   const std::vector<h_size> &indices,
+                   h_size *region_index = nullptr);
+  /// Set a boundary condition of a field for a given region index.
+  /// \param symbol
+  /// \param region_index
+  /// \param condition
+  void setBoundaryCondition(const core::Symbol &symbol, h_size region_index,
+                            bc::BoundaryCondition::Ptr condition);
+  /// Set the same boundary condition of a field in all regions.
+  /// \param field_name
+  /// \param condition
+  /// \param interior_field_loc
+  void setBoundaryCondition(const core::Symbol &symbol,
+                            bc::BoundaryCondition::Ptr condition);
+  ///
+  const Boundary &boundary(const core::Symbol &symbol) const;
+  ///
+  Boundary &boundary(const core::Symbol &symbol);
+  ///
+  const std::unordered_map<core::Symbol, Boundary> &boundaries() const;
+
+  // discrete operators
+
+  ///
+  DiscreteExpression dx(const core::DiscreteSymbol &dsym) const;
+  DiscreteExpression dy(const core::DiscreteSymbol &dsym) const;
+  DiscreteExpression L(const core::DiscreteSymbol &dsym) const;
+
+protected:
   /// Compute the derivative operator centered at the given element.
   /// \param d Derivative direction.
-  /// \param loc
   /// \param index
-  /// \param boundary_loc
-  /// \param boundary
-  virtual DiscreteOperator derivative(derivative_bits d,
-                                      const core::Element &loc, h_size index,
-                                      core::Element boundary_loc,
-                                      const Boundary &boundary) const = 0;
+  /// \param sym
+  virtual DiscreteOperator
+  derivative(derivative_bits d, h_size index,
+             const core::DiscreteSymbol &sym) const = 0;
   /// Compute the discrete Laplacian operator centered at the given element.
-  /// \param loc
   /// \param index
-  /// \param boundary_loc
-  /// \param boundary
-  virtual DiscreteOperator laplacian(const core::Element &loc, h_size index,
-                                     core::Element boundary_loc,
-                                     const Boundary &boundary) const = 0;
+  /// \param sym
+  virtual DiscreteOperator laplacian(h_size index,
+                                     const core::DiscreteSymbol &sym) const = 0;
   /// Compute the discrete Divergence operator centered at the given element.
   /// \tparam DiscretizationType Discretization type.
   /// \param boundary
@@ -115,40 +202,11 @@ public:
   virtual DiscreteOperator divergence(const core::Element &loc, h_size index,
                                       const core::Element &vector_loc,
                                       bool staggered) const = 0;
-  /// Compute boundary stencils for all boundaries.
-  NaResult resolveBoundaries();
-  /// Compute boundary stencils for the boundaries of the given field.
-  virtual NaResult resolveBoundary(const std::string &field_name) = 0;
-  /// Defines a boundary region from the given boundary element index set.
-  /// \param indices
-  /// \return The index of the newly created region.
-  void addBoundary(const std::string &field_name, core::Element loc,
-                   const std::vector<h_size> &indices,
-                   h_size *region_index = nullptr);
-  /// Set a boundary condition of a field for a given region index.
-  /// \param field_name
-  /// \param region_index
-  /// \param condition
-  /// \param interior_field_loc
-  void setBoundaryCondition(const std::string &field_name, h_size region_index,
-                            bc::BoundaryCondition::Ptr condition,
-                            core::Element interior_field_loc);
-  /// Set the same boundary condition of a field in all regions.
-  /// \param field_name
-  /// \param condition
-  /// \param interior_field_loc
-  void setBoundaryCondition(const std::string &field_name,
-                            bc::BoundaryCondition::Ptr condition,
-                            core::Element interior_field_loc);
-  ///
-  const Boundary &boundary(const std::string &field_name) const;
-  ///
-  Boundary &boundary(const std::string &field_name);
-  ///
-  std::unordered_map<std::string, Boundary> boundaries() const;
 
 protected:
-  std::unordered_map<std::string, Boundary> boundaries_;
+  std::unordered_map<core::Symbol, Boundary> boundaries_;
+  std::unordered_map<core::Symbol, core::FieldGroup> fields_;
+  core::Topology::Ptr topology_;
 };
 
 } // namespace naiades::numeric

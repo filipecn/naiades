@@ -51,20 +51,31 @@ public:
   /// \param loc
   /// \return Total number of locations of a given element.
   virtual h_size elementCount(Element loc) const = 0;
+  /// Some structures may store elements in single sequences so element
+  /// indices may have an offset.
+  /// @param loc
+  virtual h_size elementIndexOffset(Element loc) const = 0;
   /// \brief Get the lists of indices of an element type.
   /// Elements may consist of a set of different sub-elements.
   /// Ex: A polygonal cell contains a set of vertices and a set of faces.
   /// \param element
   /// \param sub_element
   /// \return The lists of sub-elements of all elements.
-  virtual std::vector<std::vector<h_size>>
-  indices(Element element, Element sub_element) const = 0;
+  virtual std::vector<std::vector<h_size>> indices(Element element,
+                                                   Element sub_element) const;
+  /// \brief Get the list of indices of a given element instance.
+  /// \param element
+  /// \param index
+  /// \param sub_element
+  /// \return The lists of sub-elements of the given element instance.
+  virtual std::vector<h_size> indices(Element element, h_index index,
+                                      Element sub_element) const = 0;
   /// Get the indices of an element at the boundary.
   /// \note This returns a copy of the indices.
   /// \param loc Element.
   /// \return A Boundary object with the indices and groups of the boundary
   ///         elements.
-  virtual std::vector<h_size> boundary(Element loc) const = 0;
+  virtual std::vector<h_size> boundaryIndices(Element loc) const = 0;
   /// Get element alignment.
   /// \note This considers the element primitive.
   /// \param loc Element.

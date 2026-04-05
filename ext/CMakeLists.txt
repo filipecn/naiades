@@ -15,10 +15,12 @@ include(stb)
 include(pybind11)
 include(libigl)
 include(eigen)
+include(simple_svg)
 
 list(APPEND DEPS_INCLUDE_DIRS ";${HERMES_INCLUDE_DIR}")
 list(APPEND DEPS_INCLUDE_DIRS ";${STB_INCLUDE_DIR}")
 list(APPEND DEPS_INCLUDE_DIRS ";${LIBIGL_INCLUDE_DIR}")
+list(APPEND DEPS_INCLUDE_DIRS ";${SIMPLE_SVG_INCLUDE_DIR}")
 
 target_link_libraries(DEPS INTERFACE 
   hermes

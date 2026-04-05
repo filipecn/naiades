@@ -30,6 +30,24 @@
 
 namespace naiades::core {
 
+numeric::Scalar operator-(const FieldRef<real_t> &field,
+                          const numeric::Scalar &s) {
+  HERMES_ASSERT(s.size() == field.size());
+  numeric::Scalar r(s.size());
+  for (h_index i = 0; i < s.size(); ++i)
+    r[i] = field[i] - s[i];
+  return r;
+}
+
+numeric::Scalar operator-(const numeric::Scalar &s,
+                          const FieldRef<real_t> &field) {
+  HERMES_ASSERT(s.size() == field.size());
+  numeric::Scalar r = s;
+  for (h_index i = 0; i < s.size(); ++i)
+    r[i] -= field[i];
+  return r;
+}
+
 void FieldGroup::setElement(Element loc) { element_ = loc; }
 
 void FieldGroup::setIndexOffset(h_size o) { index_offset_ = o; }

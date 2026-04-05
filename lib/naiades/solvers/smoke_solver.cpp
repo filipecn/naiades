@@ -75,7 +75,7 @@ Result<SmokeSolver2> SmokeSolver2::Config::build() const {
       core::Element::Type::DOWN_FACE, core::Element::Type::RIGHT_FACE,
       core::Element::Type::UP_FACE, core::Element::Type::LEFT_FACE};
   for (auto b : boundary_element_types) {
-    auto bd = solver.grid_.boundary(b);
+    auto bd = solver.grid_.boundaryIndices(b);
     solver.boundary_.addRegion("p", core::Element::Type::FACE, bd);
     solver.boundary_.addRegion("v", core::Element::Type::FACE, bd);
     solver.boundary_.addRegion("u", core::Element::Type::FACE, bd);

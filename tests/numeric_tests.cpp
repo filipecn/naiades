@@ -34,7 +34,8 @@ TEST_CASE("Grid2FD", "[numeric]") {
       core::Element::Type::LEFT_FACE, core::Element::Type::DOWN_FACE,
       core::Element::Type::RIGHT_FACE, core::Element::Type::UP_FACE};
   for (auto b : boundary_element_types)
-    grid_fd.addBoundary("p", core::Element::Type::FACE, grid.boundary(b));
+    grid_fd.addBoundary("p", core::Element::Type::FACE,
+                        grid.boundaryIndices(b));
 
   auto dirichlet = bc::Dirichlet::Ptr::shared(10);
   auto neumann = bc::Neumann::Ptr::shared();

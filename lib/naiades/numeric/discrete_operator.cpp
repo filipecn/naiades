@@ -81,7 +81,24 @@ real_t &DiscreteOperator::operator[](h_size index) {
   return it->second;
 }
 
+DiscreteOperator
+DiscreteOperator::operator+(const DiscreteOperator &rhs) const {
+  HERMES_ASSERT(center_index_ == rhs.center_index_);
+  DiscreteOperator op = *this;
+  for (const auto &node : rhs.nodes_) {
+    auto it = nodes_.find(node.first);
+    if (it != nodes_.end())
+      op[node.first] = it->second + node.second;
+    else
+      op[node.first] = node.second;
+  }
+  op.constant_ = constant_ + rhs.constant_;
+  op.center_index_ = center_index_;
+  return *this;
+}
+
 DiscreteOperator &DiscreteOperator::operator+=(const DiscreteOperator &rhs) {
+  HERMES_ASSERT(center_index_ == rhs.center_index_);
   for (const auto &node : rhs.nodes_)
     nodes_[node.first] += node.second;
   constant_ += rhs.constant_;
@@ -90,6 +107,7 @@ DiscreteOperator &DiscreteOperator::operator+=(const DiscreteOperator &rhs) {
 
 DiscreteOperator DiscreteOperator::operator*(real_t s) const {
   DiscreteOperator op;
+  op.center_index_ = center_index_;
   op.constant_ = constant_ * s;
   for (auto &node : nodes_)
     op.nodes_[node.first] = node.second * s;
@@ -103,6 +121,24 @@ DiscreteOperator &DiscreteOperator::operator*=(real_t s) {
   return *this;
 }
 
+DiscreteOperator DiscreteOperator::operator-() const {
+  DiscreteOperator op;
+  op.center_index_ = center_index_;
+  op.constant_ = -constant_;
+  for (auto &node : nodes_)
+    op.nodes_[node.first] = -node.second;
+  return op;
+}
+
 h_size DiscreteOperator::size() const { return nodes_.size(); }
+
+const std::unordered_map<h_size, real_t> &DiscreteOperator::nodes() const {
+  return nodes_;
+}
+
+const std::unordered_map<h_size, real_t> &
+DiscreteOperator::boundaryNodes() const {
+  return boundary_nodes_;
+}
 
 } // namespace naiades::numeric

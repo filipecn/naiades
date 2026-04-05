@@ -30,11 +30,13 @@
 #include <naiades/base/debug.h>
 #include <naiades/base/result.h>
 #include <naiades/core/topology.h>
+#include <naiades/numeric/blas.h>
 
 #include <hermes/geometry/vector.h>
 #include <hermes/storage/aos.h>
 
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -53,6 +55,15 @@ public:
     for (h_size i = 0; i < n; ++i) {
       (*this)[i] = value;
     }
+    return *this;
+  }
+
+  // template <typename U = T,
+  //           typename = std::enable_if_t<std::is_floating_point_v<U>::value>>
+  FieldRef &operator=(const numeric::Scalar &s) {
+    HERMES_ASSERT(s.size() == (*this).size());
+    for (h_index i = 0; i < s.size(); ++i)
+      (*this)[i] = s[i];
     return *this;
   }
 
@@ -85,7 +96,6 @@ public:
   FieldCRef(const FieldRef<T> &field)
       : hermes::mem::AoS::ConstFieldView<T>(
             static_cast<hermes::mem::AoS::ConstFieldView<T>>(field)),
-        //    field.data_, field.stride_, field.offset_, field.size_),
         element_(field.element()), index_offset_(field.indexOffset()) {}
 
   Element element() const { return element_; }
@@ -97,6 +107,20 @@ public:
     return (*this)[*i - index_offset_];
   }
 
+  hermes::Interval<T> valueRange() const {
+    auto n = hermes::mem::AoS::ConstFieldView<T>::size_;
+    hermes::Interval<T> interval(0, 0);
+    if (n > 0) {
+      interval.low = (*this)[0];
+      interval.high = (*this)[0];
+    }
+    for (h_index i = 1; i < n; ++i) {
+      interval.low = hermes::numbers::cmp::min(interval.low, (*this)[i]);
+      interval.high = hermes::numbers::cmp::max(interval.high, (*this)[i]);
+    }
+    return interval;
+  }
+
 private:
   friend class FieldGroup;
 
@@ -104,12 +128,19 @@ private:
   h_size index_offset_{0};
 };
 
-/// A field group holds one or more fields defined over a single type of
+numeric::Scalar operator-(const FieldRef<real_t> &field,
+                          const numeric::Scalar &s);
+
+numeric::Scalar operator-(const numeric::Scalar &s,
+                          const FieldRef<real_t> &field);
+
+/// A field group holds one or more sub-fields defined over a single type of
 /// discrete location (ex: vertex and face centers).
-/// \note The values are stored in an array of structs.
+/// \note The values are stored in a single array of structs.
 /// \note Field groups carry an index offset that can be present in certain
 ///       discretizations structures. The index offset transforms the indices
-///       into global and local indices. Given a field group of N elements:
+///       into global and local indices. For example, the indices of a field
+///       group of N elements in a given field group of N elements are:
 ///       - local indices:  [0, N)
 ///       - global indices: [offset, N + offset )
 class FieldGroup : public hermes::mem::AoS {
@@ -124,14 +155,14 @@ public:
   h_size indexOffset() const;
 
   template <typename T> FieldRef<T> get(h_size field_index) {
-    FieldRef<T> acc(field<T>(field_index));
+    FieldRef<T> acc(this->field<T>(field_index));
     acc.element_ = element_;
     acc.index_offset_ = index_offset_;
     return acc;
   }
 
   template <typename T> FieldCRef<T> get(h_size field_index) const {
-    FieldCRef<T> acc(field<T>(field_index));
+    FieldCRef<T> acc(this->field<T>(field_index));
     acc.element_ = element_;
     acc.index_offset_ = index_offset_;
     return acc;
@@ -148,6 +179,7 @@ private:
 #endif
 };
 
+/// The field set gathers a set of fields indexed by
 class FieldSet {
 public:
   NaResult setElementCount(Element loc, h_size count);
@@ -234,8 +266,7 @@ template <> struct DebugTraits<naiades::core::FieldGroup> {
 template <> struct DebugTraits<naiades::core::FieldSet> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
   static DebugMessage message(const naiades::core::FieldSet &data) {
-    return DebugMessage().addTitle("Field Set");
-    //.addMap("fields", data.fields_);
+    return DebugMessage().addTitle("Field Set").addMap("fields", data.fields_);
   }
 };
 

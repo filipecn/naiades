@@ -2,16 +2,14 @@ include(FetchContent)
 FetchContent_Declare(
   Eigen
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-  GIT_TAG master
+  GIT_TAG 5.0.1
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE)
-# note: To disable eigen tests,
-# you should put this code in a add_subdirectory to avoid to change
-# BUILD_TESTING for your own project too since variables are directory
-# scoped
-set(BUILD_TESTING OFF)
-set(EIGEN_BUILD_TESTING OFF)
-set(EIGEN_MPL2_ONLY ON)
-set(EIGEN_BUILD_PKGCONFIG OFF)
-set(EIGEN_BUILD_DOC OFF)
+
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(EIGEN_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(EIGEN_MPL2_ONLY ON CACHE BOOL "" FORCE)
+set(EIGEN_BUILD_PKGCONFIG OFF CACHE BOOL "" FORCE)
+set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
+
 FetchContent_MakeAvailable(Eigen)

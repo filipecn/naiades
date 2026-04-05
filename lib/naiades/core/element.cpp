@@ -34,4 +34,16 @@ ElementIndex ElementIndex::global(Element loc, h_size i) {
   return {.index = Index::global(i), .element = loc};
 }
 
+Element Element::cell() { return Element(Element::Type::CELL); }
+
+Element Element::face() { return Element(Element::Type::FACE); }
+
+Element Element::uFace() { return Element(Element::Type::U_FACE); }
+
+Element Element::vFace() { return Element(Element::Type::V_FACE); }
+
+Element Element::wFace() { return Element(Element::Type::W_FACE); }
+
+Element Element::vertex() { return Element(Element::Type::VERTEX); }
+
 } // namespace naiades::core

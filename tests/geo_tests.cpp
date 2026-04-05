@@ -250,7 +250,7 @@ TEST_CASE("regular grid 2", "[geo]") {
         auto elements = {core::Element::Type::CELL,
                          core::Element::Type::VERTEX};
         for (auto element : elements) {
-          auto boundary = grid.boundary(element);
+          auto boundary = grid.boundaryIndices(element);
           auto res = grid.resolution(element);
           REQUIRE(boundary.size() == res.width * 2 + (res.height - 2) * 2);
         }
@@ -268,7 +268,7 @@ TEST_CASE("regular grid 2", "[geo]") {
       }
       SECTION("faces") {
         SECTION("all") {
-          auto boundary = grid.boundary(core::Element::FACE);
+          auto boundary = grid.boundaryIndices(core::Element::FACE);
           auto cell_res = grid.resolution(core::Element::CELL);
           REQUIRE(boundary.size() == cell_res.width * 2 + cell_res.height * 2);
         }

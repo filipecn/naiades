@@ -4,7 +4,6 @@
     {
       "name": "base-preset",
       "hidden": true,
-      "generator": "Unix Makefiles",
       "cacheVariables": {
         "NAIADES_INCLUDE_DEBUG_TRAITS": "ON",
         "NAIADES_BUILD_TESTS": "ON",

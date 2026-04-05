@@ -27,39 +27,96 @@
 
 #pragma once
 
-#include <naiades/core/field.h>
 #include <naiades/numeric/discrete_operator.h>
+
+#include <hermes/numeric/interval.h>
 
 namespace naiades::numeric {
 
-namespace blas {
+/// A scalar field is a multi-dimensional scalar that accepts most arithmetic
+/// operators and functions.
+class Scalar {
+public:
+  static Scalar zero(h_size size);
+  static Scalar one(h_size size);
+  static Scalar constant(h_size size, real_t v);
+
+  Scalar() noexcept = default;
+  Scalar(h_size size) noexcept;
+  Scalar(const Scalar &rhs) noexcept;
+
+  Scalar &operator=(const Scalar &rhs);
+
+  h_size size() const;
+  real_t operator[](h_index i) const;
+  real_t &operator[](h_index i);
+  hermes::Interval<f32> valueRange() const;
+
+  // arithmetic functions
+
+  Scalar &operator-=(const Scalar &rhs);
+  Scalar &operator+=(const Scalar &rhs);
+  Scalar &operator*=(const Scalar &rhs);
+  Scalar &operator/=(const Scalar &rhs);
+  Scalar &operator-=(real_t s);
+  Scalar &operator+=(real_t s);
+  Scalar &operator*=(real_t s);
+  Scalar &operator/=(real_t s);
+
+  friend Scalar operator+(const Scalar &lhs, const Scalar &rhs);
+  friend Scalar operator-(const Scalar &lhs, const Scalar &rhs);
+  friend Scalar operator*(real_t s, const Scalar &field);
+  friend Scalar operator*(const Scalar &field, real_t s);
+  friend Scalar operator*(const Scalar &lhs, const Scalar &rhs);
+
+  // math/trigonometric functions
+
+  friend real_t sum(const Scalar &field);
+  friend Scalar sqr(const Scalar &field);
+  friend Scalar sin(const Scalar &field);
+  friend Scalar abs(const Scalar &field);
+
+private:
+  std::vector<real_t> data_;
+};
+
+Scalar operator+(const Scalar &lhs, const Scalar &rhs);
+Scalar operator-(const Scalar &lhs, const Scalar &rhs);
+Scalar operator*(real_t s, const Scalar &field);
+Scalar operator*(const Scalar &field, real_t s);
+Scalar operator*(const Scalar &lhs, const Scalar &rhs);
+
+// math/trigonometric functions
+
+real_t sum(const Scalar &field);
+Scalar sqr(const Scalar &field);
+Scalar sin(const Scalar &field);
+Scalar abs(const Scalar &field);
 
 /// a += k * b
-template <typename T>
-NaResult akb(core::FieldRef<T> &a, T k, const core::FieldRef<T> &b) {
-  HERMES_ASSERT(a.size() == b.size());
-  for (h_size i = 0; i < a.size(); ++i)
-    a[i] += k * b[i];
-  return NaResult::noError();
-}
+// template <typename T>
+// NaResult akb(core::FieldRef<T> &a, T k, const core::FieldRef<T> &b) {
+//   HERMES_ASSERT(a.size() == b.size());
+//   for (h_size i = 0; i < a.size(); ++i)
+//     a[i] += k * b[i];
+//   return NaResult::noError();
+// }
 
-} // namespace blas
-
-inline NaResult solve(const std::vector<DiscreteOperator> &stencils,
-                      const Boundary &boundary, core::FieldRef<f32> &x,
-                      const core::FieldRef<f32> &x0, f32 a, f32 c) {
-  HERMES_UNUSED_VARIABLE(a);
-  HERMES_UNUSED_VARIABLE(boundary);
-  const h_size iter = 4;
-  const f32 inv_c = 1.f / c;
-  const auto x_element = x.element();
-  HERMES_UNUSED_VARIABLE(x_element);
-  for (h_size k = 0; k < iter; ++k) {
-    for (h_size i = 0; i < stencils.size(); ++i) {
-      x[i] = (x0[i] + stencils[i](x)) * inv_c;
-    }
-  }
-  return NaResult::noError();
-}
+// inline NaResult solve(const std::vector<DiscreteOperator> &stencils,
+//                       const Boundary &boundary, core::FieldRef<f32> &x,
+//                       const core::FieldRef<f32> &x0, f32 a, f32 c) {
+//   HERMES_UNUSED_VARIABLE(a);
+//   HERMES_UNUSED_VARIABLE(boundary);
+//   const h_size iter = 4;
+//   const f32 inv_c = 1.f / c;
+//   const auto x_element = x.element();
+//   HERMES_UNUSED_VARIABLE(x_element);
+//   for (h_size k = 0; k < iter; ++k) {
+//     for (h_size i = 0; i < stencils.size(); ++i) {
+//       x[i] = (x0[i] + stencils[i](x)) * inv_c;
+//     }
+//   }
+//   return NaResult::noError();
+// }
 
 } // namespace naiades::numeric

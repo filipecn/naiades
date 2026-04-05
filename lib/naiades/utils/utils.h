@@ -54,8 +54,8 @@ public:
   class iterator {
   public:
     struct Item {
-      h_size flat_index;
-      h_size index;
+      h_size local_set_index;
+      h_size global_index;
     };
     const Item &operator*() const;
     iterator &operator++();
@@ -145,7 +145,7 @@ public:
   Iteration end();
 
 private:
-  friend class Iteration;
+  friend struct Iteration;
 
   // default for 60 fps
   std::chrono::microseconds fps_period_{16666};

@@ -183,6 +183,13 @@ private:
 
 class Element {
 public:
+  static Element cell();
+  static Element face();
+  static Element uFace();
+  static Element vFace();
+  static Element wFace();
+  static Element vertex();
+
   ///      v --- V ---- v    v - VERTEX
   ///      |            |    C - CELL
   ///      U     C      U    V - [V|X|HORIZONTAL]_FACE
@@ -349,7 +356,7 @@ public:
 private:
   u32 mask_{};
 
-  friend class std::hash<naiades::core::Element>;
+  friend struct std::hash<naiades::core::Element>;
 };
 
 struct ElementIndex {
@@ -585,7 +592,7 @@ template <> struct DebugTraits<naiades::core::Element::Type> {
 template <> struct DebugTraits<naiades::core::Element> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
   static DebugMessage message(const naiades::core::Element &data) {
-    return DebugMessage().addFmt("[{},{},{}]",
+    return DebugMessage().addFmt("E({},{},{})",
                                  hermes::to_string(data.primitives()),
                                  hermes::to_string(data.alignments()),
                                  hermes::to_string(data.orientations()));
@@ -596,8 +603,8 @@ template <> struct DebugTraits<naiades::core::ElementIndex> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
   static DebugMessage message(const naiades::core::ElementIndex &data) {
     auto m = DebugMessage();
-    m.add("index", data.index);
-    m.add("element", data.element);
+    m.addFmt("EI({}, {})", hermes::to_string(data.index),
+             hermes::to_string(data.element));
     return m;
   }
 };

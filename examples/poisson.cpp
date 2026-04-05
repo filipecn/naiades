@@ -8,53 +8,73 @@
 
 #include <naiades/geo/grid.h>
 #include <naiades/numeric/boundary_conditions.h>
+#include <naiades/numeric/linear_solvers.h>
 #include <naiades/utils/fields.h>
+#include <naiades/utils/io.h>
 
 namespace na = naiades;
 
 int main() {
-  // create the geometry
-  auto grid = na::geo::Grid2::Config()
-                  .setDomain(hermes::geo::bounds::bbox2::unit())
-                  .setResolution({10, 10})
-                  .build()
-                  .value();
-
   // create numerical mesh from the geometry
-  auto grid_fd = na::numeric::Grid2FD(&grid);
+  auto fd = *na::numeric::Grid2FD::Config()
+                 .setDomain(hermes::geo::bounds::bbox2::unit())
+                 .setResolution({50, 50})
+                 .build();
 
-  // define the boundary faces (all faces in this case)
-  grid_fd.addBoundary("u", naiades::core::Element::Type::FACE,
-                      grid.boundary(na::core::Element::Type::FACE));
+  // define symbols for the equation
+  auto f = na::core::DiscreteSymbol::cell("f");
+  auto u = na::core::DiscreteSymbol::cell("u");
+  // create fields for the symbols
+  fd.addFields<f32>({u.symbol, f.symbol});
+
+  // define a single boundary containting all faces
+  fd.addBoundary(u.boundary_symbol,
+                 fd.mesh().boundaryIndices(u.boundary_symbol.loc));
 
   // set Dirichlet boundary condition at the boundary
   auto dirichlet = na::numeric::bc::Dirichlet::Ptr::shared(0);
-  grid_fd.setBoundaryCondition("u", 0, dirichlet,
-                               na::core::Element::Type::CELL);
+  fd.setBoundaryCondition(u.boundary_symbol, 0, dirichlet);
 
-  // resolve boundary stencils
-  grid_fd.resolveBoundaries();
-
-  HERMES_INFO("{}", hermes::to_string(grid_fd));
-
-  // create fields
-  na::core::FieldSet fields;
-  fields.add<f32>(na::core::Element::Type::CELL,
-                  grid.flatIndexOffset(na::core::Element::Type::CELL),
-                  {"u", "f"});
-  fields.setElementCountFrom(&grid);
+  // get mesh position fields for the equations
+  auto x = fd.mesh().x(na::core::Element::cell());
+  auto y = fd.mesh().y(na::core::Element::cell());
 
   // set source term
-  auto f = fields.get<f32>("f").value();
-  na::utils::setField<f32>(grid, f, [](const hermes::geo::point2 &p) -> f32 {
-    return 2 * hermes::math::constants::pi * hermes::math::constants::pi *
-           std::sin(hermes::math::constants::pi * p.x) *
-           std::sin(hermes::math::constants::pi * p.y);
-  });
+  auto f_field = *fd.getField<f32>(f.symbol);
+  f_field = 2.f * hermes::math::constants::pi * hermes::math::constants::pi *
+            na::numeric::sin(hermes::math::constants::pi * x) *
+            na::numeric::sin(hermes::math::constants::pi * y);
 
-  HERMES_WARN("{}", na::spatialFieldString(grid, na::core::FieldCRef<f32>(f)));
+  // resolve boundary stencils
+  fd.resolveBoundaries();
 
-  -L(u) = f
+  auto u_field = *fd.getField<f32>(u.symbol);
 
-      return 0;
+  na::numeric::solvers::CG()
+      .setUnknown(u, &u_field) //
+      .addVariable(&f_field)   //
+      .solve(-fd.L(u), f);
+
+  // compute rmse error
+
+  auto sol = na::numeric::sin(hermes::math::constants::pi * x) *
+             na::numeric::sin(hermes::math::constants::pi * y);
+
+  // take the difference
+  auto diff = na::numeric::abs(u_field - sol);
+
+  f32 rmse = std::sqrt(na::numeric::sum(na::numeric::sqr(diff))) / sol.size();
+
+  HERMES_LOG_VARIABLE(rmse);
+
+  na::utils::io::SVG("grid.svg")
+      .setDimensions(fd.mesh().bbounds())
+      // .draw(fd.mesh())
+      .draw(fd.mesh(), static_cast<na::core::FieldCRef<f32>>(u_field))
+      // .draw(fd.mesh(), na::core::Element::cell(), diff)
+      // .drawText(fd.mesh(), na::core::Element::cell(), x)
+      // .draw(fd.mesh(), fd.boundaries())
+      .write();
+
+  return 0;
 }

@@ -34,46 +34,81 @@ NaResult SpatialDiscretization::resolveBoundaries() {
   return NaResult::noError();
 }
 
-void SpatialDiscretization::addBoundary(const std::string &field_name,
-                                        core::Element loc,
+NaResult SpatialDiscretization::resolveBoundary(const core::Symbol &symbol) {
+  auto it = boundaries_.find(symbol);
+  if (it == boundaries_.end())
+    return NaResult::notFound();
+  NAIADES_RETURN_BAD_RESULT(it->second.resolve(topology_));
+  return NaResult::noError();
+}
+
+void SpatialDiscretization::addBoundary(const core::Symbol &symbol,
                                         const std::vector<h_size> &indices,
                                         h_size *region_index) {
-  boundaries_[field_name].addRegion(loc, indices, region_index);
+  boundaries_[symbol].addRegion(indices, region_index);
 }
 
 void SpatialDiscretization::setBoundaryCondition(
-    const std::string &field_name, h_size region_index,
-    bc::BoundaryCondition::Ptr condition, core::Element interior_field_loc) {
-  boundaries_[field_name].setCondition(region_index, condition,
-                                       interior_field_loc);
+    const core::Symbol &symbol, h_size region_index,
+    bc::BoundaryCondition::Ptr condition) {
+  boundaries_[symbol].setCondition(region_index, condition);
 }
 
 void SpatialDiscretization::setBoundaryCondition(
-    const std::string &field_name, bc::BoundaryCondition::Ptr condition,
-    core::Element interior_field_loc) {
-  boundaries_[field_name].setCondition(condition, interior_field_loc);
+    const core::Symbol &symbol, bc::BoundaryCondition::Ptr condition) {
+  boundaries_[symbol].setCondition(condition);
 }
 
 const Boundary &
-SpatialDiscretization::boundary(const std::string &field_name) const {
+SpatialDiscretization::boundary(const core::Symbol &symbol) const {
   static Boundary s_dummy({});
-  auto it = boundaries_.find(field_name);
+  auto it = boundaries_.find(symbol);
   if (it == boundaries_.end())
     return s_dummy;
   return it->second;
 }
 
-Boundary &SpatialDiscretization::boundary(const std::string &field_name) {
+Boundary &SpatialDiscretization::boundary(const core::Symbol &symbol) {
   static Boundary s_dummy({});
-  auto it = boundaries_.find(field_name);
+  auto it = boundaries_.find(symbol);
   if (it == boundaries_.end())
     return s_dummy;
   return it->second;
 }
 
-std::unordered_map<std::string, Boundary>
+const std::unordered_map<core::Symbol, Boundary> &
 SpatialDiscretization::boundaries() const {
   return boundaries_;
+}
+
+DiscreteExpression
+SpatialDiscretization::dx(const core::DiscreteSymbol &ds) const {
+  DiscreteExpression de;
+  auto n = topology_->elementCount(ds.symbol.loc);
+  for (h_index i = 0; i < n; ++i) {
+    de.addIndexEntry(i, derivative(derivative_bits::x, i, ds));
+  }
+  return de;
+}
+
+DiscreteExpression
+SpatialDiscretization::dy(const core::DiscreteSymbol &ds) const {
+  DiscreteExpression de;
+  auto n = topology_->elementCount(ds.symbol.loc);
+  for (h_index i = 0; i < n; ++i) {
+    de.addIndexEntry(i, derivative(derivative_bits::y, i, ds));
+  }
+  return de;
+}
+
+DiscreteExpression
+SpatialDiscretization::L(const core::DiscreteSymbol &ds) const {
+  DiscreteExpression de;
+  auto n = topology_->elementCount(ds.symbol.loc);
+  for (h_index i = 0; i < n; ++i) {
+    de.addIndexEntry(i, laplacian(i, ds));
+  }
+  return de;
 }
 
 } // namespace naiades::numeric

@@ -30,20 +30,20 @@
 
 namespace naiades::utils {
 
-IndexSet::iterator::iterator(const IndexSet &index_set, h_size flat_index)
-    : index_set_{index_set}, item_{flat_index, 0} {
-  std::visit(
-      IndexSetOverloaded{[](std::monostate s) { HERMES_UNUSED_VARIABLE(s); },
-                         [&](const std::vector<h_size> &indices) {
-                           if (item_.flat_index < indices.size())
-                             item_.index = indices[item_.flat_index];
-                         },
-                         [&](const std::vector<IndexInterval> &indices) {
-                           if (item_.flat_index < indices.size()) {
-                             item_.index = index_set[item_.flat_index];
-                           }
-                         }},
-      index_set_.data_);
+IndexSet::iterator::iterator(const IndexSet &index_set, h_size local_set_index)
+    : index_set_{index_set}, item_{local_set_index, 0} {
+  std::visit(IndexSetOverloaded{
+                 [](std::monostate s) { HERMES_UNUSED_VARIABLE(s); },
+                 [&](const std::vector<h_size> &indices) {
+                   if (item_.local_set_index < indices.size())
+                     item_.global_index = indices[item_.local_set_index];
+                 },
+                 [&](const std::vector<IndexInterval> &indices) {
+                   if (item_.local_set_index < indices.size()) {
+                     item_.global_index = index_set[item_.local_set_index];
+                   }
+                 }},
+             index_set_.data_);
 }
 
 const IndexSet::iterator::Item &IndexSet::iterator::operator*() const {
@@ -51,30 +51,31 @@ const IndexSet::iterator::Item &IndexSet::iterator::operator*() const {
 }
 
 IndexSet::iterator &IndexSet::iterator::operator++() {
-  item_.flat_index++;
+  item_.local_set_index++;
   std::visit(IndexSetOverloaded{
                  [](std::monostate s) { HERMES_UNUSED_VARIABLE(s); },
                  [&](const std::vector<h_size> &indices) {
-                   if (item_.flat_index < indices.size())
-                     item_.index = indices[item_.flat_index];
+                   if (item_.local_set_index < indices.size())
+                     item_.global_index = indices[item_.local_set_index];
                  },
                  [&](const std::vector<IndexInterval> &indices) {
                    if (interval_index_ < indices.size() - 1) {
-                     if (item_.flat_index >=
+                     if (item_.local_set_index >=
                          index_set_.index_offset_[interval_index_ + 1]) {
                        interval_index_++;
                      }
                    }
-                   item_.index = indices[interval_index_].start +
-                                 (item_.flat_index -
-                                  index_set_.index_offset_[interval_index_]);
+                   item_.global_index =
+                       indices[interval_index_].start +
+                       (item_.local_set_index -
+                        index_set_.index_offset_[interval_index_]);
                  }},
              index_set_.data_);
   return *this;
 }
 
 bool IndexSet::iterator::operator==(const IndexSet::iterator &rhs) const {
-  return item_.flat_index == rhs.item_.flat_index;
+  return item_.local_set_index == rhs.item_.local_set_index;
 }
 
 bool IndexSet::iterator::operator!=(const IndexSet::iterator &rhs) const {

@@ -8,6 +8,7 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/core/element.h
   ${NAIADES_SOURCE_DIR}/naiades/core/field.h
   ${NAIADES_SOURCE_DIR}/naiades/core/geometry.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/mesh.h
   ${NAIADES_SOURCE_DIR}/naiades/core/neighbourhood.h
   ${NAIADES_SOURCE_DIR}/naiades/core/topology.h
 
@@ -16,7 +17,9 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/numeric/blas.h
   ${NAIADES_SOURCE_DIR}/naiades/numeric/boundary.h
   ${NAIADES_SOURCE_DIR}/naiades/numeric/boundary_conditions.h
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_expression.h
   ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_operator.h
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/linear_solvers.h
   ${NAIADES_SOURCE_DIR}/naiades/numeric/spatial_discretization.h
 
   ${NAIADES_SOURCE_DIR}/naiades/sampling/sampler.h
@@ -27,6 +30,7 @@ set(NAIADES_HEADERS
   # ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.h
 
   ${NAIADES_SOURCE_DIR}/naiades/utils/fields.h
+  ${NAIADES_SOURCE_DIR}/naiades/utils/io.h
   ${NAIADES_SOURCE_DIR}/naiades/utils/math.h
   ${NAIADES_SOURCE_DIR}/naiades/utils/utils.h
 )
@@ -34,11 +38,16 @@ set(NAIADES_HEADERS
 set(NAIADES_SOURCES
   ${NAIADES_SOURCE_DIR}/naiades/core/element.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/core/mesh.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/core/topology.cpp
   
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
 
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/blas.cpp
   ${NAIADES_SOURCE_DIR}/naiades/numeric/boundary.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_expression.cpp
   ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_operator.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/linear_solvers.cpp
   ${NAIADES_SOURCE_DIR}/naiades/numeric/spatial_discretization.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.cpp
@@ -47,6 +56,7 @@ set(NAIADES_SOURCES
   # ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.cpp
   
   ${NAIADES_SOURCE_DIR}/naiades/utils/fields.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/utils/io.cpp
   ${NAIADES_SOURCE_DIR}/naiades/utils/math.cpp
   ${NAIADES_SOURCE_DIR}/naiades/utils/utils.cpp
 )
@@ -58,6 +68,8 @@ target_include_directories(
   ${DEPS_INCLUDE_DIRS}
   ${NAIADES_SOURCE_DIR}
 )
+target_link_libraries(naiades PRIVATE
+DEPS)
 
 if(NAIADES_INCLUDE_DEBUG_TRAITS)
   target_compile_definitions(naiades PUBLIC NAIADES_INCLUDE_DEBUG_TRAITS)
@@ -88,7 +100,14 @@ endif(NAIADES_INCLUDE_DEBUG_TRAITS)
       # common
       "$<$<CONFIG:Debug>:-g;-pg;-fprofile-arcs;-ftest-coverage;--coverage;-fPIC>"
       "$<$<CONFIG:Release>:-O3;-fPIC;>")
-  endif(CMAKE_COMPILER_IS_GNUCXX)
+elseif(MSVC)
+    target_compile_options(
+      naiades 
+      PUBLIC 
+      "$<$<CONFIG:Debug>:/Zc:__cplusplus;/Zc:preprocessor;/EHsc;/MDd>"
+      "$<$<CONFIG:Release>:/Zc:__cplusplus;/Zc:preprocessor/EHsc;/MD>")
+endif(CMAKE_COMPILER_IS_GNUCXX)
+
 
 # ##############################################################################
 # python                                                                      ##

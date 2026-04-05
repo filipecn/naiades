@@ -70,11 +70,20 @@ public:
 
   real_t operator[](h_size index) const;
   real_t &operator[](h_size index);
+
+  /// \return the diagonal size (element count).
+  h_size size() const;
+
+  const std::unordered_map<h_size, real_t> &nodes() const;
+  const std::unordered_map<h_size, real_t> &boundaryNodes() const;
+
+  // arithmetic operators
+
+  DiscreteOperator operator+(const DiscreteOperator &rhs) const;
   DiscreteOperator &operator+=(const DiscreteOperator &rhs);
   DiscreteOperator operator*(real_t s) const;
   DiscreteOperator &operator*=(real_t s);
-  /// \return the diagonal size (element count).
-  h_size size() const;
+  DiscreteOperator operator-() const;
 
 private:
   std::unordered_map<h_size, real_t> nodes_;
@@ -97,6 +106,7 @@ template <> struct DebugTraits<naiades::numeric::DiscreteOperator> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
   static DebugMessage message(const naiades::numeric::DiscreteOperator &data) {
     auto m = DebugMessage();
+    m.add("center", data.center_index_);
     m.addMap("nodes", data.nodes_);
     m.add("constant", data.constant_);
     return m;

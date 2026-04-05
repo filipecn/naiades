@@ -28,7 +28,7 @@
 
 namespace naiades::numeric {
 
-Boundary::Region::Region(core::Element element_type,
+Boundary::Region::Region(const core::Element &element_type,
                          const std::vector<h_size> &indices)
     : boundary_element_type_{element_type},
       interior_element_type_{element_type} {
@@ -51,15 +51,28 @@ NaResult Boundary::Region::resolve(core::Topology::Ptr topology) {
   stencils_.resize(index_set_.size());
   for (auto it : index_set_) {
     auto boundary_element =
-        core::ElementIndex::global(boundary_element_type_, it.index);
+        core::ElementIndex::global(boundary_element_type_, it.global_index);
     auto interior_index =
         topology->interiorNeighbour(boundary_element, interior_element_type_);
     auto interior_element =
         core::ElementIndex::global(interior_element_type_, interior_index);
-    stencils_[it.flat_index] =
+    stencils_[it.local_set_index] =
         condition_->resolve(boundary_element, interior_element);
   }
   return NaResult::noError();
+}
+
+Boundary::Boundary(const core::Element &loc, const core::Element &interior_loc)
+    : boundary_element_type_{loc}, interior_element_type_{interior_loc} {}
+
+Boundary &Boundary::setBoundaryElement(const core::Element &loc) {
+  boundary_element_type_ = loc;
+  return *this;
+}
+
+Boundary &Boundary::setInteriorElement(const core::Element &loc) {
+  interior_element_type_ = loc;
+  return *this;
 }
 
 NaResult Boundary::compute(core::FieldCRef<f32> interior_field,
@@ -72,8 +85,7 @@ NaResult Boundary::compute(core::FieldCRef<f32> interior_field,
 const DiscreteOperator &
 Boundary::Region::stencil(const core::Index &index) const {
   if (stencils_.empty()) {
-    HERMES_ERROR(
-        "Accessing stencil in boundary but boundary regions is not resolved.");
+    HERMES_ERROR("Accessing stencil in an unresolved boundary region.");
     static DiscreteOperator dop;
     return dop;
   }
@@ -86,27 +98,24 @@ Boundary::Region::stencil(const core::Index &index) const {
   return stencils_[*local_index];
 }
 
-Boundary &Boundary::addRegion(core::Element loc,
-                              const std::vector<h_size> &indices,
+Boundary &Boundary::addRegion(const std::vector<h_size> &indices,
                               h_size *region_index) {
   if (region_index)
     *region_index = regions_.size();
-  regions_.emplace_back(loc, indices);
+  regions_.emplace_back(boundary_element_type_, indices);
   return *this;
 }
 
 Boundary &Boundary::setCondition(h_size region_index,
-                                 bc::BoundaryCondition::Ptr condition,
-                                 core::Element interior_field_loc) {
+                                 bc::BoundaryCondition::Ptr condition) {
   HERMES_ASSERT(region_index < regions_.size());
-  regions_[region_index].setCondition(condition, interior_field_loc);
+  regions_[region_index].setCondition(condition, interior_element_type_);
   return *this;
 }
 
-Boundary &Boundary::setCondition(bc::BoundaryCondition::Ptr condition,
-                                 core::Element interior_field_loc) {
+Boundary &Boundary::setCondition(bc::BoundaryCondition::Ptr condition) {
   for (h_size i = 0; i < regions_.size(); ++i)
-    setCondition(i, condition, interior_field_loc);
+    setCondition(i, condition);
   return *this;
 }
 
@@ -114,6 +123,14 @@ NaResult Boundary::resolve(core::Topology::Ptr topology) {
   for (auto &region : regions_)
     NAIADES_RETURN_BAD_RESULT(region.resolve(topology));
   return NaResult::noError();
+}
+
+const core::Element &Boundary::boundaryElement() const {
+  return boundary_element_type_;
+}
+
+const core::Element &Boundary::interiorElement() const {
+  return interior_element_type_;
 }
 
 const DiscreteOperator &Boundary::stencil(const core::Index &index) const {
@@ -125,6 +142,10 @@ const DiscreteOperator &Boundary::stencil(const core::Index &index) const {
   return s_dop;
 }
 
+const std::vector<Boundary::Region> Boundary::regions() const {
+  return regions_;
+}
+
 NaResult Boundary::Region::compute(core::FieldCRef<f32> interior_field,
                                    core::FieldRef<f32> field) const {
   if (stencils_.size() < index_set_.size()) {
@@ -132,8 +153,8 @@ NaResult Boundary::Region::compute(core::FieldCRef<f32> interior_field,
     return NaResult::checkError();
   }
   for (auto i : index_set_)
-    field.at(core::Index::global(i.index)) =
-        stencils_[i.flat_index](interior_field);
+    field.at(core::Index::global(i.global_index)) =
+        stencils_[i.local_set_index](interior_field);
   return NaResult::noError();
 }
 

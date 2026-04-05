@@ -41,8 +41,8 @@ Stencil Stencil::nearest(const geo::Grid2 &grid, core::Element loc,
 
   stencil.add(
       grid.safeFlatIndex(
-          loc,
-          hermes::index2(gp.x, gp.y).plus(x > 0.5f ? 1 : 0, y > 0.5f ? 1 : 0)),
+          loc, hermes::index2(static_cast<i32>(gp.x), static_cast<i32>(gp.y))
+                   .plus(x > 0.5f ? 1 : 0, y > 0.5f ? 1 : 0)),
       1.f);
 
   return stencil;
@@ -57,7 +57,8 @@ Stencil Stencil::bilinear(const geo::Grid2 &grid, core::Element loc,
   auto y = hermes::numbers::fract(gp.y);
 
   // bottom left coordinates give the grid index
-  auto cell_index = hermes::index2(gp.x, gp.y);
+  auto cell_index =
+      hermes::index2(static_cast<i32>(gp.x), static_cast<i32>(gp.y));
 
   ///   v12        x   v22
   ///              |
@@ -67,13 +68,13 @@ Stencil Stencil::bilinear(const geo::Grid2 &grid, core::Element loc,
   ///   v11        x   v21
 
   auto v11 = grid.safeFlatIndex(loc, cell_index.plus(0, 0)) -
-             grid.flatIndexOffset(loc);
+             grid.elementIndexOffset(loc);
   auto v21 = grid.safeFlatIndex(loc, cell_index.plus(1, 0)) -
-             grid.flatIndexOffset(loc);
+             grid.elementIndexOffset(loc);
   auto v12 = grid.safeFlatIndex(loc, cell_index.plus(0, 1)) -
-             grid.flatIndexOffset(loc);
+             grid.elementIndexOffset(loc);
   auto v22 = grid.safeFlatIndex(loc, cell_index.plus(1, 1)) -
-             grid.flatIndexOffset(loc);
+             grid.elementIndexOffset(loc);
 
   // since wp may fall off the grid or on top of its edges/vertices
   // we may have repeated indices

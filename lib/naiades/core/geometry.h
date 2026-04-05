@@ -31,6 +31,8 @@
 #include <naiades/core/element.h>
 
 #include <hermes/core/ref.h>
+#include <hermes/geometry/bounds.h>
+#include <hermes/geometry/normal.h>
 #include <hermes/geometry/point.h>
 
 #include <vector>
@@ -45,6 +47,8 @@ namespace naiades::core {
 class Geometry2 {
 public:
   using Ptr = hermes::Ref<Geometry2>;
+  /// \return The bounding box containing the whole geometry.
+  virtual hermes::geo::bounds::bbox2 bbounds() const = 0;
   /// Get the position of an element center.
   /// \note This returns a copy of the position.
   /// \param loc Element.
@@ -56,6 +60,11 @@ public:
   /// \note This returns a copy of the list.
   /// \param loc Element.
   virtual std::vector<hermes::geo::point2> centers(Element loc) const = 0;
+  /// Get the normal defined at the given element instance.
+  /// \param loc
+  /// \param index
+  /// \return The normal defined at (loc, index) or a null-vector if not found.
+  virtual hermes::geo::normal2 normal(Element loc, h_index index) const = 0;
 };
 
 } // namespace naiades::core

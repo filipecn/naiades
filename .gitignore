@@ -2,6 +2,7 @@ build
 .cache
 compile_commands.json
 __pycache__
+.vscode
 
 # Prerequisites
 *.d

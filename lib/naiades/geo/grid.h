@@ -28,9 +28,8 @@
 #pragma once
 
 #include <naiades/core/field.h>
-#include <naiades/core/geometry.h>
+#include <naiades/core/mesh.h>
 #include <naiades/core/neighbourhood.h>
-#include <naiades/core/topology.h>
 #include <naiades/numeric/spatial_discretization.h>
 
 #include <hermes/base/size.h>
@@ -86,27 +85,34 @@ namespace naiades::geo {
 ///   - flat x-face index (i, j): j * M + i
 ///   - flat y-face index (i, j): M * (N + 1) + j * (M + 1) + i
 ///
-class Grid2 : public core::Topology, public core::Geometry2 {
+class Grid2 : public core::Mesh2 {
 public:
   using Ptr = hermes::Ref<Grid2>;
 
-  struct Config {
-    Config &setResolution(const hermes::size2 &size);
-    Config &setDomain(const hermes::geo::bounds::bbox2 &region);
-    Config &setCellSize(float dx);
-    Config &setCellSize(const hermes::geo::vec2 &d);
-    Result<Grid2> build() const;
+  template <typename Derived> struct Setup {
+    Derived &setResolution(const hermes::size2 &size);
+    Derived &setDomain(const hermes::geo::bounds::bbox2 &region);
+    Derived &setCellSize(float dx);
+    Derived &setCellSize(const hermes::geo::vec2 &d);
 
-  private:
+  protected:
+    bool fixed_bounds_{false};
+    bool fixed_resolution_{false};
+    bool fixed_cell_size_{false};
     hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};
     hermes::size2 resolution_{100, 100};
-    hermes::geo::vec2 cell_size_{0.01, 0.01};
+    hermes::geo::vec2 cell_size_{0.01f, 0.01f};
+  };
+
+  struct Config : Setup<Config> {
+    Result<Grid2> build() const;
   };
 
   ///
   void setSize(const hermes::size2 &size);
   ///
   void setCellSize(f32 dx);
+  void setCellSize(const hermes::geo::vec2 &cell_size);
 
   /// Grid cell size
   hermes::geo::vec2 cellSize() const;
@@ -116,9 +122,6 @@ public:
   hermes::geo::vec2 gridOffset(core::Element loc) const;
   /// Grid resolution
   hermes::size2 resolution(core::Element loc) const;
-  /// Grid flat index offset.
-  /// \note The flat index offset is zero for all elements, except for faces.
-  h_size flatIndexOffset(core::Element loc) const;
   /// Grid flat index from index
   h_size flatIndex(core::Element loc, const hermes::index2 &index) const;
   /// Grid index from flat index
@@ -143,16 +146,29 @@ public:
                             core::element_orientation_bits orientation,
                             core::Element boundary_loc) const;
 
-  // interface
+  //  geometry interface
 
-  /// Grid location counts
-  h_size elementCount(core::Element loc) const override;
+  hermes::geo::bounds::bbox2 bbounds() const override;
+  hermes::geo::normal2 normal(core::Element loc, h_index index) const override;
   hermes::geo::point2 center(core::Element loc,
                              h_size flat_index) const override;
   std::vector<hermes::geo::point2> centers(core::Element loc) const override;
-  std::vector<std::vector<h_size>>
-  indices(core::Element loc, core::Element sub_loc) const override;
-  std::vector<h_size> boundary(core::Element loc) const override;
+
+  //  topology interface
+
+  /// Grid location counts
+  h_size elementCount(core::Element loc) const override;
+  /// Grid flat index offset.
+  /// \note The flat index offset is zero for all elements, except for faces.
+  h_size elementIndexOffset(core::Element loc) const override;
+  /// \brief Get the list of indices of a given element instance.
+  /// \param element
+  /// \param index
+  /// \param sub_element
+  /// \return The lists of sub-elements of the given element instance.
+  std::vector<h_size> indices(core::Element element, h_index index,
+                              core::Element sub_element) const override;
+  std::vector<h_size> boundaryIndices(core::Element loc) const override;
   core::element_alignments elementAlignment(core::Element loc,
                                             h_size index) const override;
   core::element_orientations elementOrientation(core::Element loc,
@@ -166,12 +182,71 @@ private:
 
   hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};
   hermes::size2 resolution_{100, 100};
-  hermes::geo::vec2 cell_size_{0.01};
+  hermes::geo::vec2 cell_size_{0.01f};
 
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS
   friend struct hermes::DebugTraits<Grid2>;
 #endif
 };
+
+template <typename Derived>
+Derived &Grid2::Setup<Derived>::setResolution(const hermes::size2 &size) {
+  fixed_resolution_ = true;
+  resolution_ = size;
+  if (fixed_bounds_ && !fixed_cell_size_) {
+    cell_size_.x = bounds_.size(0) / static_cast<real_t>(resolution_.width);
+    cell_size_.y = bounds_.size(1) / static_cast<real_t>(resolution_.height);
+  } else if (!fixed_bounds_ && fixed_cell_size_) {
+    bounds_.upper.x = resolution_.width * cell_size_.x;
+    bounds_.upper.y = resolution_.height * cell_size_.y;
+  } else {
+    bounds_.upper.x = resolution_.width * cell_size_.x;
+    bounds_.upper.y = resolution_.height * cell_size_.y;
+  }
+  return *reinterpret_cast<Derived *>(this);
+}
+
+template <typename Derived>
+Derived &
+Grid2::Setup<Derived>::setDomain(const hermes::geo::bounds::bbox2 &region) {
+  fixed_bounds_ = true;
+  bounds_ = region;
+  if (fixed_resolution_ && !fixed_cell_size_) {
+    cell_size_.x = bounds_.size(0) / static_cast<real_t>(resolution_.width);
+    cell_size_.y = bounds_.size(1) / static_cast<real_t>(resolution_.height);
+  } else if (!fixed_resolution_ && fixed_cell_size_) {
+    resolution_.width = static_cast<u32>(bounds_.extends().x / cell_size_.x);
+    resolution_.height = static_cast<u32>(bounds_.extends().y / cell_size_.y);
+  } else {
+    // here we just pick one
+    cell_size_.x = bounds_.size(0) / static_cast<real_t>(resolution_.width);
+    cell_size_.y = bounds_.size(1) / static_cast<real_t>(resolution_.height);
+  }
+  return *reinterpret_cast<Derived *>(this);
+}
+
+template <typename Derived>
+Derived &Grid2::Setup<Derived>::setCellSize(float dx) {
+  return setCellSize({dx, dx});
+}
+
+template <typename Derived>
+Derived &Grid2::Setup<Derived>::setCellSize(const hermes::geo::vec2 &d) {
+  fixed_cell_size_ = true;
+  cell_size_ = d;
+  if (fixed_bounds_ && !fixed_resolution_) {
+    resolution_.width = static_cast<u32>(bounds_.extends().x / cell_size_.x);
+    resolution_.height = static_cast<u32>(bounds_.extends().y / cell_size_.y);
+  } else if (!fixed_bounds_ && fixed_resolution_) {
+    bounds_.upper.x = resolution_.width * cell_size_.x;
+    bounds_.upper.y = resolution_.height * cell_size_.y;
+  } else {
+    // here we just pick one
+    bounds_.upper.x = resolution_.width * cell_size_.x;
+    bounds_.upper.y = resolution_.height * cell_size_.y;
+  }
+  return *reinterpret_cast<Derived *>(this);
+}
 
 } // namespace naiades::geo
 
@@ -179,26 +254,28 @@ namespace naiades::numeric {
 
 class Grid2FD : public SpatialDiscretization {
 public:
-  Grid2FD(geo::Grid2::Ptr mesh);
-  NaResult resolveBoundary(const std::string &field_name) override;
+  struct Config : geo::Grid2::Setup<Config> {
+    Result<Grid2FD> build() const;
+  };
+
+  Grid2FD() = default;
+
+  /// \brief
+  const geo::Grid2 &mesh() const;
+
   /// Compute the derivative operator centered at the given element.
   /// \param d Derivative direction.
-  /// \param loc
   /// \param index
-  /// \param boundary_loc
-  /// \param boundary
-  virtual DiscreteOperator derivative(derivative_bits d,
-                                      const core::Element &loc, h_size index,
-                                      core::Element boundary_loc,
-                                      const Boundary &boundary) const override;
+  /// \param sym
+  virtual DiscreteOperator
+  derivative(derivative_bits d, h_size index,
+             const core::DiscreteSymbol &sym) const override;
   /// Compute the discrete Laplacian operator centered at the given element.
-  /// \param loc
   /// \param index
-  /// \param boundary_loc
-  /// \param boundary
-  virtual DiscreteOperator laplacian(const core::Element &loc, h_size index,
-                                     core::Element boundary_loc,
-                                     const Boundary &boundary) const override;
+  /// \param sym
+  virtual DiscreteOperator
+  laplacian(h_size index, const core::DiscreteSymbol &sym) const override;
+  /// Compute the discrete Laplacian operator centered at the given element.
   /// Compute the discrete Divergence operator centered at the given element.
   /// \tparam DiscretizationType Discretization type.
   /// \param boundary
@@ -210,7 +287,7 @@ public:
                                       bool staggered) const override;
 
 private:
-  geo::Grid2::Ptr mesh_;
+  friend struct Config;
 
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS
   friend struct hermes::DebugTraits<Grid2FD>;
@@ -259,8 +336,11 @@ template <> struct DebugTraits<naiades::numeric::Grid2FD> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
   static DebugMessage message(const naiades::numeric::Grid2FD &data) {
     auto m = DebugMessage();
-    m.add("mesh", *data.mesh_);
-    m.addMap("discretization", data.boundaries());
+    m.addTitle("Grid2 - FD");
+    if (data.topology_)
+      m.add("mesh", data.mesh());
+    m.addMap("fields", data.fields_);
+    m.addMap("boundaries", data.boundaries_);
     return m;
   }
 };
