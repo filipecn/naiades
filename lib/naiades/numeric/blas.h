@@ -74,6 +74,7 @@ public:
   friend real_t sum(const Scalar &field);
   friend Scalar sqr(const Scalar &field);
   friend Scalar sin(const Scalar &field);
+  friend Scalar sinh(const Scalar &field);
   friend Scalar abs(const Scalar &field);
 
 private:
@@ -91,6 +92,7 @@ Scalar operator*(const Scalar &lhs, const Scalar &rhs);
 real_t sum(const Scalar &field);
 Scalar sqr(const Scalar &field);
 Scalar sin(const Scalar &field);
+Scalar sinh(const Scalar &field);
 Scalar abs(const Scalar &field);
 
 /// a += k * b

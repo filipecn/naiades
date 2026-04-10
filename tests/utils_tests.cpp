@@ -34,8 +34,8 @@ TEST_CASE("IndexSet", "[core]") {
     IndexSet set(seq);
     h_size i = 0;
     for (auto it : set) {
-      REQUIRE(i == it.flat_index);
-      REQUIRE(seq[i] == it.index);
+      REQUIRE(i == it.local_set_index);
+      REQUIRE(seq[i] == it.global_index);
       i++;
     }
   }

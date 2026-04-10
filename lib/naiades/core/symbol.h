@@ -58,6 +58,10 @@ struct DiscreteSymbol {
   DiscreteSymbol(const Symbol &sym, const Symbol &b_sym) noexcept
       : symbol{sym}, boundary_symbol{b_sym} {}
 
+  bool operator==(const DiscreteSymbol &rhs) const {
+    return symbol == rhs.symbol && boundary_symbol == rhs.boundary_symbol;
+  }
+
   Symbol symbol;
   Symbol boundary_symbol;
 };

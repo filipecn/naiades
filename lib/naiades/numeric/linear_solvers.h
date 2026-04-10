@@ -26,9 +26,10 @@
 
 #pragma once
 
+#include <naiades/core/field.h>
 #include <naiades/numeric/discrete_expression.h>
 
-#include <naiades/core/field.h>
+#include <Eigen/Sparse>
 
 namespace naiades::numeric::solvers {
 
@@ -36,52 +37,68 @@ namespace naiades::numeric::solvers {
 /// \tparam Derived
 template <typename Derived> class LinearSystemSolver {
 public:
-  Derived &setUnknown(const core::DiscreteSymbol &unknown,
-                      core::FieldRef<real_t> *unknown_field);
-  Derived &addVariable(const core::FieldRef<real_t> *var);
+  Derived &setUnknown(const core::DiscreteSymbol &unknown);
 
-  void solve(const DiscreteExpression &lhs,
-             const core::DiscreteSymbol &rhs) const;
+  Derived &build(const DiscreteExpression &lhs, const DiscreteExpression &rhs);
+
+  void
+  solve(core::FieldRef<real_t> &unknown_field,
+        const std::vector<core::FieldCRef<real_t>> &explicit_fields = {}) const;
 
 protected:
-  virtual void solve_system(const DiscreteExpression &lhs,
-                            const core::FieldRef<real_t> *rhs) const = 0;
+  virtual void buildSystem() = 0;
+  virtual void solveFor(core::FieldRef<real_t> &unknown_field,
+                        const Scalar &rhs) const = 0;
 
-  core::DiscreteSymbol unknonw_;
-  core::FieldRef<real_t> *unknown_field_;
-  std::unordered_map<core::Element, const core::FieldRef<real_t> *> variables_;
+  core::DiscreteSymbol unknown_;
+  DiscreteExpression implicit_;
+  DiscreteExpression explicit_;
 };
 
 template <typename Derived>
 Derived &
-LinearSystemSolver<Derived>::setUnknown(const core::DiscreteSymbol &sym,
-                                        core::FieldRef<real_t> *unknown_field) {
-  unknonw_ = sym;
-  unknown_field_ = unknown_field;
+LinearSystemSolver<Derived>::setUnknown(const core::DiscreteSymbol &sym) {
+  unknown_ = sym;
   return *reinterpret_cast<Derived *>(this);
 }
 
 template <typename Derived>
-Derived &
-LinearSystemSolver<Derived>::addVariable(const core::FieldRef<real_t> *var) {
-  variables_[var->element()] = var;
+Derived &LinearSystemSolver<Derived>::build(const DiscreteExpression &lhs,
+                                            const DiscreteExpression &rhs) {
+  // separate implicit and explicit parts
+  implicit_ = lhs;
+  explicit_ = rhs;
+  buildSystem();
   return *reinterpret_cast<Derived *>(this);
 }
 
 template <typename Derived>
-void LinearSystemSolver<Derived>::solve(const DiscreteExpression &lhs,
-                                        const core::DiscreteSymbol &rhs) const {
-  // resolve lhs
-  // resolve rhs
-  // solve system
-  auto it = variables_.find(rhs.symbol.loc);
-  solve_system(lhs, it->second);
+void LinearSystemSolver<Derived>::solve(
+    core::FieldRef<real_t> &unknown_field,
+    const std::vector<core::FieldCRef<real_t>> &explicit_fields) const {
+  // compute explicit side
+  Scalar rhs(unknown_field.size());
+  if (!explicit_fields.empty()) {
+    HERMES_ASSERT(unknown_field.size() == explicit_fields[0].size());
+    for (h_index i = 0; i < rhs.size(); ++i) {
+      rhs[i] = explicit_fields[0][i] - implicit_[i].constant();
+    }
+  } else {
+    HERMES_ASSERT(explicit_.isConstant());
+    for (h_index i = 0; i < rhs.size(); ++i) {
+      rhs[i] = -implicit_[i].constant();
+    }
+  }
+  solveFor(unknown_field, rhs);
 }
 
 class CG : public LinearSystemSolver<CG> {
 public:
-  void solve_system(const DiscreteExpression &lhs,
-                    const core::FieldRef<real_t> *rhs) const override;
+private:
+  void buildSystem() override;
+  void solveFor(core::FieldRef<real_t> &unknown_field,
+                const Scalar &rhs) const override;
+  Eigen::SparseMatrix<double> A_;
 };
 
 } // namespace naiades::numeric::solvers

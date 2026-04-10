@@ -83,7 +83,7 @@ SpatialDiscretization::boundaries() const {
 
 DiscreteExpression
 SpatialDiscretization::dx(const core::DiscreteSymbol &ds) const {
-  DiscreteExpression de;
+  DiscreteExpression de(ds);
   auto n = topology_->elementCount(ds.symbol.loc);
   for (h_index i = 0; i < n; ++i) {
     de.addIndexEntry(i, derivative(derivative_bits::x, i, ds));
@@ -93,7 +93,7 @@ SpatialDiscretization::dx(const core::DiscreteSymbol &ds) const {
 
 DiscreteExpression
 SpatialDiscretization::dy(const core::DiscreteSymbol &ds) const {
-  DiscreteExpression de;
+  DiscreteExpression de(ds);
   auto n = topology_->elementCount(ds.symbol.loc);
   for (h_index i = 0; i < n; ++i) {
     de.addIndexEntry(i, derivative(derivative_bits::y, i, ds));
@@ -103,7 +103,7 @@ SpatialDiscretization::dy(const core::DiscreteSymbol &ds) const {
 
 DiscreteExpression
 SpatialDiscretization::L(const core::DiscreteSymbol &ds) const {
-  DiscreteExpression de;
+  DiscreteExpression de(ds);
   auto n = topology_->elementCount(ds.symbol.loc);
   for (h_index i = 0; i < n; ++i) {
     de.addIndexEntry(i, laplacian(i, ds));

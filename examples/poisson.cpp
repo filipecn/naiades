@@ -15,10 +15,10 @@
 namespace na = naiades;
 
 int main() {
-  // create numerical mesh from the geometry
+  // create numerical mesh (a 2d grid) with finite differences discretization
   auto fd = *na::numeric::Grid2FD::Config()
                  .setDomain(hermes::geo::bounds::bbox2::unit())
-                 .setResolution({50, 50})
+                 .setResolution({4, 4})
                  .build();
 
   // define symbols for the equation
@@ -35,6 +35,9 @@ int main() {
   auto dirichlet = na::numeric::bc::Dirichlet::Ptr::shared(0);
   fd.setBoundaryCondition(u.boundary_symbol, 0, dirichlet);
 
+  // resolve boundary stencils
+  fd.resolveBoundaries();
+
   // get mesh position fields for the equations
   auto x = fd.mesh().x(na::core::Element::cell());
   auto y = fd.mesh().y(na::core::Element::cell());
@@ -45,15 +48,12 @@ int main() {
             na::numeric::sin(hermes::math::constants::pi * x) *
             na::numeric::sin(hermes::math::constants::pi * y);
 
-  // resolve boundary stencils
-  fd.resolveBoundaries();
-
   auto u_field = *fd.getField<f32>(u.symbol);
 
   na::numeric::solvers::CG()
-      .setUnknown(u, &u_field) //
-      .addVariable(&f_field)   //
-      .solve(-fd.L(u), f);
+      .setUnknown(u) //
+      .build(-fd.L(u), f)
+      .solve(u_field, {f_field});
 
   // compute rmse error
 
@@ -69,9 +69,9 @@ int main() {
 
   na::utils::io::SVG("grid.svg")
       .setDimensions(fd.mesh().bbounds())
-      // .draw(fd.mesh())
-      .draw(fd.mesh(), static_cast<na::core::FieldCRef<f32>>(u_field))
-      // .draw(fd.mesh(), na::core::Element::cell(), diff)
+      .draw(fd.mesh(), na::core::Element::cell(), sol)
+      .draw(fd.mesh())
+      // .draw(fd.mesh(), static_cast<na::core::FieldCRef<f32>>(u_field))
       // .drawText(fd.mesh(), na::core::Element::cell(), x)
       // .draw(fd.mesh(), fd.boundaries())
       .write();

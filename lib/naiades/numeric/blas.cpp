@@ -164,6 +164,12 @@ Scalar sin(const Scalar &field) {
     r.data_[i] = std::sin(r.data_[i]);
   return r;
 }
+Scalar sinh(const Scalar &field) {
+  Scalar r = field;
+  for (h_index i = 0; i < field.data_.size(); ++i)
+    r.data_[i] = std::sinh(r.data_[i]);
+  return r;
+}
 Scalar abs(const Scalar &field) {
   Scalar r = field;
   for (h_index i = 0; i < field.data_.size(); ++i)

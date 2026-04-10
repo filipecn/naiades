@@ -23,3 +23,5 @@ function(build_example EXAMPLE_NAME)
 endfunction(build_example)
 
 build_example(poisson)
+build_example(poisson_rbf)
+build_example(lid_driven_cavity)

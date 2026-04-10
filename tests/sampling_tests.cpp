@@ -190,10 +190,10 @@ TEST_CASE("sample", "[sampling]") {
   fields.add<f32>(core::Element::Type::VERTEX, 0,
                   {"vertex_samples", "vertex_exact"});
   fields.add<f32>(core::Element::Type::X_FACE,
-                  grid.flatIndexOffset(core::Element::Type::X_FACE),
+                  grid.elementIndexOffset(core::Element::Type::X_FACE),
                   {"x_face_samples", "x_face_exact"});
   fields.add<f32>(core::Element::Type::Y_FACE,
-                  grid.flatIndexOffset(core::Element::Type::Y_FACE),
+                  grid.elementIndexOffset(core::Element::Type::Y_FACE),
                   {"y_face_samples", "y_face_exact"});
   fields.setElementCountFrom(&grid);
 
@@ -219,7 +219,7 @@ TEST_CASE("sample", "[sampling]") {
         for (h_size k = 0; k < dst_field.size(); ++k) {
           auto err =
               grid.isBoundary(dst_field.element(),
-                              k + grid.flatIndexOffset(dst_field.element()))
+                              k + grid.elementIndexOffset(dst_field.element()))
                   ? param.boundary_tol
                   : param.tol;
           REQUIRE_THAT(dst_field[k],
@@ -282,11 +282,11 @@ TEST_CASE("sample vectors", "[sampling]") {
                                 {"vertex_samples", "vertex_exact"});
   fields.add<hermes::geo::vec2>(
       core::Element::Type::X_FACE,
-      grid.flatIndexOffset(core::Element::Type::X_FACE),
+      grid.elementIndexOffset(core::Element::Type::X_FACE),
       {"x_face_samples", "x_face_exact"});
   fields.add<hermes::geo::vec2>(
       core::Element::Type::Y_FACE,
-      grid.flatIndexOffset(core::Element::Type::Y_FACE),
+      grid.elementIndexOffset(core::Element::Type::Y_FACE),
       {"y_face_samples", "y_face_exact"});
 
   fields.add<f32>(core::Element::Type::CELL, 0,
@@ -294,10 +294,10 @@ TEST_CASE("sample vectors", "[sampling]") {
   fields.add<f32>(core::Element::Type::VERTEX, 0,
                   {"vertex_scalar_samples", "vertex_scalar_exact"});
   fields.add<f32>(core::Element::Type::X_FACE,
-                  grid.flatIndexOffset(core::Element::Type::X_FACE),
+                  grid.elementIndexOffset(core::Element::Type::X_FACE),
                   {"x_face_scalar_samples", "x_face_scalar_exact"});
   fields.add<f32>(core::Element::Type::Y_FACE,
-                  grid.flatIndexOffset(core::Element::Type::Y_FACE),
+                  grid.elementIndexOffset(core::Element::Type::Y_FACE),
                   {"y_face_scalar_samples", "y_face_scalar_exact"});
   fields.setElementCountFrom(&grid);
 
@@ -334,7 +334,7 @@ TEST_CASE("sample vectors", "[sampling]") {
         for (h_size k = 0; k < dst_field.size(); ++k) {
           auto err =
               grid.isBoundary(dst_field.element(),
-                              k + grid.flatIndexOffset(dst_field.element()))
+                              k + grid.elementIndexOffset(dst_field.element()))
                   ? param.boundary_tol
                   : param.tol;
           for (h_size c = 0; c < 2; ++c)
@@ -351,9 +351,9 @@ TEST_CASE("sample vectors", "[sampling]") {
           sample<hermes::geo::vec2>(grid, src_field, component,
                                     dst_scalar_field);
           for (h_size k = 0; k < dst_scalar_field.size(); ++k) {
-            auto err = grid.isBoundary(
-                           dst_scalar_field.element(),
-                           k + grid.flatIndexOffset(dst_scalar_field.element()))
+            auto err = grid.isBoundary(dst_scalar_field.element(),
+                                       k + grid.elementIndexOffset(
+                                               dst_scalar_field.element()))
                            ? param.boundary_tol
                            : param.tol;
             REQUIRE_THAT(

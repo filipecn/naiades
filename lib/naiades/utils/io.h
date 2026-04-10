@@ -27,6 +27,7 @@
 #pragma once
 
 #include <naiades/core/mesh.h>
+#include <naiades/geo/he.h>
 #include <naiades/numeric/spatial_discretization.h>
 
 #include <hermes/colors/color.h>
@@ -185,7 +186,6 @@ public:
 
     return *this;
   }
-
   SVG &draw(const core::Mesh2 &mesh, const core::FieldCRef<f32> &values) {
     auto palette = colors::palettes::batlow();
     // get min and max values
@@ -286,7 +286,7 @@ public:
     }
     return *this;
   }
-
+  SVG &draw(const geo::HE2 &he_mesh) { return *this; }
   void write() {
     if (doc_.save()) {
       HERMES_INFO("SVG {} saved.", path_.string());
@@ -342,7 +342,7 @@ private:
   }
   svg::Polygon cell(const std::vector<hermes::geo::point2> &positions,
                     const hermes::colors::RGB_Color &color) const {
-    svg::Polygon border(svg::Fill(toSVG(color)), svg::Stroke(0, bg_color));
+    svg::Polygon border(svg::Fill(toSVG(color)), svg::Stroke(1, bg_color));
     for (const auto &position : positions)
       border << pos(position);
     return border;

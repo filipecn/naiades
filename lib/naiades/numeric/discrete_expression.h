@@ -30,15 +30,27 @@
 #include <naiades/core/symbol.h>
 #include <naiades/numeric/discrete_operator.h>
 
+#include <optional>
+
 namespace naiades::numeric {
 
-/// \brief  Represents a discrete operator for a element type in a
-///         discretization.
+/// \brief  A DiscreteExpression object represents the term of an equation or
+///         the expression of multiple terms.
 ///
-/// The discrete equation term holds a single discrete operator for each
-/// element instance in a discretization. Therefore, the discrete equation
-/// term is defined for a given element type.
-/// \note Multiple discrete equation terms compose a discrete equation.
+/// The expression is represented by a single discrete operator defined at
+/// every element instance in the discretization. Each instance index may have a
+/// different operator due to mesh topology and boundaries. However, all stencil
+/// (discrete operators) nodes are associated to a single field (referred by a
+/// given symbol).
+///
+/// Therefore, the discrete expression is associated to a discrete symbol. By
+/// default, all discrete operators are mono-stencils containing a single node
+/// that referrs to the center element. But we can define operators for indices
+/// individually.
+///
+/// The discrete expression can be an explicit expression as well, i.e. a
+/// constant. In this case, there is no symbol associated and discrete operators
+/// are the same for all indices.
 class DiscreteExpression {
 public:
   ///
@@ -61,6 +73,7 @@ public:
 
   DiscreteExpression() = default;
   DiscreteExpression(const core::DiscreteSymbol &sym) noexcept;
+  DiscreteExpression(real_t constant) noexcept;
   virtual ~DiscreteExpression() = default;
 
   /// Register an indexed entry to this expression.
@@ -71,9 +84,11 @@ public:
   /// \brief
   /// \return
   const core::Symbol &symbol() const;
+  bool isConstant() const;
 
   ///
   const DiscreteOperator &operator[](h_index index) const;
+  h_size size() const;
 
   iterator begin() const;
   iterator end() const;
@@ -88,8 +103,13 @@ public:
   DiscreteExpression operator+(const DiscreteExpression &rhs) const;
 
 private:
-  core::DiscreteSymbol sym_;
+  /// if empty, this DE is a constant (stored at default_constant_)
+  std::optional<core::DiscreteSymbol> sym_;
+  /// entries defined for indices
   std::unordered_map<h_index, DiscreteOperator> entries_;
+  /// mono-stencil coefficient (operators are not explicitly stored)
+  real_t default_coefficient_{1.0};
+  real_t default_constant_{0.0};
 
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS
   friend struct hermes::DebugTraits<DiscreteExpression>;
@@ -106,7 +126,7 @@ template <> struct DebugTraits<naiades::numeric::DiscreteExpression> {
   message(const naiades::numeric::DiscreteExpression &data) {
     auto m = DebugMessage();
     m.addTitle("Discrete Expression");
-    m.add("symbol", data.sym_);
+    m.add("symbol", data.sym_.has_value() ? hermes::to_string(*data.sym_) : "");
     m.addMap("entries", data.entries_);
     return m;
   }

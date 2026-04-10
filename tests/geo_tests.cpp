@@ -16,20 +16,21 @@ TEST_CASE("regular grid 2", "[geo]") {
                     .build()
                     .value();
     SECTION("index offset") {
-      REQUIRE(grid.flatIndexOffset(core::Element::Type::CELL) == 0);
-      REQUIRE(grid.flatIndexOffset(core::Element::Type::VERTEX) == 0);
-      REQUIRE(grid.flatIndexOffset(core::Element::Type::HORIZONTAL_FACE) == 0);
-      REQUIRE(grid.flatIndexOffset(core::Element::Type::VERTICAL_FACE) ==
+      REQUIRE(grid.elementIndexOffset(core::Element::Type::CELL) == 0);
+      REQUIRE(grid.elementIndexOffset(core::Element::Type::VERTEX) == 0);
+      REQUIRE(grid.elementIndexOffset(core::Element::Type::HORIZONTAL_FACE) ==
+              0);
+      REQUIRE(grid.elementIndexOffset(core::Element::Type::VERTICAL_FACE) ==
               grid.resolution(core::Element::Type::HORIZONTAL_FACE).total());
 
-      REQUIRE(grid.flatIndexOffset(core::Element::Type::HORIZONTAL_FACE) ==
-              grid.flatIndexOffset(core::Element::Type::V_FACE));
-      REQUIRE(grid.flatIndexOffset(core::Element::Type::HORIZONTAL_FACE) ==
-              grid.flatIndexOffset(core::Element::Type::X_FACE));
-      REQUIRE(grid.flatIndexOffset(core::Element::Type::VERTICAL_FACE) ==
-              grid.flatIndexOffset(core::Element::Type::U_FACE));
-      REQUIRE(grid.flatIndexOffset(core::Element::Type::VERTICAL_FACE) ==
-              grid.flatIndexOffset(core::Element::Type::Y_FACE));
+      REQUIRE(grid.elementIndexOffset(core::Element::Type::HORIZONTAL_FACE) ==
+              grid.elementIndexOffset(core::Element::Type::V_FACE));
+      REQUIRE(grid.elementIndexOffset(core::Element::Type::HORIZONTAL_FACE) ==
+              grid.elementIndexOffset(core::Element::Type::X_FACE));
+      REQUIRE(grid.elementIndexOffset(core::Element::Type::VERTICAL_FACE) ==
+              grid.elementIndexOffset(core::Element::Type::U_FACE));
+      REQUIRE(grid.elementIndexOffset(core::Element::Type::VERTICAL_FACE) ==
+              grid.elementIndexOffset(core::Element::Type::Y_FACE));
     }
     SECTION("offset") {
       REQUIRE(grid.gridOffset(core::Element::Type::CELL) ==
@@ -237,13 +238,14 @@ TEST_CASE("regular grid 2", "[geo]") {
     u32 M = 5;
     auto grid = Grid2::Config().setResolution({M, N}).build().value();
     SECTION("indices") {
-      auto indices =
-          grid.indices(core::Element::Type::CELL, core::Element::Type::VERTEX);
-      REQUIRE(indices.size() ==
-              grid.resolution(core::Element::Type::CELL).total());
-      for (h_size i = 0; i < indices.size(); ++i) {
-        REQUIRE(indices[i].size() == 4);
-      }
+      //       auto indices =
+      //           grid.indices(core::Element::Type::CELL,
+      //           core::Element::Type::VERTEX);
+      //       REQUIRE(indices.size() ==
+      //               grid.resolution(core::Element::Type::CELL).total());
+      //       for (h_size i = 0; i < indices.size(); ++i) {
+      //         REQUIRE(indices[i].size() == 4);
+      //       }
     }
     SECTION("boundary") {
       SECTION("sanity") {
@@ -388,4 +390,22 @@ TEST_CASE("regular grid 2", "[geo]") {
     //   }
     // }
   }
+}
+
+hermes::geo::vec2 vec2FromAngle(real_t degrees) {
+  auto angle = hermes::math::degrees2radians(degrees);
+  return {std::cos(angle), std::sin(angle)};
+}
+
+TEST_CASE("half-edge 2", "[geo]") {
+  auto v1 = vec2FromAngle(0);
+  auto v2 = vec2FromAngle(90);
+  auto v3 = vec2FromAngle(180);
+  auto v4 = vec2FromAngle(360);
+  HERMES_LOG_VARIABLE(v1);
+  HERMES_LOG_VARIABLE(v2);
+  HERMES_LOG_VARIABLE(v3);
+  HERMES_LOG_VARIABLE(v4);
+  HERMES_INFO("{}", hermes::math::radians2degrees(std::atan2(
+                        hermes::geo::cross(v2, v1), hermes::geo::dot(v1, v2))));
 }

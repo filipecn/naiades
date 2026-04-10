@@ -49,22 +49,44 @@ bool DiscreteExpression::iterator::operator==(
 }
 
 DiscreteExpression::DiscreteExpression(const core::DiscreteSymbol &sym) noexcept
-    : sym_{sym} {}
+    : sym_{sym}, default_coefficient_{1.0}, default_constant_{0.0} {}
+
+DiscreteExpression::DiscreteExpression(real_t value) noexcept
+    : default_coefficient_{1.0}, default_constant_{value} {}
 
 void DiscreteExpression::addIndexEntry(h_index index, DiscreteOperator &&e) {
+  HERMES_ASSERT(sym_.has_value());
   entries_[index] = e;
 }
 
-const core::Symbol &DiscreteExpression::symbol() const { return sym_.symbol; }
+const core::Symbol &DiscreteExpression::symbol() const {
+  if (sym_.has_value())
+    return (*sym_).symbol;
+  HERMES_ERROR("Trying to access symbol from constant discrete expression.");
+  static core::Symbol s_sym;
+  return s_sym;
+}
+
+bool DiscreteExpression::isConstant() const { return !sym_.has_value(); }
 
 const DiscreteOperator &DiscreteExpression::operator[](h_index index) const {
+  static DiscreteOperator s_dop;
+  if (!sym_.has_value()) {
+    s_dop = DiscreteOperator();
+    s_dop.setConstant(default_constant_);
+    return s_dop;
+  }
   auto it = entries_.find(index);
   if (it != entries_.end())
     return it->second;
-  HERMES_ERROR("Entry with index {} not found!", index);
-  static DiscreteOperator s_dop;
+  // fallback to mono-stencil
+  s_dop = DiscreteOperator(index);
+  s_dop.add(index, default_coefficient_);
+  s_dop.setConstant(default_constant_);
   return s_dop;
 }
+
+h_size DiscreteExpression::size() const { return entries_.size(); }
 
 DiscreteExpression::iterator DiscreteExpression::begin() const {
   return DiscreteExpression::iterator(*this, entries_.begin());
@@ -76,6 +98,9 @@ DiscreteExpression::iterator DiscreteExpression::end() const {
 
 DiscreteExpression DiscreteExpression::operator-() const {
   DiscreteExpression r;
+  r.sym_ = sym_;
+  r.default_coefficient_ = -default_coefficient_;
+  r.default_constant_ = -default_constant_;
   for (const auto &item : entries_)
     r.entries_[item.first] = -item.second;
   return r;
@@ -84,14 +109,39 @@ DiscreteExpression DiscreteExpression::operator-() const {
 DiscreteExpression
 DiscreteExpression::operator+(const DiscreteExpression &rhs) const {
   DiscreteExpression r;
-  for (const auto &item : entries_) {
-    auto it = rhs.entries_.find(item.first);
-    if (it != rhs.entries_.end())
-      r.entries_[item.first] = item.second + it->second;
-    else {
-      // err
+  // sum default_constant values
+  r.default_constant_ = default_constant_ + rhs.default_constant_;
+  r.default_coefficient_ = default_coefficient_ + rhs.default_coefficient_;
+  // here we need to handle symbol cases
+  if (sym_.has_value() && rhs.sym_.has_value()) {
+    HERMES_ASSERT(*sym_ == *rhs.sym_);
+    r.sym_ = sym_;
+
+    // for all in lhs add the correspondent in rhs
+    // note that unexistent indices in rhs should return the mono-stencil
+    for (const auto &item : entries_) {
+      r.entries_[item.first] += rhs[item.first];
+    }
+
+    // for all in rhs (not caught by the loop above) add to new indices in lhs
+    for (const auto &item : rhs.entries_) {
+      if (!entries_.count(item.first)) {
+        r.entries_[item.first] = (*this)[item.first] + item.second;
+      }
+    }
+
+  } else if (sym_.has_value() && !rhs.sym_.has_value()) {
+    r.sym_ = sym_;
+    for (const auto &item : entries_) {
+      r.entries_[item.first] += rhs[item.first];
+    }
+  } else if (!sym_.has_value() && rhs.sym_.has_value()) {
+    r.sym_ = rhs.sym_;
+    for (const auto &item : rhs.entries_) {
+      r.entries_[item.first] = (*this)[item.first] + item.second;
     }
   }
+
   return r;
 }
 

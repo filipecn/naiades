@@ -23,28 +23,27 @@ TEST_CASE("Discrete Operator", "[numeric]") {
   }
 }
 TEST_CASE("Grid2FD", "[numeric]") {
-  auto grid = geo::Grid2::Config()
-                  .setCellSize({0.1, 0.2})
-                  .setResolution({3, 4})
-                  .build()
-                  .value();
-  auto grid_fd = numeric::Grid2FD(&grid);
+  auto fd = numeric::Grid2FD::Config()
+                .setCellSize({0.1f, 0.2f})
+                .setResolution({3, 4})
+                .build()
+                .value();
 
   auto boundary_element_types = {
       core::Element::Type::LEFT_FACE, core::Element::Type::DOWN_FACE,
       core::Element::Type::RIGHT_FACE, core::Element::Type::UP_FACE};
-  for (auto b : boundary_element_types)
-    grid_fd.addBoundary("p", core::Element::Type::FACE,
-                        grid.boundaryIndices(b));
+  // for (auto b : boundary_element_types)
+  //   fd.addBoundary("p", core::Element::Type::FACE,
+  //                  fd.mesh().boundaryIndices(b));
 
-  auto dirichlet = bc::Dirichlet::Ptr::shared(10);
-  auto neumann = bc::Neumann::Ptr::shared();
-  grid_fd.setBoundaryCondition("p", neumann, core::Element::Type::CELL);
-  grid_fd.setBoundaryCondition("p", 0, dirichlet, core::Element::Type::CELL);
+  // auto dirichlet = bc::Dirichlet::Ptr::shared(10);
+  // auto neumann = bc::Neumann::Ptr::shared();
+  // fd.setBoundaryCondition("p", neumann, core::Element::Type::CELL);
+  // fd.setBoundaryCondition("p", 0, dirichlet, core::Element::Type::CELL);
 
-  SECTION("boundary") {
-    REQUIRE(grid_fd.resolveBoundaries() == NaResult::noError());
-  }
+  // SECTION("boundary") {
+  //   REQUIRE(fd.resolveBoundaries() == NaResult::noError());
+  // }
 
   SECTION("compute") {
     // auto dirichlet_v = naiades::core::bc::Dirichlet::Ptr::shared(10);

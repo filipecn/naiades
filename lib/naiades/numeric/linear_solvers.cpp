@@ -27,30 +27,35 @@
 #include <naiades/numeric/linear_solvers.h>
 
 #include <Eigen/IterativeLinearSolvers>
-#include <Eigen/Sparse>
 
 namespace naiades::numeric::solvers {
 
-void CG::solve_system(const DiscreteExpression &lhs,
-                      const core::FieldRef<real_t> *rhs) const {
-  h_size n = rhs->size();
+void CG::buildSystem() {
+  h_size n = implicit_.size();
 
   // Declare a sparse matrix type with double precision
-  Eigen::SparseMatrix<double> A(n, n);
+  A_ = Eigen::SparseMatrix<double>(n, n);
+
+  // Reserve space for 1 non-zero element per row
+  A_.reserve(Eigen::VectorXi::Constant(n, 1));
+
+  // Build matrix rows
+  for (auto dop : implicit_) {
+    for (auto item : dop.nodes())
+      A_.insert(dop.centerIndex(), item.first) = item.second;
+  }
+  A_.makeCompressed();
+}
+
+void CG::solveFor(core::FieldRef<real_t> &unknown_field,
+                  const Scalar &rhs) const {
+  h_size n = implicit_.size();
+
   // Declare vectors for the solution (x) and the right-hand side (b)
   Eigen::VectorXd x(n), b(n);
 
-  // Reserve space for 1 non-zero element per row
-  A.reserve(Eigen::VectorXi::Constant(n, 1));
-
-  for (auto dop : lhs) {
-    for (auto item : dop.nodes())
-      A.insert(dop.centerIndex(), item.first) = item.second;
-  }
-  A.makeCompressed();
-
   for (h_index i = 0; i < n; ++i) {
-    b(i) = (*rhs)[i] - lhs[i].constant();
+    b(i) = rhs[i];
   }
 
   // --- Set up and use the Conjugate Gradient solver ---
@@ -60,7 +65,7 @@ void CG::solve_system(const DiscreteExpression &lhs,
       cg;
 
   // 1. Compute the factorization/preconditioner
-  cg.compute(A);
+  cg.compute(A_);
 
   // 2. Solve the linear system
   x = cg.solve(b);
@@ -69,8 +74,6 @@ void CG::solve_system(const DiscreteExpression &lhs,
   std::cout << "Solver info:" << std::endl;
   std::cout << "#iterations: " << cg.iterations() << std::endl;
   std::cout << "Estimated error: " << cg.error() << std::endl;
-  std::cout << "Solution x (first 5 elements):" << std::endl;
-  std::cout << x.head(4) << std::endl;
 
   // You can also control the max iterations and tolerance if needed
   cg.setMaxIterations(100);
@@ -78,7 +81,7 @@ void CG::solve_system(const DiscreteExpression &lhs,
 
   //
   for (h_index i = 0; i < n; ++i)
-    (*unknown_field_)[i] = x[i];
-};
+    unknown_field[i] = x[i];
+}
 
 } // namespace naiades::numeric::solvers

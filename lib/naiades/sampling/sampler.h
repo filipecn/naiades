@@ -42,11 +42,11 @@ void sample(const geo::Grid2 &grid, const core::FieldCRef<T> &field,
 
 #define SRC(IJ)                                                                \
   field[grid.safeFlatIndex(field_element, IJ) -                                \
-        grid.flatIndexOffset(field_element)][component]
+        grid.elementIndexOffset(field_element)][component]
 
 #define DST(IJ)                                                                \
   sample_field[grid.flatIndex(sample_element, IJ) -                            \
-               grid.flatIndexOffset(sample_element)]
+               grid.elementIndexOffset(sample_element)]
 
   if (field.element() == sample_element) {
     // copy
@@ -145,11 +145,11 @@ void sample(const geo::Grid2 &grid, const core::FieldCRef<T> &field,
 
 #define SRC(IJ)                                                                \
   field[grid.safeFlatIndex(field_element, IJ) -                                \
-        grid.flatIndexOffset(field_element)]
+        grid.elementIndexOffset(field_element)]
 
 #define DST(IJ)                                                                \
   sample_field[grid.flatIndex(sample_element, IJ) -                            \
-               grid.flatIndexOffset(sample_element)]
+               grid.elementIndexOffset(sample_element)]
 
   if (field.element() == sample_element) {
     // copy
