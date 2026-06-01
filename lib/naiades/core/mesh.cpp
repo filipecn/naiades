@@ -78,4 +78,12 @@ numeric::Scalar Mesh2::y(const Element &loc) const {
   return values;
 }
 
+hermes::geo::point2 Mesh2::center(const ElementIndex &e_index) const {
+  if (e_index.index.isGlobal()) {
+    return center(e_index.element, *e_index.index);
+  }
+  return center(e_index.element,
+                *e_index.index + elementIndexOffset(e_index.element));
+}
+
 } // namespace naiades::core

@@ -55,6 +55,13 @@ public:
   /// \return List of neighbours of the given element.
   virtual std::vector<Neighbour> star(Element loc, h_size index,
                                       Element boundary_loc) const = 0;
+  /// The ring neighbourhood of a given element.
+  /// \param loc Element type.
+  /// \param index Center index.
+  /// \param boundary_loc Boundary elements included in the ring.
+  /// \return List of neighbours of the given element.
+  virtual std::vector<Neighbour> ring(Element loc, h_size index,
+                                      Element boundary_loc) const = 0;
   /// The direct neighbourhood of elements for a given element.
   /// \param loc Element type.
   /// \param index Center index.

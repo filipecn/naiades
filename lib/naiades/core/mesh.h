@@ -25,6 +25,7 @@
 /// \date   2026-03-28
 
 #include <naiades/core/geometry.h>
+#include <naiades/core/neighbourhood.h>
 #include <naiades/core/topology.h>
 #include <naiades/numeric/blas.h>
 
@@ -35,7 +36,7 @@ namespace naiades::core {
 /// \brief Interface for 2-dimensional numeric discretization meshes.
 /// A discretization mesh holds geometric and topological information that fully
 /// represents a spatial discretization structure.
-class Mesh2 : public Topology, public Geometry2 {
+class Mesh2 : public Topology, public Geometry2, public NeighbourhoodSet {
 public:
   using Ptr = hermes::Ref<Mesh2>;
 
@@ -84,6 +85,12 @@ public:
   numeric::Scalar x(const Element &loc) const;
   /// \return center's y coordinate.
   numeric::Scalar y(const Element &loc) const;
+
+  // bring center method to this scope so new center methods do not
+  // shadow it
+  using Geometry2::center;
+
+  hermes::geo::point2 center(const ElementIndex &e_index) const;
 };
 
 } // namespace naiades::core

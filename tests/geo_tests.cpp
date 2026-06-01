@@ -398,14 +398,17 @@ hermes::geo::vec2 vec2FromAngle(real_t degrees) {
 }
 
 TEST_CASE("half-edge 2", "[geo]") {
-  auto v1 = vec2FromAngle(0);
+  auto v1 = vec2FromAngle(359);
   auto v2 = vec2FromAngle(90);
-  auto v3 = vec2FromAngle(180);
-  auto v4 = vec2FromAngle(360);
+  auto v3 = vec2FromAngle(91);
+  auto v4 = vec2FromAngle(270);
   HERMES_LOG_VARIABLE(v1);
   HERMES_LOG_VARIABLE(v2);
   HERMES_LOG_VARIABLE(v3);
   HERMES_LOG_VARIABLE(v4);
+
+  HERMES_INFO("{}", hermes::math::radians2degrees(std::atan2(v1.y, v1.x)));
+
   HERMES_INFO("{}", hermes::math::radians2degrees(std::atan2(
-                        hermes::geo::cross(v2, v1), hermes::geo::dot(v1, v2))));
+                        hermes::geo::cross(v2, v4), hermes::geo::dot(v2, v4))));
 }

@@ -26,9 +26,13 @@
 
 #include <naiades/geo/he.h>
 
+#include <unordered_set>
+
 namespace naiades::geo {
 
 h_index HE2::null_index_ = 1 << 20;
+
+HE2::HE2() noexcept : boundary_start_he_{HE2::null_index_} {}
 
 h_index HE2::addVertex(const hermes::geo::point2 &position) {
   vertices_.push_back({.position = position, .he_index = null_index_});
@@ -51,22 +55,21 @@ h_index HE2::addCell(const std::vector<h_index> &oriented_vertex_indices) {
     // assign he_edge to cell
     half_edges_[internal_half_edges[e]].cell_index = cell_index;
   }
-  // now we connect the internal half-edges
-  for (h_index i = 0; i < internal_half_edges.size(); ++i) {
-    half_edges_[internal_half_edges[i]].next_he =
-        internal_half_edges[(i + 1) % internal_half_edges.size()];
-    half_edges_[internal_half_edges[(i + 1) % internal_half_edges.size()]]
-        .prev_he = internal_half_edges[i];
-  }
-  // for the outer half-edges, we must connect those that are boudary faces
-  // because existent internal half-edges should already be connected
+  // update boundary start he to any
   for (h_index internal_he : internal_half_edges) {
-    h_index outer_he = heTwin(internal_he);
-    // boundary he have no cell associated
-    if (half_edges_[outer_he].cell_index == null_index_) {
+    auto he = heTwin(internal_he);
+    if (half_edges_[he].cell_index == null_index_) {
+      boundary_start_he_ = he;
     }
   }
-  return 0;
+
+  // cell center
+  hermes::geo::point2 center;
+  for (const auto &v : oriented_vertex_indices)
+    center += hermes::geo::vec2(vertices_[v].position);
+  center /= static_cast<real_t>(oriented_vertex_indices.size());
+  cells_.push_back({.center = center, .he_index = internal_half_edges[0]});
+  return cells_.size() - 1;
 }
 
 h_index HE2::heTwin(h_index he_index) const {
@@ -89,6 +92,8 @@ h_index HE2::hePrev(h_index he_index) const {
   HERMES_ASSERT(he_index < half_edges_.size());
   return half_edges_[he_index].prev_he;
 }
+
+h_index HE2::faceHe(h_index index) const { return index * 2; }
 
 h_index HE2::heStart(h_index he_index) const {
   HERMES_ASSERT(he_index < half_edges_.size());
@@ -131,26 +136,66 @@ h_index HE2::addOrientedFace(h_index va, h_index vb) {
   auto it = edge_vertices_to_edge_index_map_.find(key);
   if (it != edge_vertices_to_edge_index_map_.end()) {
     // find out which half edge represents va->vb
-    return heFace(it->second);
+    if (half_edges_[it->second].vertex_index == va)
+      return it->second;
+    return heTwin(it->second);
   }
+  // cache face
+  edge_vertices_to_edge_index_map_[key] = half_edges_.size();
+  auto ab_he = half_edges_.size();
+  auto ba_he = half_edges_.size() + 1;
   // left half-edge
-  half_edges_.push_back(
-      {.vertex_index = va, .cell_index = null_index_, .next_he = null_index_});
-  // right half-edge
-  half_edges_.push_back(
-      {.vertex_index = vb, .cell_index = null_index_, .next_he = null_index_});
+  auto ab = (vertices_[vb].position - vertices_[va].position).normalized();
+  auto va_next = nextOutgoingHE(va, ab.angleToX());
+  auto va_prev = previousIncomingHE(va, ab.angleToX());
+  if (va_next != null_index_) {
+    half_edges_[va_next].prev_he = ba_he;
+  } else
+    va_next = ab_he;
+  if (va_prev != null_index_) {
+    half_edges_[va_prev].next_he = ab_he;
+  } else
+    va_prev = ba_he;
+  vertices_[va].he_index = ab_he;
 
+  // right half-edge
+  auto ba = -ab;
+  auto vb_next = nextOutgoingHE(vb, ba.angleToX());
+  auto vb_prev = previousIncomingHE(vb, ba.angleToX());
+  if (vb_next != null_index_) {
+    half_edges_[vb_next].prev_he = ab_he;
+  } else
+    vb_next = ba_he;
+  if (vb_prev != null_index_) {
+    half_edges_[vb_prev].next_he = ba_he;
+  } else
+    vb_prev = ab_he;
+
+  vertices_[vb].he_index = ba_he;
+
+  half_edges_.push_back({.vertex_index = va,
+                         .cell_index = null_index_,
+                         .next_he = vb_next,
+                         .prev_he = va_prev});
+  half_edges_.push_back({.vertex_index = vb,
+                         .cell_index = null_index_,
+                         .next_he = va_next,
+                         .prev_he = vb_prev});
   // return left half-edge
   return half_edges_.size() - 2;
 }
 
-std::vector<h_index> HE2::leavingHEs(h_index vertex_index) const {
+std::vector<h_index> HE2::outgoingHEs(h_index vertex_index) const {
   HERMES_ASSERT(vertex_index < vertices_.size());
   std::vector<h_index> hes;
   auto start = vertices_[vertex_index].he_index;
-  HERMES_ASSERT(start != null_index_);
+  if (start == null_index_)
+    return hes;
   auto curr = start;
+  auto i = 0;
   do {
+    if (i++ == 5)
+      break;
     hes.emplace_back(curr);
     curr = heTwin(curr);
     curr = half_edges_[curr].next_he;
@@ -158,34 +203,90 @@ std::vector<h_index> HE2::leavingHEs(h_index vertex_index) const {
   return hes;
 }
 
-std::vector<h_index> HE2::arrivingHEs(h_index vertex_index) const {
+std::vector<h_index> HE2::incomingHEs(h_index vertex_index) const {
   HERMES_ASSERT(vertex_index < vertices_.size());
   std::vector<h_index> hes;
   auto start = vertices_[vertex_index].he_index;
-  HERMES_ASSERT(start != null_index_);
+  if (start == null_index_)
+    return hes;
   start = heTwin(start);
   auto curr = start;
+  auto i = 0;
   do {
+    if (i++ == 5)
+      break;
     hes.emplace_back(curr);
     curr = half_edges_[curr].next_he;
     curr = heTwin(curr);
   } while (curr != start);
   return hes;
+}
+
+h_index HE2::nextOutgoingHE(h_index vertex, real_t angle_to_x) const {
+  auto outgoing_hes = outgoingHEs(vertex);
+  if (outgoing_hes.empty())
+    return null_index_;
+  // we map all angles of the outgoing half-edges to [0,2pi] (as angle_to_x)
+  // and rotate them so angle_to_x becomes zero. Then the next half-edge
+  // will the one with the largest value.
+  auto next_he = outgoing_hes.front();
+  auto next_angle = hermes::math::wrapRadians(
+      heVector(outgoing_hes.front()).normalized().angleToX() - angle_to_x);
+
+  for (auto outgoing_he : outgoing_hes) {
+    auto w = heVector(outgoing_he).normalized();
+    auto angle = hermes::math::wrapRadians(w.angleToX() - angle_to_x);
+    if (angle > next_angle) {
+      next_he = outgoing_he;
+      next_angle = angle;
+    }
+  }
+  return next_he;
+}
+
+h_index HE2::previousIncomingHE(h_index vertex, real_t angle_to_x) const {
+  auto incoming_hes = incomingHEs(vertex);
+  if (incoming_hes.empty())
+    return null_index_;
+  // we map all angles of the outgoing half-edges to [0,2pi] (as angle_to_x)
+  // and rotate them so angle_to_x becomes zero. Then the previous half-edge
+  // will the one with the smallest value.
+  auto prev_he = incoming_hes.front();
+  auto prev_angle = hermes::math::wrapRadians(
+      (-heVector(incoming_hes.front())).normalized().angleToX() - angle_to_x);
+  for (auto incoming_he : incoming_hes) {
+    auto w = -heVector(incoming_he).normalized();
+    auto angle = hermes::math::wrapRadians(w.angleToX() - angle_to_x);
+    if (angle < prev_angle) {
+      prev_he = incoming_he;
+      prev_angle = angle;
+    }
+  }
+  return prev_he;
 }
 
 h_index HE2::computeNextHE(h_index he_index) const {
   HERMES_ASSERT(he_index < half_edges_.size());
-  auto v = hermes::geo::normalize(heVector(he_index));
+  // he_index points towards heEnd(he_index), and the next h-e will be outgoing
+  // it. we must consider the opposite direction, as if he_index is also
+  // outgoing heEnd(he_index) so we can sort the edge fan properly.
+  auto v = hermes::geo::normalize(-heVector(he_index));
+  auto v_angle = std::atan2(v.y, v.x);
+  if (v_angle < 0.0)
+    v_angle += hermes::math::constants::two_pi;
+  // we map all angles of the outgoing half-edges to [0,2pi] (as v_angle)
+  // and rotate them so v_angle becomes zero. Then the next half-edge
+  // will the one if greatest angle value.
   auto next_he = heTwin(he_index);
-  auto next_angle = hermes::math::constants::two_pi;
-  // the next he is the one that makes the smallest angle with the given
-  // edge
-  for (auto leaving_he : leavingHEs(heEnd(he_index))) {
-    auto w = hermes::geo::normalize(heVector(leaving_he));
-    auto angle = std::atan2(hermes::geo::cross(v, w), hermes::geo::dot(v, w)) +
-                 hermes::math::constants::two_pi;
-    if (angle < next_angle) {
-      next_he = leaving_he;
+  auto next_angle = 0.0;
+  for (auto outgoing_he : outgoingHEs(heEnd(he_index))) {
+    auto w = hermes::geo::normalize(heVector(outgoing_he));
+    // compute the rotated angle for this h-e
+    auto angle = std::atan2(w.y, w.x) - v_angle;
+    while (angle < 0.0)
+      angle += hermes::math::constants::two_pi;
+    if (angle > next_angle) {
+      next_he = outgoing_he;
       next_angle = angle;
     }
   }
@@ -194,26 +295,42 @@ h_index HE2::computeNextHE(h_index he_index) const {
 
 h_index HE2::computePreviousHE(h_index he_index) const {
   HERMES_ASSERT(he_index < half_edges_.size());
+  // he_index originates at heStart(he_index), and the previous h-e will be
+  // incoming it. we must consider the opposite direction of all incoming edges
+  // as if they were also outgoing heStart(he_index) so we can sort the edge fan
+  // properly.
   auto v = hermes::geo::normalize(heVector(he_index));
-  auto prev_he = heTwin(he_index);
+  auto v_angle = std::atan2(v.y, v.x);
+  if (v_angle < 0.0)
+    v_angle += hermes::math::constants::two_pi;
+  // we map all angles of the outgoing half-edges to [0,2pi] (as v_angle)
+  // and rotate them so v_angle becomes zero. Then the previous half-edge
+  // will the one if smallest angle value.
+  auto twin_he = heTwin(he_index);
+  auto prev_he = twin_he;
   auto prev_angle = hermes::math::constants::two_pi;
-  // the next he is the one that makes the smallest angle with the given
-  // edge
-  for (auto leaving_he : arrivingHEs(heEnd(he_index))) {
-    auto w = -hermes::geo::normalize(heVector(leaving_he));
-    auto angle = std::atan2(hermes::geo::cross(v, w), hermes::geo::dot(v, w)) +
-                 hermes::math::constants::two_pi;
+  for (auto incoming_he : incomingHEs(heStart(he_index))) {
+    // for safety, skip the twin of the original edge, as it might give angle
+    // zero and is considered as the default answer above
+    if (incoming_he == twin_he)
+      continue;
+    // here we negate to consider w outgoing the vertex
+    auto w = hermes::geo::normalize(-heVector(incoming_he));
+    // compute the rotated angle for this h-e
+    auto angle = std::atan2(w.y, w.x) - v_angle;
+    while (angle < 0.0)
+      angle += hermes::math::constants::two_pi;
     if (angle < prev_angle) {
-      prev_he = leaving_he;
+      prev_he = incoming_he;
       prev_angle = angle;
     }
   }
-  return 0;
+  return prev_he;
 }
 
 hermes::geo::vec2 HE2::heVector(h_index he_index) const {
   HERMES_ASSERT(he_index < half_edges_.size());
-  return vertices_[half_edges_[heEnd(he_index)].vertex_index].position -
+  return vertices_[half_edges_[heTwin(he_index)].vertex_index].position -
          vertices_[half_edges_[he_index].vertex_index].position;
 }
 
@@ -231,7 +348,7 @@ hermes::geo::bounds::bbox2 HE2::bbounds() const {
 hermes::geo::normal2 HE2::normal(core::Element loc, h_index index) const {
   HERMES_ASSERT(!loc.is(core::element_primitive_bits::cell));
   if (loc.is(core::element_primitive_bits::face)) {
-    auto he_index = index * 2;
+    auto he_index = faceHe(index);
     HERMES_ASSERT(he_index < half_edges_.size());
     // boudary normals point outside
     if (half_edges_[he_index + 1].cell_index == null_index_) {
@@ -254,7 +371,7 @@ hermes::geo::point2 HE2::center(core::Element loc, h_size flat_index) const {
     return vertices_[flat_index].position;
   }
   if (loc.is(core::element_primitive_bits::face)) {
-    auto he_index = flat_index * 2;
+    auto he_index = faceHe(flat_index);
     HERMES_ASSERT(he_index < half_edges_.size());
     return (heStartPosition(he_index) +
             hermes::geo::vec2(heEndPosition(he_index))) /
@@ -325,7 +442,7 @@ std::vector<h_size> HE2::indices(core::Element element, h_index index,
       HERMES_NOT_IMPLEMENTED;
     }
   } else if (element.is(core::element_primitive_bits::face)) {
-    auto he_index = index * 2;
+    auto he_index = faceHe(index);
     HERMES_ASSERT(he_index < half_edges_.size());
     is.emplace_back(heStart(he_index));
     is.emplace_back(heEnd(he_index));
@@ -335,31 +452,214 @@ std::vector<h_size> HE2::indices(core::Element element, h_index index,
 }
 
 std::vector<h_size> HE2::boundaryIndices(core::Element loc) const {
-  HERMES_NOT_IMPLEMENTED;
-  return {};
+  std::vector<h_size> boundary_indices;
+  std::unordered_set<h_size> listed_indices;
+  auto cur_he = boundary_start_he_;
+  HERMES_ASSERT(cur_he != null_index_);
+  do {
+    auto the = heTwin(cur_he);
+    if (loc.is(core::element_primitive_bits::cell)) {
+      h_index cell_index = half_edges_[the].cell_index;
+      HERMES_ASSERT(cell_index != null_index_);
+      if (!listed_indices.contains(cell_index)) {
+        boundary_indices.emplace_back(cell_index);
+        listed_indices.insert(cell_index);
+      }
+    } else if (loc.is(core::element_primitive_bits::face)) {
+      h_index face_index = heFace(cur_he);
+      boundary_indices.emplace_back(face_index);
+    } else if (loc.is(core::element_primitive_bits::vertex)) {
+      h_index vertex_index = half_edges_[cur_he].vertex_index;
+      boundary_indices.emplace_back(vertex_index);
+    } else {
+      HERMES_NOT_IMPLEMENTED;
+      return {};
+    }
+    cur_he = heNext(cur_he);
+  } while (cur_he != null_index_ && cur_he != boundary_start_he_);
+  return boundary_indices;
 }
 
 core::element_alignments HE2::elementAlignment(core::Element loc,
                                                h_size index) const {
-  HERMES_NOT_IMPLEMENTED;
-  return {};
+  return core::element_alignment_bits::any;
 }
 
 core::element_orientations HE2::elementOrientation(core::Element loc,
                                                    h_size index) const {
-  HERMES_NOT_IMPLEMENTED;
-  return {};
+  return core::element_orientation_bits::any;
 }
 
 bool HE2::isBoundary(core::Element loc, h_size index) const {
-  HERMES_NOT_IMPLEMENTED;
+  auto he = null_index_;
+  if (loc.is(core::element_primitive_bits::cell)) {
+    HERMES_ASSERT(index < cells_.size());
+    auto loop = heLoop(cells_[index].he_index);
+    for (auto he : loop)
+      if (half_edges_[he].cell_index == null_index_ ||
+          half_edges_[heTwin(he)].cell_index == null_index_)
+        return true;
+    return false;
+  } else if (loc.is(core::element_primitive_bits::face)) {
+    he = faceHe(index);
+    HERMES_ASSERT(he < half_edges_.size());
+  } else if (loc.is(core::element_primitive_bits::vertex)) {
+    HERMES_ASSERT(index < vertices_.size());
+    he = vertices_[index].he_index;
+  } else {
+    HERMES_NOT_IMPLEMENTED;
+    return false;
+  }
+
+  HERMES_ASSERT(he != null_index_);
+  if (half_edges_[he].cell_index == null_index_ ||
+      half_edges_[heTwin(he)].cell_index == null_index_)
+    return true;
   return false;
 }
 
 h_size HE2::interiorNeighbour(const core::ElementIndex &boundary_element,
                               const core::Element &interior_loc) const {
-  HERMES_NOT_IMPLEMENTED;
+  if (boundary_element.element.is(core::element_primitive_bits::face)) {
+    if (interior_loc.is(core::element_primitive_bits::cell)) {
+      auto he = faceHe(*boundary_element.index);
+      HERMES_ASSERT(he < half_edges_.size());
+      if (half_edges_[he].cell_index != null_index_)
+        return half_edges_[he].cell_index;
+      HERMES_ASSERT(half_edges_[heTwin(he)].cell_index != null_index_);
+      return half_edges_[heTwin(he)].cell_index;
+    } else {
+      HERMES_NOT_IMPLEMENTED;
+    }
+  } else {
+    HERMES_NOT_IMPLEMENTED;
+  }
   return 0;
 }
 
+std::vector<core::Neighbour> HE2::star(core::Element loc, h_size index,
+                                       core::Element boundary_loc) const {
+  std::vector<core::Neighbour> s;
+  // insert the center of the star
+  s.push_back(
+      {.element_index = core::ElementIndex::global(loc, index), .distance = 0});
+  auto center_pos = center(loc, index);
+  if (loc.is(core::element_primitive_bits::cell)) {
+    HERMES_ASSERT(index < cells_.size());
+    if (boundary_loc.is(core::element_primitive_bits::face)) {
+      HERMES_ASSERT(cells_[index].he_index < half_edges_.size());
+      for (auto he : heLoop(cells_[index].he_index)) {
+        auto he_t = heTwin(he);
+        auto n_cell = half_edges_[he_t].cell_index;
+        if (n_cell == null_index_) {
+          // the boundary is represented by the center of the face
+          auto n_face = heFace(he_t);
+          s.push_back({.element_index =
+                           core::ElementIndex::global(boundary_loc, n_face),
+                       .distance = hermes::geo::distance(
+                           center_pos, center(boundary_loc, n_face))});
+        } else {
+          s.push_back({.element_index = core::ElementIndex::global(loc, n_cell),
+                       .distance = hermes::geo::distance(center_pos,
+                                                         center(loc, n_cell))});
+        }
+      }
+    } else {
+      HERMES_NOT_IMPLEMENTED;
+    }
+  } else {
+    HERMES_NOT_IMPLEMENTED;
+  }
+  return s;
+}
+
+std::vector<core::Neighbour> HE2::star(core::Element loc, h_size index,
+                                       core::Element boundary_loc) const {
+  std::vector<core::Neighbour> s;
+  // insert the center of the star
+  s.push_back(
+      {.element_index = core::ElementIndex::global(loc, index), .distance = 0});
+  auto center_pos = center(loc, index);
+  if (loc.is(core::element_primitive_bits::cell)) {
+    HERMES_ASSERT(index < cells_.size());
+    if (boundary_loc.is(core::element_primitive_bits::face)) {
+      HERMES_ASSERT(cells_[index].he_index < half_edges_.size());
+      for (auto he : heLoop(cells_[index].he_index)) {
+        auto he_t = heTwin(he);
+        auto n_cell = half_edges_[he_t].cell_index;
+        if (n_cell == null_index_) {
+          // the boundary is represented by the center of the face
+          auto n_face = heFace(he_t);
+          s.push_back({.element_index =
+                           core::ElementIndex::global(boundary_loc, n_face),
+                       .distance = hermes::geo::distance(
+                           center_pos, center(boundary_loc, n_face))});
+        } else {
+          s.push_back({.element_index = core::ElementIndex::global(loc, n_cell),
+                       .distance = hermes::geo::distance(center_pos,
+                                                         center(loc, n_cell))});
+        }
+      }
+    } else {
+      HERMES_NOT_IMPLEMENTED;
+    }
+  } else {
+    HERMES_NOT_IMPLEMENTED;
+  }
+  return s;
+}
+
+std::vector<std::pair<h_size, real_t>>
+HE2::neighbours(core::Element loc, h_size index,
+                core::Element neighbour_loc) const {
+  HERMES_NOT_IMPLEMENTED;
+  return {};
+}
+
 } // namespace naiades::geo
+
+namespace naiades::numeric {
+
+const geo::HE2 &HE2RBFFD::mesh() const {
+  return *reinterpret_cast<const geo::HE2 *>(topology_.get());
+}
+
+DiscreteOperator HE2RBFFD::derivative(derivative_bits d, h_size index,
+                                      const core::DiscreteSymbol &sym) const {
+  DiscreteOperator op(index);
+
+  // sanity error checks
+  auto it = boundaries_.find(sym.boundary_symbol);
+  HERMES_ASSERT(it != boundaries_.end() && topology_);
+
+  // get mesh
+  const geo::HE2 *mesh = reinterpret_cast<const geo::HE2 *>(topology_.get());
+  // get boundary
+  auto &boundary = it->second;
+
+  auto addNeighbour = [&](const core::Neighbour &n, real_t k) {
+    if (n.element_index.element != sym.symbol.loc)
+      op += boundary.stencil(n.element_index.index) * k;
+    else
+      op.add(*n.element_index.index, k);
+  };
+
+  return op;
+}
+
+DiscreteOperator HE2RBFFD::laplacian(h_size index,
+                                     const core::DiscreteSymbol &sym) const {
+  DiscreteOperator op(index);
+  op += derivative(derivative_bits::x, index, sym);
+  op += derivative(derivative_bits::y, index, sym);
+  return op;
+}
+
+DiscreteOperator HE2RBFFD::divergence(const core::Element &loc, h_size index,
+                                      const core::Element &vector_loc,
+                                      bool staggered) const {
+  DiscreteOperator op;
+  return op;
+}
+
+} // namespace naiades::numeric

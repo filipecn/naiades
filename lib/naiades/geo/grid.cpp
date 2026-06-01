@@ -465,6 +465,25 @@ core::Element Grid2::faceType(h_size flat_index) const {
   return core::Element::X_FACE;
 }
 
+std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size index,
+                                         core::Element boundary_loc) const {
+  HERMES_NOT_IMPLEMENTED;
+  return {};
+}
+
+std::vector<core::Neighbour> Grid2::ring(core::Element loc, h_size index,
+                                         core::Element boundary_loc) const {
+  HERMES_NOT_IMPLEMENTED;
+  return {};
+}
+
+std::vector<std::pair<h_size, real_t>>
+Grid2::neighbours(core::Element loc, h_size index,
+                  core::Element neighbour_loc) const {
+  HERMES_NOT_IMPLEMENTED;
+  return {};
+}
+
 } // namespace naiades::geo
 
 namespace naiades::numeric {

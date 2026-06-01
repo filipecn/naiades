@@ -177,6 +177,31 @@ public:
   h_size interiorNeighbour(const core::ElementIndex &boundary_element,
                            const core::Element &interior_loc) const override;
 
+  // neighbourhood set interface
+
+  /// The star neighbourhood of a given element.
+  /// \param loc Element type.
+  /// \param index Center index.
+  /// \param boundary_loc Boundary elements included in the star.
+  /// \return List of neighbours of the given element.
+  std::vector<core::Neighbour> star(core::Element loc, h_size index,
+                                    core::Element boundary_loc) const override;
+  /// The ring neighbourhood of a given element.
+  /// \param loc Element type.
+  /// \param index Center index.
+  /// \param boundary_loc Boundary elements included in the ring.
+  /// \return List of neighbours of the given element.
+  std::vector<Neighbour> ring(core::Element loc, h_size index,
+                              core::Element boundary_loc) const override;
+  /// The direct neighbourhood of elements for a given element.
+  /// \param loc Element type.
+  /// \param index Center index.
+  /// \param neighbour_loc neighbour element type.
+  /// \return List of pairs neighbour <index, distance> of the given element.
+  std::vector<std::pair<h_size, real_t>>
+  neighbours(core::Element loc, h_size index,
+             core::Element neighbour_loc) const override;
+
 private:
   core::Element faceType(h_size flat_index) const;
 

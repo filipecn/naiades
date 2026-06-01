@@ -14,6 +14,7 @@ set(NAIADES_HEADERS
 
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.h
   ${NAIADES_SOURCE_DIR}/naiades/geo/he.h
+  ${NAIADES_SOURCE_DIR}/naiades/geo/utils.h
 
   ${NAIADES_SOURCE_DIR}/naiades/numeric/blas.h
   ${NAIADES_SOURCE_DIR}/naiades/numeric/boundary.h
@@ -44,6 +45,7 @@ set(NAIADES_SOURCES
   
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
   ${NAIADES_SOURCE_DIR}/naiades/geo/he.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/geo/utils.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/numeric/blas.cpp
   ${NAIADES_SOURCE_DIR}/naiades/numeric/boundary.cpp

@@ -27,6 +27,7 @@
 #pragma once
 
 #include <naiades/core/mesh.h>
+#include <naiades/numeric/spatial_discretization.h>
 
 #include <hermes/geometry/vector.h>
 #include <hermes/numeric/numeric.h>
@@ -55,7 +56,7 @@ namespace naiades::geo {
 ///              \/  1
 class HE2 : public core::Mesh2 {
 public:
-  HE2() noexcept = default;
+  HE2() noexcept;
   virtual ~HE2() = default;
 
   /// \param position Vertex position.
@@ -73,7 +74,10 @@ public:
   h_index heCell(h_index he_index) const;
   h_index heNext(h_index he_index) const;
   h_index hePrev(h_index he_index) const;
+  h_index faceHe(h_index face_index) const;
   hermes::geo::normal2 heNormal(h_index he_index) const;
+  /// \return Edge vector of the given half-edge.
+  hermes::geo::vec2 heVector(h_index he_index) const;
   /// \return Vertex at the end of the given half-edge.
   h_index heEnd(h_index he_index) const;
   /// \return Vertex at the end of the given half-edge.
@@ -114,18 +118,44 @@ public:
   h_size interiorNeighbour(const core::ElementIndex &boundary_element,
                            const core::Element &interior_loc) const override;
 
+  // neighbourhood set interface
+
+  /// The star neighbourhood of a given element.
+  /// \param loc Element type.
+  /// \param index Center index.
+  /// \param boundary_loc Boundary elements included in the star.
+  /// \return List of neighbours of the given element.
+  std::vector<core::Neighbour> star(core::Element loc, h_size index,
+                                    core::Element boundary_loc) const override;
+  /// The ring neighbourhood of a given element.
+  /// \param loc Element type.
+  /// \param index Center index.
+  /// \param boundary_loc Boundary elements included in the ring.
+  /// \return List of neighbours of the given element.
+  std::vector<Neighbour> ring(core::Element loc, h_size index,
+                              core::Element boundary_loc) const override;
+  /// The direct neighbourhood of elements for a given element.
+  /// \param loc Element type.
+  /// \param index Center index.
+  /// \param neighbour_loc neighbour element type.
+  /// \return List of pairs neighbour <index, distance> of the given element.
+  std::vector<std::pair<h_size, real_t>>
+  neighbours(core::Element loc, h_size index,
+             core::Element neighbour_loc) const override;
+
 private:
   /// \brief Add a oriented face.
-  /// A oriented face is an edge whole (va,vb) order is found in the cell it
-  /// belongs to.
+  /// A oriented face is an edge whose (va,vb) order is found in the cell it
+  /// belongs to, i.e., the "internal half-edge" is on the left side if
+  /// following the same order.
   /// \return The index of the internal half-edge relative to the oriented face.
   /// \note The internal half-edge relative to the oriented face is the
   ///       half-edge that is "located" to the left of the face.
   h_index addOrientedFace(h_index va, h_index vb);
   /// \return List of half-edges leaving the given vertex.
-  std::vector<h_index> leavingHEs(h_index vertex_index) const;
+  std::vector<h_index> outgoingHEs(h_index vertex_index) const;
   /// \return List of half-edges arriving at the given vertex.
-  std::vector<h_index> arrivingHEs(h_index vertex_index) const;
+  std::vector<h_index> incomingHEs(h_index vertex_index) const;
   /// Compute the next half-edge index for the given half-edge.
   /// \note This finds the next half-edge even if there is a index stored
   ///       for the next half-edge already stored in the given half-edge struct.
@@ -135,8 +165,14 @@ private:
   ///       for the previous half-edge already stored in the given half-edge
   ///       struct.
   h_index computePreviousHE(h_index he_index) const;
-  /// \return Edge vector of the given half-edge.
-  hermes::geo::vec2 heVector(h_index he_index) const;
+  /// Find would be the next outgoing half-edge in the sequence for an incoming
+  /// angle.
+  /// \param angle [0,2pi] angle to abscissa
+  h_index nextOutgoingHE(h_index vertex, real_t angle_to_x) const;
+  /// Find would be the previous incoming half-edge in the sequence for an
+  /// outgoing angle.
+  /// \param angle [0,2pi] angle to abscissa
+  h_index previousIncomingHE(h_index vertex, real_t angle_to_x) const;
 
   // Since half-edges exist in pairs and are created together whenever a new
   // full-edge is created, we convensionate that the pair of half-edges is
@@ -165,6 +201,7 @@ private:
   std::vector<HalfEdge> half_edges_;
   std::vector<Vertex> vertices_;
   std::vector<Cell> cells_;
+  h_index boundary_start_he_;
 
   struct EdgeKey {
     EdgeKey() = default;
@@ -188,6 +225,85 @@ private:
   // (min(va, vb), max(va, vb)) -> half_edges even index
   std::unordered_map<EdgeKey, h_index, EdgeKey>
       edge_vertices_to_edge_index_map_;
+  h_index boundary_start_;
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<HE2>;
+#endif
 };
 
 } // namespace naiades::geo
+
+namespace naiades::numeric {
+
+class HE2RBFFD : public SpatialDiscretization {
+
+  /// \brief
+  const geo::HE2 &mesh() const;
+
+  /// Compute the derivative operator centered at the given element.
+  /// \param d Derivative direction.
+  /// \param index
+  /// \param sym
+  virtual DiscreteOperator
+  derivative(derivative_bits d, h_size index,
+             const core::DiscreteSymbol &sym) const override;
+  /// Compute the discrete Laplacian operator centered at the given element.
+  /// \param index
+  /// \param sym
+  virtual DiscreteOperator
+  laplacian(h_size index, const core::DiscreteSymbol &sym) const override;
+  /// Compute the discrete Laplacian operator centered at the given element.
+  /// Compute the discrete Divergence operator centered at the given element.
+  /// \tparam DiscretizationType Discretization type.
+  /// \param boundary
+  /// \param loc
+  /// \param index
+  /// \param staggered
+  virtual DiscreteOperator divergence(const core::Element &loc, h_size index,
+                                      const core::Element &vector_loc,
+                                      bool staggered) const override;
+};
+
+} // namespace naiades::numeric
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::geo::HE2> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::geo::HE2 &data) {
+    auto m = DebugMessage();
+    m.add("bounds", data.bbounds());
+    m.add("vertex count", data.elementCount(naiades::core::Element::vertex()));
+    m.add("face count", data.elementCount(naiades::core::Element::face()));
+    m.add("cell count", data.elementCount(naiades::core::Element::cell()));
+
+    m.addFmt("Half-Edges");
+    for (auto face : data.elements(naiades::core::Element::face())) {
+      auto he = face.global_index * 2;
+      auto het = data.heTwin(he);
+      m.addFmt("face[{}]: he[{}]({}, {})|{},{}| he[{}]({},{})|{},{}|",
+               face.global_index,                                  //
+               he, data.heStart(he), data.heEnd(he),               //
+               data.computePreviousHE(he), data.computeNextHE(he), //
+               het, data.heStart(het), data.heEnd(het),            //
+               data.computePreviousHE(het), data.computeNextHE(het));
+    }
+    m.addFmt("Vertices");
+    for (auto vertex : data.elements(naiades::core::Element::vertex())) {
+      m.addFmt("vertex[{}]({}): he[{}] in[{}] out[{}]", vertex.global_index,
+               hermes::to_string(vertex.center),
+               data.vertices_[vertex.global_index].he_index,
+               hermes::cstr::join(data.incomingHEs(vertex.global_index), ","),
+               hermes::cstr::join(data.outgoingHEs(vertex.global_index), ","));
+    }
+
+    return m;
+  }
+};
+
+} // namespace hermes
+
+#endif

@@ -25,6 +25,8 @@ list(APPEND DEPS_INCLUDE_DIRS ";${SIMPLE_SVG_INCLUDE_DIR}")
 target_link_libraries(DEPS INTERFACE 
   hermes
   Eigen3::Eigen
+  igl::core
+  igl_restricted::triangle
 )
 
 if (NAIADES_BUILD_TESTS)  
