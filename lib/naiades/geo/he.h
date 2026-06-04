@@ -33,6 +33,36 @@
 #include <hermes/numeric/numeric.h>
 
 namespace naiades::geo {
+
+struct EdgeKey {
+  EdgeKey() = default;
+  EdgeKey(h_index a, h_index b) noexcept {
+    a_ = std::min(a, b);
+    b_ = std::max(a, b);
+  }
+
+  bool operator==(const EdgeKey &rhs) const {
+    return a_ == rhs.a_ && b_ == rhs.b_;
+  }
+
+private:
+  friend struct std::hash<EdgeKey>;
+  h_index a_{0};
+  h_index b_{0};
+};
+
+} // namespace naiades::geo
+
+namespace std {
+template <> struct hash<naiades::geo::EdgeKey> {
+  std::size_t operator()(const naiades::geo::EdgeKey &key) const noexcept {
+    return key.a_ ^ (key.b_ << 1);
+  }
+};
+} // namespace std
+
+namespace naiades::geo {
+
 /// \class HE2
 /// \brief 2-dimensional Half-Edge structure mesh
 ///
@@ -90,58 +120,62 @@ public:
   //  geometry interface
 
   hermes::geo::bounds::bbox2 bbounds() const override;
-  hermes::geo::normal2 normal(core::Element loc, h_index index) const override;
-  hermes::geo::point2 center(core::Element loc,
-                             h_size flat_index) const override;
+  hermes::geo::normal2 normal(const core::ElementIndex &loc) const override;
+  hermes::geo::point2 center(const core::ElementIndex &loc) const override;
   std::vector<hermes::geo::point2> centers(core::Element loc) const override;
 
-  //  topology interface
+  // element set interface
 
   /// Grid location counts
   h_size elementCount(core::Element loc) const override;
   /// Grid flat index offset.
   /// \note The flat index offset is zero for all elements, except for faces.
   h_size elementIndexOffset(core::Element loc) const override;
+  core::element_alignments
+  elementAlignment(const core::ElementIndex &iloc) const override;
+  core::element_orientations
+  elementOrientation(const core::ElementIndex &iloc) const override;
+
+  //  topology interface
+
   /// \brief Get the list of indices of a given element instance.
   /// \param element
   /// \param index
   /// \param sub_element
   /// \return The lists of sub-elements of the given element instance.
-  std::vector<h_size> indices(core::Element element, h_index index,
+  std::vector<h_size> indices(const core::ElementIndex &iloc,
                               core::Element sub_element) const override;
+
   std::vector<h_size> boundaryIndices(core::Element loc) const override;
-  core::element_alignments elementAlignment(core::Element loc,
-                                            h_size index) const override;
-  core::element_orientations elementOrientation(core::Element loc,
-                                                h_size index) const override;
-  bool isBoundary(core::Element loc, h_size index) const override;
-  h_size interiorNeighbour(const core::ElementIndex &boundary_element,
-                           const core::Element &interior_loc) const override;
+  bool isBoundary(const core::ElementIndex &iloc) const override;
 
-  // neighbourhood set interface
-
+  // avoid shadowing of other Topology star methods
+  using Topology::star;
   /// The star neighbourhood of a given element.
-  /// \param loc Element type.
-  /// \param index Center index.
   /// \param boundary_loc Boundary elements included in the star.
   /// \return List of neighbours of the given element.
-  std::vector<core::Neighbour> star(core::Element loc, h_size index,
-                                    core::Element boundary_loc) const override;
+  std::vector<core::Neighbour>
+  star(const core::ElementIndex &iloc, core::Element star_loc,
+       std::optional<core::Element> boundary_loc) const override;
   /// The ring neighbourhood of a given element.
-  /// \param loc Element type.
+  /// \param eloc Center element index.
   /// \param index Center index.
   /// \param boundary_loc Boundary elements included in the ring.
   /// \return List of neighbours of the given element.
-  std::vector<Neighbour> ring(core::Element loc, h_size index,
-                              core::Element boundary_loc) const override;
+  std::vector<core::Neighbour>
+  k_ring(const core::ElementIndex &iloc, h_size k, core::Element ring_loc,
+         std::optional<core::Element> boundary_loc) const override;
   /// The direct neighbourhood of elements for a given element.
-  /// \param loc Element type.
+  /// \param eloc Center element index.
   /// \param index Center index.
   /// \param neighbour_loc neighbour element type.
   /// \return List of pairs neighbour <index, distance> of the given element.
   std::vector<std::pair<h_size, real_t>>
-  neighbours(core::Element loc, h_size index,
-             core::Element neighbour_loc) const override;
+  neighbours(const core::ElementIndex &eloc, h_size radius,
+             core::Element neighbour_loc,
+             std::optional<core::Element> boundary_loc) const override;
+  h_size interiorNeighbour(const core::ElementIndex &boundary_element,
+                           const core::Element &interior_loc) const override;
 
 private:
   /// \brief Add a oriented face.
@@ -203,28 +237,8 @@ private:
   std::vector<Cell> cells_;
   h_index boundary_start_he_;
 
-  struct EdgeKey {
-    EdgeKey() = default;
-    EdgeKey(h_index a, h_index b) noexcept {
-      a_ = std::min(a, b);
-      b_ = std::max(a, b);
-    }
-
-    bool operator==(const EdgeKey &rhs) const {
-      return a_ == rhs.a_ && b_ == rhs.b_;
-    }
-
-    std::size_t operator()(const EdgeKey &key) const {
-      return key.a_ ^ (key.b_ << 1);
-    }
-
-  private:
-    h_index a_{0};
-    h_index b_{0};
-  };
   // (min(va, vb), max(va, vb)) -> half_edges even index
-  std::unordered_map<EdgeKey, h_index, EdgeKey>
-      edge_vertices_to_edge_index_map_;
+  std::unordered_map<EdgeKey, h_index> edge_vertices_to_edge_index_map_;
   h_index boundary_start_;
 
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS

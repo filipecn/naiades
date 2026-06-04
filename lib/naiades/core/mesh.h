@@ -24,8 +24,8 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2026-03-28
 
+#include <naiades/core/element_set.h>
 #include <naiades/core/geometry.h>
-#include <naiades/core/neighbourhood.h>
 #include <naiades/core/topology.h>
 #include <naiades/numeric/blas.h>
 
@@ -36,7 +36,7 @@ namespace naiades::core {
 /// \brief Interface for 2-dimensional numeric discretization meshes.
 /// A discretization mesh holds geometric and topological information that fully
 /// represents a spatial discretization structure.
-class Mesh2 : public Topology, public Geometry2, public NeighbourhoodSet {
+class Mesh2 : public Geometry2, public Topology {
 public:
   using Ptr = hermes::Ref<Mesh2>;
 
@@ -48,6 +48,9 @@ public:
       hermes::geo::point2 center;
       h_index local_index;
       h_index global_index;
+      Element element;
+      ElementIndex globalIndex() const;
+      ElementIndex localIndex() const;
     };
 
     ElementInstance operator*() const;
@@ -57,11 +60,10 @@ public:
 
   private:
     friend class element_view;
-    iterator(const Mesh2 *mesh, const Element &loc, h_index index);
+    iterator(const Mesh2 *mesh, const ElementIndex &iloc);
 
     const Mesh2 *mesh_;
-    Element loc_;
-    h_index local_index_;
+    ElementIndex iloc_;
   };
 
   class element_view {
@@ -85,12 +87,6 @@ public:
   numeric::Scalar x(const Element &loc) const;
   /// \return center's y coordinate.
   numeric::Scalar y(const Element &loc) const;
-
-  // bring center method to this scope so new center methods do not
-  // shadow it
-  using Geometry2::center;
-
-  hermes::geo::point2 center(const ElementIndex &e_index) const;
 };
 
 } // namespace naiades::core

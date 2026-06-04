@@ -20,17 +20,26 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   utils.h
+/// \file   topology.cpp
 /// \author FilipeCN (filipedecn@gmail.com)
-/// \date   2026-04-20
+/// \date   2026-03-28
 
-#pragma once
+#include <naiades/core/element_set.h>
 
-#include <naiades/geo/he.h>
+namespace naiades::core {
 
-namespace naiades::geo {
+ElementIndex ElementSet::localIndex(const ElementIndex &iloc) const {
+  if (iloc.index.isGlobal())
+    return {iloc.element,
+            Index::local(*iloc.index - elementIndexOffset(iloc.element))};
+  return iloc;
+}
 
-///
-Result<HE2> triangulate(std::vector<hermes::geo::point2> &points);
+ElementIndex ElementSet::globalIndex(const ElementIndex &iloc) const {
+  if (iloc.index.isLocal())
+    return {iloc.element,
+            Index::global(*iloc.index + elementIndexOffset(iloc.element))};
+  return iloc;
+}
 
-} // namespace naiades::geo
+} // namespace naiades::core

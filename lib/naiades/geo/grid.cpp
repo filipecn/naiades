@@ -24,6 +24,7 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
+#include "naiades/core/element.h"
 #include <naiades/geo/grid.h>
 
 #include <naiades/numeric/boundary.h>
@@ -85,15 +86,15 @@ hermes::geo::vec2 Grid2::gridOffset(core::Element loc) const {
 
 hermes::geo::bounds::bbox2 Grid2::bbounds() const {
   return hermes::geo::bounds::bbox2(
-      center(core::Element::Type::VERTEX, 0),
-      center(core::Element::Type::VERTEX,
-             flatIndex(core::Element::Type::VERTEX,
-                       hermes::index2(resolution_.width, resolution_.height))));
+      center(core::ElementIndex::global(core::Element::Type::VERTEX, 0)),
+      center(core::ElementIndex::global(
+          core::Element::Type::VERTEX,
+          flatIndex(core::Element::Type::VERTEX,
+                    hermes::index2(resolution_.width, resolution_.height)))));
 }
 
-hermes::geo::normal2 Grid2::normal(core::Element loc,
-                                   h_index flat_index) const {
-  if (loc.is(core::element_primitive_bits::face)) {
+hermes::geo::normal2 Grid2::normal(const core::ElementIndex &iloc) const {
+  if (iloc.element.is(core::element_primitive_bits::face)) {
     // by design the vertices of a face are sorted in bottom->up, left->right
     // order:
     //            ^
@@ -107,15 +108,17 @@ hermes::geo::normal2 Grid2::normal(core::Element loc,
     //            v
     // and for all the edges in the iterior of the grid, we follow the original
     // order.
-    auto vertex_indices = indices(loc, flat_index, core::Element::vertex());
+    auto vertex_indices = indices(iloc, core::Element::vertex());
     HERMES_ASSERT(vertex_indices.size() == 2);
-    auto edge = center(core::Element::vertex(), vertex_indices[1]) -
-                center(core::Element::vertex(), vertex_indices[0]);
+    auto edge = center(core::ElementIndex::global(core::Element::vertex(),
+                                                  vertex_indices[1])) -
+                center(core::ElementIndex::global(core::Element::vertex(),
+                                                  vertex_indices[0]));
     // we choose left or right based on the lower boundaries (left|bottom)
-    if (loc == core::Element::Type::HORIZONTAL_FACE) {
-      return {index(loc, flat_index).j == 0 ? edge.right() : edge.left()};
+    if (iloc.element == core::Element::Type::HORIZONTAL_FACE) {
+      return {index(iloc).j == 0 ? edge.right() : edge.left()};
     } else {
-      return {index(loc, flat_index).i == 0 ? edge.left() : edge.right()};
+      return {index(iloc).i == 0 ? edge.left() : edge.right()};
     }
   }
   // other type of elements have no normal
@@ -169,14 +172,22 @@ h_size Grid2::flatIndex(core::Element loc, const hermes::index2 &index) const {
   return elementIndexOffset(loc) + index.j * res.width + index.i;
 }
 
-hermes::index2 Grid2::index(core::Element loc, h_size flat_index) const {
-  // force face alignment based on index
-  if (loc.is(core::element_primitive_bits::face))
-    loc = faceType(flat_index);
-  auto res = resolution(loc);
-  auto local_flat_index = flat_index - elementIndexOffset(loc);
-  return hermes::index2(local_flat_index % res.width,
-                        local_flat_index / res.width);
+core::ElementIndex
+Grid2::computeGlobalIndex(const core::ElementIndex &iloc) const {
+  if (iloc.element.is(core::element_primitive_bits::face)) {
+    // general face indices have local == global values
+    if (*iloc.index >= elementIndexOffset(core::Element::Y_FACE))
+      return core::ElementIndex::global(core::Element::Y_FACE, iloc.index);
+    return core::ElementIndex::global(core::Element::X_FACE, iloc.index);
+  }
+  return globalIndex(iloc);
+}
+
+hermes::index2 Grid2::index(const core::ElementIndex &iloc) const {
+  auto g_iloc = computeGlobalIndex(iloc);
+  auto l_iloc = localIndex(g_iloc);
+  auto res = resolution(g_iloc.element);
+  return hermes::index2(l_iloc.index % res.width, l_iloc.index / res.width);
 }
 
 hermes::geo::point2 Grid2::center(core::Element loc,
@@ -217,11 +228,10 @@ Grid2::gridPosition(core::Element loc,
           (world_position.y - o.y) / cell_size_.y};
 }
 
-hermes::geo::point2 Grid2::center(core::Element loc, h_size flat_index) const {
-  // force face alignment based on index
-  if (loc.is(core::element_primitive_bits::face))
-    loc = faceType(flat_index);
-  return center(loc, index(loc, flat_index));
+hermes::geo::point2 Grid2::center(const core::ElementIndex &iloc) const {
+  auto g_iloc = computeGlobalIndex(iloc);
+  auto ij = index(g_iloc);
+  return center(g_iloc.element, ij);
 }
 
 std::vector<hermes::geo::point2> Grid2::centers(core::Element loc) const {
@@ -247,21 +257,21 @@ std::vector<hermes::geo::point2> Grid2::centers(core::Element loc) const {
   return ps;
 }
 
-std::vector<h_size> Grid2::indices(core::Element element, h_index flat_index,
+std::vector<h_size> Grid2::indices(const core::ElementIndex &iloc,
                                    core::Element sub_element) const {
   // vertices have no sub elements
-  if (element == core::Element::VERTEX)
+  if (iloc.element == core::Element::VERTEX)
     return {};
   // faces have only vertices as sub-elements
-  if (element.is(core::element_primitive_bits::face) &&
+  if (iloc.element.is(core::element_primitive_bits::face) &&
       !sub_element.is(core::element_primitive_bits::vertex))
     return {};
 
   std::vector<h_size> is;
-  auto ij = index(element, flat_index);
+  auto ij = index(iloc);
   const hermes::range2 sub_range(resolution(sub_element));
 
-  if (element == core::Element::CELL) {
+  if (iloc.element == core::Element::CELL) {
     if (sub_element == core::Element::Type::VERTEX) {
       is.emplace_back(safeFlatIndex(sub_element, ij.plus(0, 0)));
       is.emplace_back(safeFlatIndex(sub_element, ij.plus(1, 0)));
@@ -289,10 +299,10 @@ std::vector<h_size> Grid2::indices(core::Element element, h_index flat_index,
     } else {
       HERMES_NOT_IMPLEMENTED;
     }
-  } else if (element == core::Element::Type::HORIZONTAL_FACE) {
+  } else if (iloc.element == core::Element::Type::HORIZONTAL_FACE) {
     is.emplace_back(safeFlatIndex(sub_element, ij.plus(0, 0)));
     is.emplace_back(safeFlatIndex(sub_element, ij.plus(1, 0)));
-  } else if (element == core::Element::Type::VERTICAL_FACE) {
+  } else if (iloc.element == core::Element::Type::VERTICAL_FACE) {
     is.emplace_back(safeFlatIndex(sub_element, ij.plus(0, 0)));
     is.emplace_back(safeFlatIndex(sub_element, ij.plus(0, 1)));
   } else {
@@ -337,30 +347,33 @@ std::vector<h_size> Grid2::boundaryIndices(core::Element loc) const {
   return b;
 }
 
-core::element_alignments Grid2::elementAlignment(core ::Element loc,
-                                                 h_size index) const {
-  if (loc.is(core::element_primitive_bits::face)) {
-    return index < elementCount(core::Element::Type::X_FACE)
+core::element_alignments
+Grid2::elementAlignment(const core ::ElementIndex &iloc) const {
+  if (iloc.element.is(core::element_primitive_bits::face)) {
+    return iloc.index < elementCount(core::Element::Type::X_FACE)
                ? core::element_alignment_bits::x
                : core::element_alignment_bits::y;
-  }
+  } else if (iloc.element == core::Element::Type::X_FACE)
+    return core::element_alignment_bits::x;
+  else if (iloc.element == core::Element::Type::Y_FACE)
+    return core::element_alignment_bits::y;
   return core::element_alignment_bits::none;
 }
 
-core::element_orientations Grid2::elementOrientation(core ::Element loc,
-                                                     h_size index) const {
-  if (loc.is(core::element_primitive_bits::face)) {
-    if (index < elementCount(core::Element::Type::X_FACE)) {
+core::element_orientations
+Grid2::elementOrientation(const core ::ElementIndex &iloc) const {
+  if (iloc.element.is(core::element_primitive_bits::face)) {
+    if (iloc.index < elementCount(core::Element::Type::X_FACE)) {
       auto res = resolution(core::Element::Type::X_FACE);
       // x alignment
-      if (index < res.width)
+      if (iloc.index < res.width)
         return core::element_orientation_bits::neg_y;
-      if (index > res.total() - res.width)
+      if (iloc.index > res.total() - res.width)
         return core::element_orientation_bits::y;
       return core::element_orientation_bits::any_y;
     } else {
       auto res = resolution(core::Element::Type::Y_FACE);
-      auto i = index - elementIndexOffset(core::Element::Y_FACE);
+      auto i = iloc.index - elementIndexOffset(core::Element::Y_FACE);
       // y alignment
       if (i % res.width == 0)
         return core::element_orientation_bits::neg_x;
@@ -372,9 +385,10 @@ core::element_orientations Grid2::elementOrientation(core ::Element loc,
   return core::element_orientation_bits::none;
 }
 
-bool Grid2::isBoundary(core::Element loc, h_size i) const {
-  auto res = resolution(loc);
-  auto ij = index(loc, i);
+bool Grid2::isBoundary(const core::ElementIndex &iloc) const {
+  auto g_iloc = computeGlobalIndex(iloc);
+  auto res = resolution(g_iloc.element);
+  auto ij = index(g_iloc);
   return ij.i <= 0 || ij.i >= static_cast<i32>(res.width) - 1 || ij.j <= 0 ||
          ij.j >= static_cast<i32>(res.height) - 1;
 }
@@ -384,18 +398,15 @@ h_size Grid2::interiorNeighbour(const core::ElementIndex &boundary_element,
   HERMES_ASSERT(
       boundary_element.element.is(core::element_primitive_bits::face));
   HERMES_ASSERT(interior_loc.is(core::element_primitive_bits::cell));
-  auto loc = faceType(*boundary_element.index);
-  auto flat_index =
-      *boundary_element.index +
-      (boundary_element.index.isLocal() ? elementIndexOffset(loc) : 0);
-  auto bij = index(loc, flat_index);
-  auto res = resolution(loc);
-  if (loc == core::Element::Type::HORIZONTAL_FACE) {
+  auto g_iloc = computeGlobalIndex(boundary_element);
+  auto bij = index(g_iloc);
+  auto res = resolution(g_iloc.element);
+  if (g_iloc.element == core::Element::Type::HORIZONTAL_FACE) {
     if (bij.j == 0)
       return safeFlatIndex(interior_loc, bij);
     if (bij.j == static_cast<i32>(res.height) - 1)
       return safeFlatIndex(interior_loc, bij.down());
-  } else if (loc == core::Element::Type::VERTICAL_FACE) {
+  } else if (g_iloc.element == core::Element::Type::VERTICAL_FACE) {
     if (bij.i == 0)
       return safeFlatIndex(interior_loc, bij);
     if (bij.i == static_cast<i32>(res.width) - 1)
@@ -459,27 +470,24 @@ core::Neighbour Grid2::neighbour(core::Element loc, const hermes::index2 &index,
   return {};
 }
 
-core::Element Grid2::faceType(h_size flat_index) const {
-  if (flat_index >= elementIndexOffset(core::Element::Y_FACE))
-    return core::Element::Y_FACE;
-  return core::Element::X_FACE;
-}
-
-std::vector<core::Neighbour> Grid2::star(core::Element loc, h_size index,
-                                         core::Element boundary_loc) const {
+std::vector<core::Neighbour>
+Grid2::star(const core::ElementIndex &eloc, core::Element star_loc,
+            std::optional<core::Element> boundary_loc) const {
   HERMES_NOT_IMPLEMENTED;
   return {};
 }
 
-std::vector<core::Neighbour> Grid2::ring(core::Element loc, h_size index,
-                                         core::Element boundary_loc) const {
+std::vector<core::Neighbour>
+Grid2::k_ring(const core::ElementIndex &eloc, h_size k, core::Element ring_loc,
+              std::optional<core::Element> boundary_loc) const {
   HERMES_NOT_IMPLEMENTED;
   return {};
 }
 
 std::vector<std::pair<h_size, real_t>>
-Grid2::neighbours(core::Element loc, h_size index,
-                  core::Element neighbour_loc) const {
+Grid2::neighbours(const core::ElementIndex &eloc, h_size radius,
+                  core::Element neighbour_loc,
+                  std::optional<core::Element> boundary_loc) const {
   HERMES_NOT_IMPLEMENTED;
   return {};
 }
@@ -489,7 +497,7 @@ Grid2::neighbours(core::Element loc, h_size index,
 namespace naiades::numeric {
 
 const geo::Grid2 &Grid2FD::mesh() const {
-  return *reinterpret_cast<const geo::Grid2 *>(topology_.get());
+  return *static_cast<const geo::Grid2 *>(topology_.get());
 }
 
 Result<Grid2FD> Grid2FD::Config::build() const {
@@ -512,8 +520,7 @@ DiscreteOperator Grid2FD::derivative(derivative_bits d, h_size index,
   HERMES_ASSERT(it != boundaries_.end() && topology_);
 
   // get mesh
-  const geo::Grid2 *mesh =
-      reinterpret_cast<const geo::Grid2 *>(topology_.get());
+  const geo::Grid2 *mesh = static_cast<const geo::Grid2 *>(topology_.get());
   // get boundary
   auto &boundary = it->second;
 
@@ -523,7 +530,7 @@ DiscreteOperator Grid2FD::derivative(derivative_bits d, h_size index,
     else
       op.add(*n.element_index.index, k);
   };
-  auto ij = mesh->index(sym.symbol.loc, index);
+  auto ij = mesh->index(core::ElementIndex::global(sym.symbol.loc, index));
   if (d == derivative_bits::x) {
     auto left = mesh->neighbour(sym.symbol.loc, ij,
                                 core::element_orientation_bits::left,

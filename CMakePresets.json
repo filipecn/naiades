@@ -7,7 +7,8 @@
       "cacheVariables": {
         "NAIADES_INCLUDE_DEBUG_TRAITS": "ON",
         "NAIADES_BUILD_TESTS": "ON",
-        "NAIADES_BUILD_EXAMPLES": "ON"
+        "NAIADES_BUILD_EXAMPLES": "ON",
+        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
       }
     },
     {

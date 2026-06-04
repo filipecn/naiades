@@ -156,7 +156,6 @@ struct Index {
 
   Index() : space_{IndexSpace::GLOBAL}, value_{s_invalid_value_} {}
   Index(h_size value, IndexSpace ctx) : space_{ctx}, value_{value} {}
-
   Index &operator=(h_size i) {
     value_ = i;
     return *this;
@@ -174,6 +173,12 @@ struct Index {
   bool isGlobal() const { return space_ == IndexSpace::GLOBAL; }
 
   IndexSpace space() const { return space_; }
+
+  Index &operator++() {
+    if (value_ != s_invalid_value_)
+      value_++;
+    return *this;
+  }
 
 private:
   IndexSpace space_{IndexSpace::GLOBAL};
@@ -361,8 +366,16 @@ private:
 
 struct ElementIndex {
   static ElementIndex global(Element loc, h_size i);
-  Index index{Index::invalid()};
+  static ElementIndex local(Element loc, h_size i);
+
   Element element{Element::Type::ANY};
+  Index index{Index::invalid()};
+
+  ElementIndex();
+  ElementIndex(Element loc, Index i);
+
+  ElementIndex &operator++();
+  bool operator==(const ElementIndex &rhs) const;
 };
 
 #undef NAIADES_ELEMENT_MASK

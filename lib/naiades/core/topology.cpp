@@ -28,14 +28,20 @@
 
 namespace naiades::core {
 
-std::vector<std::vector<h_size>>
-Topology::indices(core::Element loc, core::Element sub_loc) const {
+std::vector<std::vector<h_size>> Topology::indices(Element loc,
+                                                   Element sub_loc) const {
   std::vector<std::vector<h_size>> is;
   h_size n = elementCount(loc);
   for (h_index i = 0; i < n; ++i) {
-    is.emplace_back(indices(loc, i + elementIndexOffset(loc), sub_loc));
+    is.emplace_back(indices(
+        ElementIndex::global(loc, i + elementIndexOffset(loc)), sub_loc));
   }
   return is;
+}
+
+std::vector<Neighbour> Topology::star(const ElementIndex &iloc,
+                                      Element boundary_loc) const {
+  return star(iloc, iloc.element, {boundary_loc});
 }
 
 } // namespace naiades::core

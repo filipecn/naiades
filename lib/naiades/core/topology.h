@@ -20,41 +20,40 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   topology.h
+/// \file   neighbourhood.h
 /// \author FilipeCN (filipedecn@gmail.com)
-/// \date   2025-06-07
-/// \brief  Topology interface.
+/// \date   2026-17-01
+/// \brief  Stencil interface.
 
 #pragma once
 
 #include <naiades/base/result.h>
 #include <naiades/core/element.h>
+#include <naiades/core/element_set.h>
 
 #include <hermes/core/ref.h>
 #include <hermes/geometry/point.h>
 
+#include <optional>
 #include <vector>
 
 namespace naiades::core {
 
-/// \brief Interface for discretization topologies.
-/// A derived topology holds the topology of a discretization that is commonly
-/// required by simulation algorithms. The discretization topology may have the
-/// relationship of different element types.
-class Topology {
+/// \brief Discretization neighbour.
+struct Neighbour {
+  ElementIndex element_index;
+  real_t distance;
+};
+
+/// \brief Interface for discretization neighbourhoods.
+/// A stencil represents a set of discretization elements grouped by some
+/// criteria, such as neighbourhood.
+class Topology : public ElementSet {
 public:
   using Ptr = hermes::Ref<Topology>;
 
-  Topology() noexcept {}
-  virtual ~Topology() noexcept {}
+  // elements
 
-  /// \param loc
-  /// \return Total number of locations of a given element.
-  virtual h_size elementCount(Element loc) const = 0;
-  /// Some structures may store elements in single sequences so element
-  /// indices may have an offset.
-  /// @param loc
-  virtual h_size elementIndexOffset(Element loc) const = 0;
   /// \brief Get the lists of indices of an element type.
   /// Elements may consist of a set of different sub-elements.
   /// Ex: A polygonal cell contains a set of vertices and a set of faces.
@@ -68,32 +67,53 @@ public:
   /// \param index
   /// \param sub_element
   /// \return The lists of sub-elements of the given element instance.
-  virtual std::vector<h_size> indices(Element element, h_index index,
+  virtual std::vector<h_size> indices(const ElementIndex &iloc,
                                       Element sub_element) const = 0;
-  /// Get the indices of an element at the boundary.
+
+  // boundary
+
+  /// Get the indices of an element type  at the boundary.
   /// \note This returns a copy of the indices.
   /// \param loc Element.
   /// \return A Boundary object with the indices and groups of the boundary
   ///         elements.
   virtual std::vector<h_size> boundaryIndices(Element loc) const = 0;
-  /// Get element alignment.
-  /// \note This considers the element primitive.
-  /// \param loc Element.
-  /// \param index Element index.
-  /// \return The element alignment at the given index.
-  virtual element_alignments elementAlignment(Element loc,
-                                              h_size index) const = 0;
-  /// Get element orientation.
-  /// \note This considers the element primitive.
-  /// \param loc Element.
-  /// \param index Element index.
-  /// \return The element orientation at the given index.
-  virtual element_orientations elementOrientation(Element loc,
-                                                  h_size index) const = 0;
-  /// \param loc Element.
-  /// \param index Element index.
+  /// \param iloc Element location index.
   /// \return True if this is the index of a boundary element.
-  virtual bool isBoundary(Element loc, h_size index) const = 0;
+  virtual bool isBoundary(const ElementIndex &iloc) const = 0;
+
+  // neighbourhood
+
+  /// \brief The star neighbourhood of a given element.
+  /// The star consists of elements directly connected to a central element.
+  /// \param iloc Center element index.
+  /// \param star_loc Star elements location.
+  /// \param boundary_loc Boundary elements included in the star.
+  /// \return List of neighbours of the given element.
+  virtual std::vector<Neighbour>
+  star(const ElementIndex &iloc, Element star_loc,
+       std::optional<Element> boundary_loc) const = 0;
+  std::vector<Neighbour> star(const ElementIndex &iloc,
+                              Element boundary_loc) const;
+  /// The k-ring consists of the set of concentric elements
+  /// surrounding the central element.
+  /// \param iloc Center element index.
+  /// \param k ring topological radius.
+  /// \param boundary_loc Boundary elements included in the ring.
+  /// \return List of neighbours of the given element.
+  virtual std::vector<Neighbour>
+  k_ring(const ElementIndex &iloc, h_size k, Element ring_loc,
+         std::optional<Element> boundary_loc) const = 0;
+  /// \brief The direct neighbourhood of elements for a given element.
+  /// The neighborhood (here, the 1-neighbour) consists of the set of elements
+  /// of topological distance of 1.
+  /// \param iloc Center element index.
+  /// \param radius Topological distance.
+  /// \param neighbour_loc neighbour element type.
+  /// \return List of pairs neighbour <index, distance> of the given element.
+  virtual std::vector<std::pair<h_size, real_t>>
+  neighbours(const ElementIndex &iloc, h_size radius, Element neighbour_loc,
+             std::optional<core::Element> boundary_loc) const = 0;
   /// \param boundary_element
   /// \param interior_loc
   virtual h_size interiorNeighbour(const ElementIndex &boundary_element,
@@ -101,3 +121,19 @@ public:
 };
 
 } // namespace naiades::core
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::core::Neighbour> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::core::Neighbour &data) {
+    return DebugMessage().addFmt(
+        "[{} dist: {}]", hermes::to_string(data.element_index), data.distance);
+  }
+};
+
+} // namespace hermes
+
+#endif

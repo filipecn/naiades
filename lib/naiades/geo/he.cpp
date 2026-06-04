@@ -24,6 +24,7 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2026-04-08
 
+#include "naiades/core/element.h"
 #include <naiades/geo/he.h>
 
 #include <unordered_set>
@@ -132,7 +133,7 @@ std::vector<h_index> HE2::heLoop(h_index he_index) const {
 
 h_index HE2::addOrientedFace(h_index va, h_index vb) {
   HERMES_ASSERT(va < vertices_.size() && vb < vertices_.size());
-  auto key = HE2::EdgeKey(va, vb);
+  auto key = EdgeKey(va, vb);
   auto it = edge_vertices_to_edge_index_map_.find(key);
   if (it != edge_vertices_to_edge_index_map_.end()) {
     // find out which half edge represents va->vb
@@ -345,10 +346,10 @@ hermes::geo::bounds::bbox2 HE2::bbounds() const {
   return bounds;
 }
 
-hermes::geo::normal2 HE2::normal(core::Element loc, h_index index) const {
-  HERMES_ASSERT(!loc.is(core::element_primitive_bits::cell));
-  if (loc.is(core::element_primitive_bits::face)) {
-    auto he_index = faceHe(index);
+hermes::geo::normal2 HE2::normal(const core::ElementIndex &iloc) const {
+  HERMES_ASSERT(!iloc.element.is(core::element_primitive_bits::cell));
+  if (iloc.element.is(core::element_primitive_bits::face)) {
+    auto he_index = faceHe(iloc.index);
     HERMES_ASSERT(he_index < half_edges_.size());
     // boudary normals point outside
     if (half_edges_[he_index + 1].cell_index == null_index_) {
@@ -361,17 +362,17 @@ hermes::geo::normal2 HE2::normal(core::Element loc, h_index index) const {
   return {};
 }
 
-hermes::geo::point2 HE2::center(core::Element loc, h_size flat_index) const {
-  if (loc.is(core::element_primitive_bits::cell)) {
-    HERMES_ASSERT(flat_index < cells_.size());
-    return cells_[flat_index].center;
+hermes::geo::point2 HE2::center(const core::ElementIndex &iloc) const {
+  if (iloc.element.is(core::element_primitive_bits::cell)) {
+    HERMES_ASSERT(iloc.index < cells_.size());
+    return cells_[iloc.index].center;
   }
-  if (loc.is(core::element_primitive_bits::vertex)) {
-    HERMES_ASSERT(flat_index < vertices_.size());
-    return vertices_[flat_index].position;
+  if (iloc.element.is(core::element_primitive_bits::vertex)) {
+    HERMES_ASSERT(iloc.index < vertices_.size());
+    return vertices_[iloc.index].position;
   }
-  if (loc.is(core::element_primitive_bits::face)) {
-    auto he_index = faceHe(flat_index);
+  if (iloc.element.is(core::element_primitive_bits::face)) {
+    auto he_index = faceHe(iloc.index);
     HERMES_ASSERT(he_index < half_edges_.size());
     return (heStartPosition(he_index) +
             hermes::geo::vec2(heEndPosition(he_index))) /
@@ -417,21 +418,21 @@ h_size HE2::elementIndexOffset(core::Element loc) const {
   return 0;
 }
 
-std::vector<h_size> HE2::indices(core::Element element, h_index index,
+std::vector<h_size> HE2::indices(const core::ElementIndex &iloc,
                                  core::Element sub_element) const {
   // vertices have no sub elements
-  if (element == core::Element::VERTEX)
+  if (iloc.element == core::Element::VERTEX)
     return {};
   // faces have only vertices as sub-elements
-  if (element.is(core::element_primitive_bits::face) &&
+  if (iloc.element.is(core::element_primitive_bits::face) &&
       !sub_element.is(core::element_primitive_bits::vertex))
     return {};
 
   std::vector<h_size> is;
 
-  if (element.is(core::element_primitive_bits::cell)) {
-    HERMES_ASSERT(index < cells_.size());
-    auto loop = heLoop(cells_[index].he_index);
+  if (iloc.element.is(core::element_primitive_bits::cell)) {
+    HERMES_ASSERT(iloc.index < cells_.size());
+    auto loop = heLoop(cells_[iloc.index].he_index);
     if (sub_element.is(core::element_primitive_bits::vertex)) {
       for (auto he : loop)
         is.emplace_back(heStart(he));
@@ -441,8 +442,8 @@ std::vector<h_size> HE2::indices(core::Element element, h_index index,
     } else {
       HERMES_NOT_IMPLEMENTED;
     }
-  } else if (element.is(core::element_primitive_bits::face)) {
-    auto he_index = faceHe(index);
+  } else if (iloc.element.is(core::element_primitive_bits::face)) {
+    auto he_index = faceHe(iloc.index);
     HERMES_ASSERT(he_index < half_edges_.size());
     is.emplace_back(heStart(he_index));
     is.emplace_back(heEnd(he_index));
@@ -480,32 +481,32 @@ std::vector<h_size> HE2::boundaryIndices(core::Element loc) const {
   return boundary_indices;
 }
 
-core::element_alignments HE2::elementAlignment(core::Element loc,
-                                               h_size index) const {
+core::element_alignments
+HE2::elementAlignment(const core::ElementIndex &iloc) const {
   return core::element_alignment_bits::any;
 }
 
-core::element_orientations HE2::elementOrientation(core::Element loc,
-                                                   h_size index) const {
+core::element_orientations
+HE2::elementOrientation(const core::ElementIndex &iloc) const {
   return core::element_orientation_bits::any;
 }
 
-bool HE2::isBoundary(core::Element loc, h_size index) const {
+bool HE2::isBoundary(const core::ElementIndex &iloc) const {
   auto he = null_index_;
-  if (loc.is(core::element_primitive_bits::cell)) {
-    HERMES_ASSERT(index < cells_.size());
-    auto loop = heLoop(cells_[index].he_index);
+  if (iloc.element.is(core::element_primitive_bits::cell)) {
+    HERMES_ASSERT(iloc.index < cells_.size());
+    auto loop = heLoop(cells_[iloc.index].he_index);
     for (auto he : loop)
       if (half_edges_[he].cell_index == null_index_ ||
           half_edges_[heTwin(he)].cell_index == null_index_)
         return true;
     return false;
-  } else if (loc.is(core::element_primitive_bits::face)) {
-    he = faceHe(index);
+  } else if (iloc.element.is(core::element_primitive_bits::face)) {
+    he = faceHe(iloc.index);
     HERMES_ASSERT(he < half_edges_.size());
-  } else if (loc.is(core::element_primitive_bits::vertex)) {
-    HERMES_ASSERT(index < vertices_.size());
-    he = vertices_[index].he_index;
+  } else if (iloc.element.is(core::element_primitive_bits::vertex)) {
+    HERMES_ASSERT(iloc.index < vertices_.size());
+    he = vertices_[iloc.index].he_index;
   } else {
     HERMES_NOT_IMPLEMENTED;
     return false;
@@ -537,34 +538,38 @@ h_size HE2::interiorNeighbour(const core::ElementIndex &boundary_element,
   return 0;
 }
 
-std::vector<core::Neighbour> HE2::star(core::Element loc, h_size index,
-                                       core::Element boundary_loc) const {
+std::vector<core::Neighbour>
+HE2::star(const core::ElementIndex &iloc, core::Element star_loc,
+          std::optional<core::Element> boundary_loc) const {
   std::vector<core::Neighbour> s;
   // insert the center of the star
-  s.push_back(
-      {.element_index = core::ElementIndex::global(loc, index), .distance = 0});
-  auto center_pos = center(loc, index);
-  if (loc.is(core::element_primitive_bits::cell)) {
-    HERMES_ASSERT(index < cells_.size());
-    if (boundary_loc.is(core::element_primitive_bits::face)) {
-      HERMES_ASSERT(cells_[index].he_index < half_edges_.size());
-      for (auto he : heLoop(cells_[index].he_index)) {
+  s.push_back({.element_index = iloc, .distance = 0});
+  auto center_pos = center(iloc);
+  if (iloc.element.is(core::element_primitive_bits::cell)) {
+    HERMES_ASSERT(iloc.index < cells_.size());
+    if (star_loc.is(core::element_primitive_bits::cell)) {
+      HERMES_ASSERT(cells_[iloc.index].he_index < half_edges_.size());
+      for (auto he : heLoop(cells_[iloc.index].he_index)) {
         auto he_t = heTwin(he);
         auto n_cell = half_edges_[he_t].cell_index;
-        if (n_cell == null_index_) {
+        if (n_cell != null_index_) {
+          auto cell_iloc = core::ElementIndex::global(iloc.element, n_cell);
+          s.push_back({.element_index = cell_iloc,
+                       .distance = hermes::geo::distance(center_pos,
+                                                         center(cell_iloc))});
+        } else if (boundary_loc) {
+          HERMES_ASSERT(*boundary_loc == core::Element::FACE);
           // the boundary is represented by the center of the face
           auto n_face = heFace(he_t);
-          s.push_back({.element_index =
-                           core::ElementIndex::global(boundary_loc, n_face),
-                       .distance = hermes::geo::distance(
-                           center_pos, center(boundary_loc, n_face))});
-        } else {
-          s.push_back({.element_index = core::ElementIndex::global(loc, n_cell),
+          auto face_iloc = core::ElementIndex::global(*boundary_loc, n_face);
+          s.push_back({.element_index = face_iloc,
                        .distance = hermes::geo::distance(center_pos,
-                                                         center(loc, n_cell))});
+                                                         center(face_iloc))});
         }
       }
-    } else {
+    } else if (star_loc.is(core::element_primitive_bits::face)) {
+      HERMES_NOT_IMPLEMENTED;
+    } else if (star_loc.is(core::element_primitive_bits::vertex)) {
       HERMES_NOT_IMPLEMENTED;
     }
   } else {
@@ -573,45 +578,17 @@ std::vector<core::Neighbour> HE2::star(core::Element loc, h_size index,
   return s;
 }
 
-std::vector<core::Neighbour> HE2::star(core::Element loc, h_size index,
-                                       core::Element boundary_loc) const {
-  std::vector<core::Neighbour> s;
-  // insert the center of the star
-  s.push_back(
-      {.element_index = core::ElementIndex::global(loc, index), .distance = 0});
-  auto center_pos = center(loc, index);
-  if (loc.is(core::element_primitive_bits::cell)) {
-    HERMES_ASSERT(index < cells_.size());
-    if (boundary_loc.is(core::element_primitive_bits::face)) {
-      HERMES_ASSERT(cells_[index].he_index < half_edges_.size());
-      for (auto he : heLoop(cells_[index].he_index)) {
-        auto he_t = heTwin(he);
-        auto n_cell = half_edges_[he_t].cell_index;
-        if (n_cell == null_index_) {
-          // the boundary is represented by the center of the face
-          auto n_face = heFace(he_t);
-          s.push_back({.element_index =
-                           core::ElementIndex::global(boundary_loc, n_face),
-                       .distance = hermes::geo::distance(
-                           center_pos, center(boundary_loc, n_face))});
-        } else {
-          s.push_back({.element_index = core::ElementIndex::global(loc, n_cell),
-                       .distance = hermes::geo::distance(center_pos,
-                                                         center(loc, n_cell))});
-        }
-      }
-    } else {
-      HERMES_NOT_IMPLEMENTED;
-    }
-  } else {
-    HERMES_NOT_IMPLEMENTED;
-  }
-  return s;
+std::vector<core::Neighbour>
+HE2::k_ring(const core::ElementIndex &iloc, h_size k, core::Element ring_loc,
+            std::optional<core::Element> boundary_loc) const {
+  HERMES_NOT_IMPLEMENTED;
+  return {};
 }
 
 std::vector<std::pair<h_size, real_t>>
-HE2::neighbours(core::Element loc, h_size index,
-                core::Element neighbour_loc) const {
+HE2::neighbours(const core::ElementIndex &iloc, h_size radius,
+                core::Element neighbour_loc,
+                std::optional<core::Element> boundary_loc) const {
   HERMES_NOT_IMPLEMENTED;
   return {};
 }
@@ -621,7 +598,7 @@ HE2::neighbours(core::Element loc, h_size index,
 namespace naiades::numeric {
 
 const geo::HE2 &HE2RBFFD::mesh() const {
-  return *reinterpret_cast<const geo::HE2 *>(topology_.get());
+  return *static_cast<const geo::HE2 *>(topology_.get());
 }
 
 DiscreteOperator HE2RBFFD::derivative(derivative_bits d, h_size index,
@@ -633,7 +610,7 @@ DiscreteOperator HE2RBFFD::derivative(derivative_bits d, h_size index,
   HERMES_ASSERT(it != boundaries_.end() && topology_);
 
   // get mesh
-  const geo::HE2 *mesh = reinterpret_cast<const geo::HE2 *>(topology_.get());
+  const geo::HE2 *mesh = static_cast<const geo::HE2 *>(topology_.get());
   // get boundary
   auto &boundary = it->second;
 

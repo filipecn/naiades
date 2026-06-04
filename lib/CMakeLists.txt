@@ -6,10 +6,10 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/base/result.h
 
   ${NAIADES_SOURCE_DIR}/naiades/core/element.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/element_set.h
   ${NAIADES_SOURCE_DIR}/naiades/core/field.h
   ${NAIADES_SOURCE_DIR}/naiades/core/geometry.h
   ${NAIADES_SOURCE_DIR}/naiades/core/mesh.h
-  ${NAIADES_SOURCE_DIR}/naiades/core/neighbourhood.h
   ${NAIADES_SOURCE_DIR}/naiades/core/topology.h
 
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.h
@@ -26,7 +26,7 @@ set(NAIADES_HEADERS
 
   ${NAIADES_SOURCE_DIR}/naiades/sampling/sampler.h
   ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.h
-  
+
   ${NAIADES_SOURCE_DIR}/naiades/solvers/convection.h
   ${NAIADES_SOURCE_DIR}/naiades/solvers/sim_control.h
   # ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.h
@@ -39,10 +39,11 @@ set(NAIADES_HEADERS
 
 set(NAIADES_SOURCES
   ${NAIADES_SOURCE_DIR}/naiades/core/element.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/core/element_set.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/mesh.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/topology.cpp
-  
+
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
   ${NAIADES_SOURCE_DIR}/naiades/geo/he.cpp
   ${NAIADES_SOURCE_DIR}/naiades/geo/utils.cpp
@@ -58,7 +59,7 @@ set(NAIADES_SOURCES
 
   ${NAIADES_SOURCE_DIR}/naiades/solvers/sim_control.cpp
   # ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.cpp
-  
+
   ${NAIADES_SOURCE_DIR}/naiades/utils/fields.cpp
   ${NAIADES_SOURCE_DIR}/naiades/utils/io.cpp
   ${NAIADES_SOURCE_DIR}/naiades/utils/math.cpp
@@ -68,7 +69,7 @@ set(NAIADES_SOURCES
 add_library(naiades STATIC ${NAIADES_SOURCES} ${NAIADES_HEADERS})
 add_dependencies(naiades hermes)
 target_include_directories(
-  naiades PRIVATE  
+  naiades PRIVATE
   ${DEPS_INCLUDE_DIRS}
   ${NAIADES_SOURCE_DIR}
 )
@@ -80,15 +81,15 @@ if(NAIADES_INCLUDE_DEBUG_TRAITS)
   target_compile_definitions(naiades PUBLIC HERMES_INCLUDE_DEBUG_TRAITS)
 endif(NAIADES_INCLUDE_DEBUG_TRAITS)
 
-  set_target_properties(
+set_target_properties(
     naiades
     PROPERTIES CXX_STANDART 23
     CXX_STANDARD_REQUIRED YES
     LINKER_LANGUAGE CXX
   )
 
- if(CMAKE_COMPILER_IS_GNUCXX)
-    target_compile_options(
+if(CMAKE_COMPILER_IS_GNUCXX)
+  target_compile_options(
       naiades
       PUBLIC
       # cuda
@@ -105,9 +106,9 @@ endif(NAIADES_INCLUDE_DEBUG_TRAITS)
       "$<$<CONFIG:Debug>:-g;-pg;-fprofile-arcs;-ftest-coverage;--coverage;-fPIC>"
       "$<$<CONFIG:Release>:-O3;-fPIC;>")
 elseif(MSVC)
-    target_compile_options(
-      naiades 
-      PUBLIC 
+  target_compile_options(
+      naiades
+      PUBLIC
       "$<$<CONFIG:Debug>:/Zc:__cplusplus;/Zc:preprocessor;/EHsc;/MDd>"
       "$<$<CONFIG:Release>:/Zc:__cplusplus;/Zc:preprocessor/EHsc;/MD>")
 endif(CMAKE_COMPILER_IS_GNUCXX)
@@ -119,12 +120,12 @@ endif(CMAKE_COMPILER_IS_GNUCXX)
 #pybind11_add_module(naiades_py naiades_py.cpp)
 #
 #add_dependencies(naiades_py hermes)
-#target_link_libraries(naiades_py PUBLIC 
+#target_link_libraries(naiades_py PUBLIC
 #  DEPS
 #  naiades
 #)
 #
-#target_include_directories(naiades_py PUBLIC 
+#target_include_directories(naiades_py PUBLIC
 #  ${DEPS_INCLUDE_DIRS}
 #  ${NAIADES_SOURCE_DIR})
 #

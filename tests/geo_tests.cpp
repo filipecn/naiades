@@ -121,7 +121,11 @@ TEST_CASE("regular grid 2", "[geo]") {
       for (auto ij :
            hermes::range2(grid.resolution(core::Element::Type::CELL))) {
         REQUIRE(i == grid.flatIndex(core::Element::Type::CELL, ij));
-        REQUIRE(ij == grid.index(core::Element::Type::CELL, i));
+        HERMES_LOG_VARIABLE(ij);
+        HERMES_LOG_VARIABLE(grid.index(
+            core::ElementIndex::global(core::Element::Type::CELL, i)));
+        REQUIRE(ij == grid.index(core::ElementIndex::global(
+                          core::Element::Type::CELL, i)));
         i++;
       }
       REQUIRE(i == grid.elementCount(core::Element::Type::CELL));
@@ -179,11 +183,12 @@ TEST_CASE("regular grid 2", "[geo]") {
     }
     SECTION("position") {
       hermes::index2 ij(5, 1);
-      int flat_index = grid.flatIndex(core::Element::Type::CELL, ij);
+      auto flat_index =
+          core::Index::global(grid.flatIndex(core::Element::Type::CELL, ij));
       hermes::geo::point2 p = {(0.5f + ij.i) * cell_size.x,
                                (0.5f + ij.j) * cell_size.y};
       REQUIRE(grid.center(core::Element::Type::CELL, ij) == p);
-      REQUIRE(grid.center(core::Element::Type::CELL, flat_index) == p);
+      REQUIRE(grid.center({core::Element::Type::CELL, flat_index}) == p);
       hermes::geo::point2 gp(5.5, 1.5);
       REQUIRE(grid.center(core::Element::Type::CELL, gp) ==
               hermes::geo::point2(5.5 * 20 + 10, 1.5 * 10 + 5));
@@ -195,21 +200,22 @@ TEST_CASE("regular grid 2", "[geo]") {
     auto grid = Grid2::Config().setResolution({M, N}).build().value();
     SECTION("flat index") {
       { // x-faces
-        h_size i = 0;
+        auto i = core::Index::global(0);
         for (auto ij :
              hermes::range2(grid.resolution(core::Element::Type::X_FACE))) {
           REQUIRE(i == grid.flatIndex(core::Element::Type::X_FACE, ij));
-          REQUIRE(ij == grid.index(core::Element::Type::X_FACE, i));
-          i++;
+          REQUIRE(ij == grid.index({core::Element::Type::X_FACE, i}));
+          ++i;
         }
       }
       { // y-faces
-        h_size i = grid.resolution(core::Element::Type::X_FACE).total();
+        auto i = core::Index::global(
+            grid.resolution(core::Element::Type::X_FACE).total());
         for (auto ij :
              hermes::range2(grid.resolution(core::Element::Type::Y_FACE))) {
           REQUIRE(i == grid.flatIndex(core::Element::Type::Y_FACE, ij));
-          REQUIRE(ij == grid.index(core::Element::Type::Y_FACE, i));
-          i++;
+          REQUIRE(ij == grid.index({core::Element::Type::Y_FACE, i}));
+          ++i;
         }
       }
     }
@@ -263,8 +269,8 @@ TEST_CASE("regular grid 2", "[geo]") {
         for (auto element : elements) {
           auto range = hermes::range2(grid.resolution(element));
           for (auto ij : range) {
-            auto fij = grid.safeFlatIndex(element, ij);
-            REQUIRE(grid.isBoundary(element, fij) == range.isBoundary(ij));
+            auto fij = core::Index::global(grid.safeFlatIndex(element, ij));
+            REQUIRE(grid.isBoundary({element, fij}) == range.isBoundary(ij));
           }
         }
       }
@@ -278,76 +284,80 @@ TEST_CASE("regular grid 2", "[geo]") {
     }
     SECTION("alignment") {
       auto check_f = [&](core::Element element) {
-        for (h_size i = 0; i < grid.elementCount(element); ++i)
-          REQUIRE(grid.elementAlignment(element, i) ==
+        for (auto i = core::Index::global(0); i < grid.elementCount(element);
+             ++i)
+          REQUIRE(grid.elementAlignment({element, i}) ==
                   core::element_alignment_bits::none);
       };
       auto elements = {core::Element::Type::CELL, core::Element::Type::VERTEX};
       for (auto element : elements)
         check_f(element);
       { // x-faces
-        h_size i = 0;
+        auto i = core::Index::global(0);
         for (auto ij :
              hermes::range2(grid.resolution(core::Element::Type::X_FACE))) {
           HERMES_UNUSED_VARIABLE(ij);
-          REQUIRE(grid.elementAlignment(core::Element::Type::FACE, i) ==
+          REQUIRE(grid.elementAlignment({core::Element::Type::FACE, i}) ==
                   core::element_alignment_bits::x);
-          i++;
+          ++i;
         }
       }
       { // y-faces
-        h_size i = grid.resolution(core::Element::Type::X_FACE).total();
+        auto i = core::Index::global(
+            grid.resolution(core::Element::Type::X_FACE).total());
         for (auto ij :
              hermes::range2(grid.resolution(core::Element::Type::Y_FACE))) {
           HERMES_UNUSED_VARIABLE(ij);
-          REQUIRE(grid.elementAlignment(core::Element::Type::FACE, i) ==
+          REQUIRE(grid.elementAlignment({core::Element::Type::FACE, i}) ==
                   core::element_alignment_bits::y);
-          i++;
+          ++i;
         }
       }
     }
     SECTION("orientation") {
       auto check_f = [&](core::Element element) {
-        for (h_size i = 0; i < grid.elementCount(element); ++i)
-          REQUIRE(grid.elementOrientation(element, i) ==
+        for (auto i = core::Index::global(0); i < grid.elementCount(element);
+             ++i)
+          REQUIRE(grid.elementOrientation({element, i}) ==
                   core::element_orientation_bits::none);
       };
       auto elements = {core::Element::Type::CELL, core::Element::Type::VERTEX};
       for (auto element : elements)
         check_f(element);
       { // x-faces
-        h_size i = 0;
+        auto i = core::Index::global(0);
         for (auto ij :
              hermes::range2(grid.resolution(core::Element::Type::X_FACE))) {
           HERMES_UNUSED_VARIABLE(ij);
           if (i < M)
-            REQUIRE(grid.elementOrientation(core::Element::Type::FACE, i) ==
+            REQUIRE(grid.elementOrientation({core::Element::Type::FACE, i}) ==
                     core::element_orientation_bits::neg_y);
           else if (i > M * (N + 1) - M)
-            REQUIRE(grid.elementOrientation(core::Element::Type::FACE, i) ==
+            REQUIRE(grid.elementOrientation({core::Element::Type::FACE, i}) ==
                     core::element_orientation_bits::y);
           else
-            REQUIRE(grid.elementOrientation(core::Element::Type::FACE, i) ==
+            REQUIRE(grid.elementOrientation({core::Element::Type::FACE, i}) ==
                     core::element_orientation_bits::any_y);
-          i++;
+          ++i;
         }
       }
       { // y-faces
-        h_size i = grid.resolution(core::Element::Type::X_FACE).total();
+        auto i = core::Index::global(
+            grid.resolution(core::Element::Type::X_FACE).total());
         auto fij = 0;
         for (auto ij :
              hermes::range2(grid.resolution(core::Element::Type::Y_FACE))) {
           HERMES_UNUSED_VARIABLE(ij);
           if (fij % (M + 1) == 0)
-            REQUIRE(grid.elementOrientation(core::Element::Type::FACE, i) ==
+            REQUIRE(grid.elementOrientation({core::Element::Type::FACE, i}) ==
                     core::element_orientation_bits::neg_x);
           else if ((fij + 1) % (M + 1) == 0)
-            REQUIRE(grid.elementOrientation(core::Element::Type::FACE, i) ==
+            REQUIRE(grid.elementOrientation({core::Element::Type::FACE, i}) ==
                     core::element_orientation_bits::x);
           else
-            REQUIRE(grid.elementOrientation(core::Element::Type::FACE, i) ==
+            REQUIRE(grid.elementOrientation({core::Element::Type::FACE, i}) ==
                     core::element_orientation_bits::any_x);
-          i++;
+          ++i;
           fij++;
         }
       }

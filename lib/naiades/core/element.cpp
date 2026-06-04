@@ -30,8 +30,26 @@ namespace naiades::core {
 
 h_size Index::s_invalid_value_ = 1 << 30;
 
+ElementIndex::ElementIndex()
+    : element{Element::Type::ANY}, index{Index::invalid()} {}
+
+ElementIndex::ElementIndex(Element loc, Index i) : element{loc}, index{i} {}
+
 ElementIndex ElementIndex::global(Element loc, h_size i) {
-  return {.index = Index::global(i), .element = loc};
+  return {loc, Index::global(i)};
+}
+
+ElementIndex ElementIndex::local(Element loc, h_size i) {
+  return {loc, Index::local(i)};
+}
+
+ElementIndex &ElementIndex::operator++() {
+  ++index;
+  return *this;
+}
+
+bool ElementIndex::operator==(const ElementIndex &rhs) const {
+  return index == rhs.index && element == rhs.element;
 }
 
 Element Element::cell() { return Element(Element::Type::CELL); }

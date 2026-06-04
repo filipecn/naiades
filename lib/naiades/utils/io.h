@@ -178,10 +178,12 @@ public:
   SVG &draw(const core::Mesh2 &mesh) {
     // edges
     for (const auto &face : mesh.elements(core::Element::face())) {
-      auto vertices = mesh.indices(core::Element::face(), face.global_index,
-                                   core::Element::vertex());
-      doc_ << link(mesh.center(core::Element::vertex(), vertices[0]),
-                   mesh.center(core::Element::vertex(), vertices[1]), bg_color);
+      auto vertices = mesh.indices(face.globalIndex(), core::Element::vertex());
+      doc_ << link(mesh.center(core::ElementIndex::global(
+                       core::Element::vertex(), vertices[0])),
+                   mesh.center(core::ElementIndex::global(
+                       core::Element::vertex(), vertices[1])),
+                   bg_color);
     }
     // for (const auto &cell_vertices :
     //      mesh.indices(core::Element::cell(), core::Element::vertex())) {
@@ -221,8 +223,7 @@ public:
         if (draw_options_.contain(draw_option_bits::normals))
           doc_ << arrow(face.center,
                         vector_scale_ *
-                            hermes::geo::vec2(mesh.normal(core::Element::face(),
-                                                          face.global_index)),
+                            hermes::geo::vec2(mesh.normal(face.globalIndex())),
                         x_color);
       }
 
@@ -268,8 +269,8 @@ public:
            mesh.indices(core::Element::cell(), core::Element::vertex())) {
         std::vector<hermes::geo::point2> positions;
         for (auto vertex_index : cell_vertices)
-          positions.emplace_back(
-              mesh.center(core::Element::vertex(), vertex_index));
+          positions.emplace_back(mesh.center(core::ElementIndex::global(
+              core::Element::vertex(), vertex_index)));
         // compute color
         doc_ << cell(positions, palette(hermes::numeric::smoothStep(
                                     value_range.low, value_range.high,
@@ -290,8 +291,8 @@ public:
            mesh.indices(core::Element::cell(), core::Element::vertex())) {
         std::vector<hermes::geo::point2> positions;
         for (auto vertex_index : cell_vertices)
-          positions.emplace_back(
-              mesh.center(core::Element::vertex(), vertex_index));
+          positions.emplace_back(mesh.center(core::ElementIndex::global(
+              core::Element::vertex(), vertex_index)));
         // compute color
         doc_ << cell(positions, palette(hermes::numeric::smoothStep(
                                     value_range.low, value_range.high,
@@ -311,11 +312,13 @@ public:
   SVG &draw(const core::Mesh2 &mesh, const numeric::DiscreteOperator &dop,
             const core::DiscreteSymbol &sym) {
     h_index center_index = dop.centerIndex();
-    auto center = mesh.center(sym.symbol.loc, center_index);
+    auto center =
+        mesh.center(core::ElementIndex::global(sym.symbol.loc, center_index));
     for (const auto &item : dop.nodes()) {
       if (item.first == center_index) {
       } else {
-        auto node_center = mesh.center(sym.symbol.loc, item.first);
+        auto node_center =
+            mesh.center(core::ElementIndex::global(sym.symbol.loc, item.first));
         doc_ << link(center, node_center, bg_color);
         if (draw_options_.contain(draw_option_bits::values))
           doc_ << text(hermes::cstr::format("{}", item.second),
@@ -326,7 +329,8 @@ public:
     for (const auto &item : dop.boundaryNodes()) {
       if (item.first == center_index) {
       } else {
-        auto node_center = mesh.center(sym.boundary_symbol.loc, item.first);
+        auto node_center = mesh.center(
+            core::ElementIndex::global(sym.boundary_symbol.loc, item.first));
         doc_ << link(center, node_center, z_color);
         if (draw_options_.contain(draw_option_bits::values))
           doc_ << text(hermes::cstr::format("{}", item.second),
@@ -347,7 +351,8 @@ public:
   SVG &draw(const core::Mesh2 &mesh, const numeric::Boundary &boundary) {
     for (const auto &region : boundary.regions()) {
       for (auto item : region.indices()) {
-        auto p = mesh.center(boundary.boundaryElement(), item.global_index);
+        auto p = mesh.center(core::ElementIndex::global(
+            boundary.boundaryElement(), item.global_index));
         doc_ << svg::Circle(pos(p), point_size_ * 1.5, {},
                             svg::Stroke(1, bg_color));
         const auto &stencil =

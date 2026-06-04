@@ -28,31 +28,40 @@
 
 namespace naiades::core {
 
+ElementIndex Mesh2::iterator::ElementInstance::globalIndex() const {
+  return ElementIndex::global(element, global_index);
+}
+
+ElementIndex Mesh2::iterator::ElementInstance::localIndex() const {
+  return ElementIndex::local(element, local_index);
+}
+
 Mesh2::iterator::ElementInstance Mesh2::iterator::operator*() const {
-  return {.center = mesh_->center(loc_, local_index_ +
-                                            mesh_->elementIndexOffset(loc_)),
-          .local_index = local_index_,
-          .global_index = local_index_ + mesh_->elementIndexOffset(loc_)};
+  return {.center = mesh_->center(iloc_),
+          .local_index = mesh_->localIndex(iloc_).index,
+          .global_index = mesh_->globalIndex(iloc_).index,
+          .element = iloc_.element};
 }
 
 Mesh2::iterator &Mesh2::iterator::operator++() {
-  local_index_++;
+  ++iloc_;
   return *this;
 }
 
 bool Mesh2::iterator::operator==(const Mesh2::iterator &rhs) const {
-  return local_index_ == rhs.local_index_ && loc_ == rhs.loc_;
+  return iloc_ == rhs.iloc_;
 }
 
-Mesh2::iterator::iterator(const Mesh2 *mesh, const Element &loc, h_index index)
-    : mesh_{mesh}, loc_{loc}, local_index_{index} {}
+Mesh2::iterator::iterator(const Mesh2 *mesh, const ElementIndex &iloc)
+    : mesh_{mesh}, iloc_{iloc} {}
 
 Mesh2::iterator Mesh2::element_view::begin() const {
-  return Mesh2::iterator(mesh_, loc_, 0);
+  return Mesh2::iterator(mesh_, {loc_, Index::local(0)});
 }
 
 Mesh2::iterator Mesh2::element_view::end() const {
-  return Mesh2::iterator(mesh_, loc_, mesh_->elementCount(loc_));
+  return Mesh2::iterator(mesh_,
+                         {loc_, Index::local(mesh_->elementCount(loc_))});
 }
 
 Mesh2::element_view::element_view(const Mesh2 *mesh, const Element &loc)
@@ -76,14 +85,6 @@ numeric::Scalar Mesh2::y(const Element &loc) const {
     values[e.global_index] = e.center.y;
   }
   return values;
-}
-
-hermes::geo::point2 Mesh2::center(const ElementIndex &e_index) const {
-  if (e_index.index.isGlobal()) {
-    return center(e_index.element, *e_index.index);
-  }
-  return center(e_index.element,
-                *e_index.index + elementIndexOffset(e_index.element));
 }
 
 } // namespace naiades::core

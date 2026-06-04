@@ -28,6 +28,7 @@
 #pragma once
 
 #include <naiades/core/field.h>
+#include <naiades/core/topology.h>
 #include <naiades/numeric/boundary_conditions.h>
 #include <naiades/utils/utils.h>
 
@@ -147,7 +148,7 @@ private:
 #endif
 };
 
-} // namespace naiades::numeric
+} // namespace naiades::numeric::numeric
 
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS
 

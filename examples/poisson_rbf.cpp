@@ -46,11 +46,14 @@ int main() {
                na::utils::io::draw_option_bits::vertices)
       .draw(static_cast<const na::core::Mesh2 &>(tri))
       .draw(static_cast<const na::core::Mesh2 &>(tri),
-            tri.star(na::core::Element::cell(), 0, na::core::Element::face()))
+            tri.star({na::core::Element::cell(), na::core::Index::global(0)},
+                     na::core::Element::face()))
       .draw(static_cast<const na::core::Mesh2 &>(tri),
-            tri.star(na::core::Element::cell(), 50, na::core::Element::face()))
+            tri.star({na::core::Element::cell(), na::core::Index::global(50)},
+                     na::core::Element::face()))
       .draw(static_cast<const na::core::Mesh2 &>(tri),
-            tri.star(na::core::Element::cell(), 100, na::core::Element::face()))
+            tri.star({na::core::Element::cell(), na::core::Index::global(100)},
+                     na::core::Element::face()))
       // .draw(*tri)
       .write();
 

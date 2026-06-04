@@ -27,9 +27,9 @@
 
 #pragma once
 
+#include "naiades/core/element.h"
 #include <naiades/core/field.h>
 #include <naiades/core/mesh.h>
-#include <naiades/core/neighbourhood.h>
 #include <naiades/numeric/spatial_discretization.h>
 
 #include <hermes/base/size.h>
@@ -125,7 +125,7 @@ public:
   /// Grid flat index from index
   h_size flatIndex(core::Element loc, const hermes::index2 &index) const;
   /// Grid index from flat index
-  hermes::index2 index(core::Element loc, h_size flat_index) const;
+  hermes::index2 index(const core::ElementIndex &iloc) const;
   /// Grid safe index (clamped)
   hermes::index2 safeIndex(core::Element loc,
                            const hermes::index2 &index) const;
@@ -149,61 +149,63 @@ public:
   //  geometry interface
 
   hermes::geo::bounds::bbox2 bbounds() const override;
-  hermes::geo::normal2 normal(core::Element loc, h_index index) const override;
-  hermes::geo::point2 center(core::Element loc,
-                             h_size flat_index) const override;
+  hermes::geo::point2 center(const core::ElementIndex &iloc) const override;
   std::vector<hermes::geo::point2> centers(core::Element loc) const override;
+  hermes::geo::normal2 normal(const core::ElementIndex &iloc) const override;
 
-  //  topology interface
+  // element set interface
 
   /// Grid location counts
   h_size elementCount(core::Element loc) const override;
   /// Grid flat index offset.
   /// \note The flat index offset is zero for all elements, except for faces.
   h_size elementIndexOffset(core::Element loc) const override;
+  core::element_alignments
+  elementAlignment(const core::ElementIndex &iloc) const override;
+  core::element_orientations
+  elementOrientation(const core::ElementIndex &loc) const override;
+
+  //  topology interface
+
   /// \brief Get the list of indices of a given element instance.
-  /// \param element
-  /// \param index
+  /// \param iloc element index
   /// \param sub_element
-  /// \return The lists of sub-elements of the given element instance.
-  std::vector<h_size> indices(core::Element element, h_index index,
+  /// \return The lists of sub-elements global indices of the given element
+  ///         instance.
+  std::vector<h_size> indices(const core::ElementIndex &iloc,
                               core::Element sub_element) const override;
   std::vector<h_size> boundaryIndices(core::Element loc) const override;
-  core::element_alignments elementAlignment(core::Element loc,
-                                            h_size index) const override;
-  core::element_orientations elementOrientation(core::Element loc,
-                                                h_size index) const override;
-  bool isBoundary(core::Element loc, h_size index) const override;
-  h_size interiorNeighbour(const core::ElementIndex &boundary_element,
-                           const core::Element &interior_loc) const override;
-
-  // neighbourhood set interface
-
+  bool isBoundary(const core::ElementIndex &iloc) const override;
   /// The star neighbourhood of a given element.
-  /// \param loc Element type.
-  /// \param index Center index.
   /// \param boundary_loc Boundary elements included in the star.
   /// \return List of neighbours of the given element.
-  std::vector<core::Neighbour> star(core::Element loc, h_size index,
-                                    core::Element boundary_loc) const override;
+  std::vector<core::Neighbour>
+  star(const core::ElementIndex &iloc, core::Element star_loc,
+       std::optional<core::Element> boundary_loc) const override;
   /// The ring neighbourhood of a given element.
-  /// \param loc Element type.
+  /// \param iloc Center element index.
   /// \param index Center index.
   /// \param boundary_loc Boundary elements included in the ring.
   /// \return List of neighbours of the given element.
-  std::vector<Neighbour> ring(core::Element loc, h_size index,
-                              core::Element boundary_loc) const override;
+  std::vector<core::Neighbour>
+  k_ring(const core::ElementIndex &iloc, h_size k, core::Element ring_loc,
+         std::optional<core::Element> boundary_loc) const override;
   /// The direct neighbourhood of elements for a given element.
-  /// \param loc Element type.
+  /// \param iloc Center element index.
   /// \param index Center index.
   /// \param neighbour_loc neighbour element type.
   /// \return List of pairs neighbour <index, distance> of the given element.
   std::vector<std::pair<h_size, real_t>>
-  neighbours(core::Element loc, h_size index,
-             core::Element neighbour_loc) const override;
+  neighbours(const core::ElementIndex &iloc, h_size radius,
+             core::Element neighbour_loc,
+             std::optional<core::Element> boundary_loc) const override;
+  h_size interiorNeighbour(const core::ElementIndex &boundary_element,
+                           const core::Element &interior_loc) const override;
 
 private:
-  core::Element faceType(h_size flat_index) const;
+  /// Refines face indices (face -> aligned face types) and computes its global
+  /// index.
+  core::ElementIndex computeGlobalIndex(const core::ElementIndex &iloc) const;
 
   hermes::geo::bounds::bbox2 bounds_{{0.f, 0.f}, {1.f, 1.f}};
   hermes::size2 resolution_{100, 100};

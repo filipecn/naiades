@@ -51,20 +51,19 @@ public:
   virtual hermes::geo::bounds::bbox2 bbounds() const = 0;
   /// Get the position of an element center.
   /// \note This returns a copy of the position.
-  /// \param loc Element.
+  /// \param iloc Element index.
   /// \param index Element index.
   /// \return The element center position in world coordinates.
-  virtual hermes::geo::point2 center(Element loc, h_size index) const = 0;
+  virtual hermes::geo::point2 center(const ElementIndex &iloc) const = 0;
   /// Get the flat list of center positions of an element type.
   /// \note The indices of the list match the element index.
   /// \note This returns a copy of the list.
   /// \param loc Element.
   virtual std::vector<hermes::geo::point2> centers(Element loc) const = 0;
   /// Get the normal defined at the given element instance.
-  /// \param loc
-  /// \param index
+  /// \param iloc Element index.
   /// \return The normal defined at (loc, index) or a null-vector if not found.
-  virtual hermes::geo::normal2 normal(Element loc, h_index index) const = 0;
+  virtual hermes::geo::normal2 normal(const ElementIndex &iloc) const = 0;
 };
 
 } // namespace naiades::core
