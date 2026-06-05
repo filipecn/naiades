@@ -31,6 +31,8 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/solvers/sim_control.h
   # ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.h
 
+  ${NAIADES_SOURCE_DIR}/naiades/spatial/morton_tree.h
+
   ${NAIADES_SOURCE_DIR}/naiades/utils/fields.h
   ${NAIADES_SOURCE_DIR}/naiades/utils/io.h
   ${NAIADES_SOURCE_DIR}/naiades/utils/math.h
@@ -59,6 +61,8 @@ set(NAIADES_SOURCES
 
   ${NAIADES_SOURCE_DIR}/naiades/solvers/sim_control.cpp
   # ${NAIADES_SOURCE_DIR}/naiades/solvers/smoke_solver.cpp
+
+  ${NAIADES_SOURCE_DIR}/naiades/spatial/morton_tree.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/utils/fields.cpp
   ${NAIADES_SOURCE_DIR}/naiades/utils/io.cpp

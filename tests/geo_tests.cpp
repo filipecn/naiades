@@ -121,9 +121,6 @@ TEST_CASE("regular grid 2", "[geo]") {
       for (auto ij :
            hermes::range2(grid.resolution(core::Element::Type::CELL))) {
         REQUIRE(i == grid.flatIndex(core::Element::Type::CELL, ij));
-        HERMES_LOG_VARIABLE(ij);
-        HERMES_LOG_VARIABLE(grid.index(
-            core::ElementIndex::global(core::Element::Type::CELL, i)));
         REQUIRE(ij == grid.index(core::ElementIndex::global(
                           core::Element::Type::CELL, i)));
         i++;

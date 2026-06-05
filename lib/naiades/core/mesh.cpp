@@ -38,8 +38,8 @@ ElementIndex Mesh2::iterator::ElementInstance::localIndex() const {
 
 Mesh2::iterator::ElementInstance Mesh2::iterator::operator*() const {
   return {.center = mesh_->center(iloc_),
-          .local_index = mesh_->localIndex(iloc_).index,
-          .global_index = mesh_->globalIndex(iloc_).index,
+          .local_index = *(mesh_->localIndex(iloc_).index),
+          .global_index = *(mesh_->globalIndex(iloc_).index),
           .element = iloc_.element};
 }
 

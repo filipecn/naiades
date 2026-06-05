@@ -431,7 +431,7 @@ std::vector<h_size> HE2::indices(const core::ElementIndex &iloc,
   std::vector<h_size> is;
 
   if (iloc.element.is(core::element_primitive_bits::cell)) {
-    HERMES_ASSERT(iloc.index < cells_.size());
+    HERMES_ASSERT(*iloc.index < cells_.size());
     auto loop = heLoop(cells_[iloc.index].he_index);
     if (sub_element.is(core::element_primitive_bits::vertex)) {
       for (auto he : loop)

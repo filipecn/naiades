@@ -161,11 +161,11 @@ struct Index {
     return *this;
   }
 
+  operator h_index() const { return value_; }
+
   bool operator==(const Index &rhs) const {
     return space_ == rhs.space_ && value_ == rhs.value_;
   }
-
-  operator bool() const { return isValid(); };
 
   h_size operator*() const { return value_; };
   bool isValid() const { return value_ != s_invalid_value_; }
@@ -439,7 +439,7 @@ template <> struct DebugTraits<naiades::core::Index> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
   static DebugMessage message(const naiades::core::Index &data) {
     auto m = DebugMessage();
-    if (data) {
+    if (data.isValid()) {
       m.addFmt("{}", *data);
     } else {
       m.addFmt("[invalid - ]", *data, to_string(data.space()));

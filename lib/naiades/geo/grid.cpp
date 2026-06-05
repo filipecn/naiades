@@ -177,8 +177,8 @@ Grid2::computeGlobalIndex(const core::ElementIndex &iloc) const {
   if (iloc.element.is(core::element_primitive_bits::face)) {
     // general face indices have local == global values
     if (*iloc.index >= elementIndexOffset(core::Element::Y_FACE))
-      return core::ElementIndex::global(core::Element::Y_FACE, iloc.index);
-    return core::ElementIndex::global(core::Element::X_FACE, iloc.index);
+      return core::ElementIndex::global(core::Element::Y_FACE, *iloc.index);
+    return core::ElementIndex::global(core::Element::X_FACE, *iloc.index);
   }
   return globalIndex(iloc);
 }
@@ -187,7 +187,7 @@ hermes::index2 Grid2::index(const core::ElementIndex &iloc) const {
   auto g_iloc = computeGlobalIndex(iloc);
   auto l_iloc = localIndex(g_iloc);
   auto res = resolution(g_iloc.element);
-  return hermes::index2(l_iloc.index % res.width, l_iloc.index / res.width);
+  return hermes::index2(*l_iloc.index % res.width, *l_iloc.index / res.width);
 }
 
 hermes::geo::point2 Grid2::center(core::Element loc,
@@ -350,7 +350,7 @@ std::vector<h_size> Grid2::boundaryIndices(core::Element loc) const {
 core::element_alignments
 Grid2::elementAlignment(const core ::ElementIndex &iloc) const {
   if (iloc.element.is(core::element_primitive_bits::face)) {
-    return iloc.index < elementCount(core::Element::Type::X_FACE)
+    return *iloc.index < elementCount(core::Element::Type::X_FACE)
                ? core::element_alignment_bits::x
                : core::element_alignment_bits::y;
   } else if (iloc.element == core::Element::Type::X_FACE)
@@ -363,17 +363,17 @@ Grid2::elementAlignment(const core ::ElementIndex &iloc) const {
 core::element_orientations
 Grid2::elementOrientation(const core ::ElementIndex &iloc) const {
   if (iloc.element.is(core::element_primitive_bits::face)) {
-    if (iloc.index < elementCount(core::Element::Type::X_FACE)) {
+    if (*iloc.index < elementCount(core::Element::Type::X_FACE)) {
       auto res = resolution(core::Element::Type::X_FACE);
       // x alignment
-      if (iloc.index < res.width)
+      if (*iloc.index < res.width)
         return core::element_orientation_bits::neg_y;
-      if (iloc.index > res.total() - res.width)
+      if (*iloc.index > res.total() - res.width)
         return core::element_orientation_bits::y;
       return core::element_orientation_bits::any_y;
     } else {
       auto res = resolution(core::Element::Type::Y_FACE);
-      auto i = iloc.index - elementIndexOffset(core::Element::Y_FACE);
+      auto i = *iloc.index - elementIndexOffset(core::Element::Y_FACE);
       // y alignment
       if (i % res.width == 0)
         return core::element_orientation_bits::neg_x;
