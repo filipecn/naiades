@@ -26,8 +26,12 @@
 
 #pragma once
 
-#include <bitset>
 #include <naiades/base/result.h>
+
+#include <hermes/base/index.h>
+
+#include <bitset>
+#include <functional>
 
 #define MORTON_TREE_ELEMENT_INDEX_BOUND 1 << 10
 
@@ -46,12 +50,35 @@ public:
   /// /brief
   void reset();
 
+  struct PredicateData {
+    hermes::range2 bounds;
+    h_index level;
+  };
+
   /// /brief
   /// /param predicate
   /// /return
-  NaResult refine(const std::function<bool(index2, h_size)> &predicate);
+  NaResult refine(const std::function<bool(const PredicateData &)> &predicate);
 
 private:
+  /// \return the index length of the side of cells at the given level.
+  h_index levelResolution(h_index level) const;
+  /// \return true if the given index can be a cell head.
+  bool isCellHead(h_index h_index) const;
+  /// The parent index at a given level is the largest z-index value multiple
+  /// of the size of the level that is smaller or equal the given index.
+  /// \return the index of the parent of the given index at specified level.
+  h_index parentIndex(h_index level, h_index z_index) const;
+  /// \return The level of the given node.
+  h_index level(h_index z_index) const;
+  /// \return true if the given node is a leaf node.
+  bool isLeaf(h_index z_index) const;
+  /// \return The child index [0-4] of the given node in the parent children
+  /// list.
+  h_index childIndex(h_index z_index) const;
+  /// \return The index area covered by the given cell.
+  hermes::range2 cellIndexBounds(h_index z_index) const;
+
   std::bitset<MORTON_TREE_ELEMENT_INDEX_BOUND> active_cells_;
   h_size resolution_{0};
 };

@@ -48,9 +48,38 @@ void MortonTree2::reset() {
   active_cells_.set(0);
 }
 
-NaResult
-MortonTree2::refine(const std::function<bool(index2, h_size)> &predicate) {
+NaResult MortonTree2::refine(
+    const std::function<bool(const MortonTree2::PredicateData &)> &predicate) {
+  if (!predicate)
+    return NaResult::inputError();
+  std::function<void(h_index)> f;
+  f = [&](h_index node) {
+
+  };
+  f(0);
   return NaResult::noError();
 }
+
+h_index MortonTree2::levelResolution(h_index level) const {
+  return 1 << (2 * level);
+}
+
+bool MortonTree2::isCellHead(h_index h_index) const { return h_index % 4 == 0; }
+
+h_index MortonTree2::parentIndex(h_index level, h_index z_index) const {}
+
+h_index MortonTree2::level(h_index z_index) const {
+  HERMES_ASSERT(z_index < active_cells_.size());
+  HERMES_ASSERT(active_cells_.test(z_index));
+  // if this is not
+  if (!isCellHead(z_index)) {
+  }
+}
+
+bool MortonTree2::isLeaf(h_index z_index) const {}
+
+h_index MortonTree2::childIndex(h_index z_index) const {}
+
+hermes::range2 MortonTree2::cellIndexBounds(h_index z_index) const {}
 
 } // namespace naiades::spatial
