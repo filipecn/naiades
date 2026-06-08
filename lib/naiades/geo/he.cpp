@@ -597,6 +597,13 @@ HE2::neighbours(const core::ElementIndex &iloc, h_size radius,
 
 namespace naiades::numeric {
 
+Result<HE2RBFFD> HE2RBFFD::Config::build(geo::HE2::Ptr mesh) const {
+  HE2RBFFD he2rbfd;
+  he2rbfd.topology_ = mesh;
+
+  return Result<HE2RBFFD>(std::move(he2rbfd));
+}
+
 const geo::HE2 &HE2RBFFD::mesh() const {
   return *static_cast<const geo::HE2 *>(topology_.get());
 }

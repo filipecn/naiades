@@ -26,6 +26,7 @@
 
 #include <naiades/spatial/morton_tree.h>
 
+#include <hermes/math/math.h>
 #include <hermes/math/space_filling.h>
 
 namespace naiades::spatial {
@@ -37,6 +38,7 @@ Result<MortonTree2> MortonTree2::build(h_size resolution) {
       hermes::index2(resolution - 1, resolution - 1));
   if (max_index >= MORTON_TREE_ELEMENT_INDEX_BOUND)
     return NaResult::badAllocation();
+  mt.max_level_ = hermes::math::log2(resolution);
   mt.reset();
   return Result<MortonTree2>(std::move(mt));
 }
@@ -60,26 +62,49 @@ NaResult MortonTree2::refine(
   return NaResult::noError();
 }
 
-h_index MortonTree2::levelResolution(h_index level) const {
-  return 1 << (2 * level);
-}
-
-bool MortonTree2::isCellHead(h_index h_index) const { return h_index % 4 == 0; }
-
-h_index MortonTree2::parentIndex(h_index level, h_index z_index) const {}
-
-h_index MortonTree2::level(h_index z_index) const {
+bool MortonTree2::isActive(h_index z_index) const {
   HERMES_ASSERT(z_index < active_cells_.size());
-  HERMES_ASSERT(active_cells_.test(z_index));
-  // if this is not
-  if (!isCellHead(z_index)) {
-  }
+  return active_cells_[z_index];
 }
 
-bool MortonTree2::isLeaf(h_index z_index) const {}
+h_index MortonTree2::levelResolution(h_index l) const { return 1 << (2 * l); }
 
-h_index MortonTree2::childIndex(h_index z_index) const {}
+bool MortonTree2::isCellHead(h_index z) const { return z % 4 == 0; }
 
-hermes::range2 MortonTree2::cellIndexBounds(h_index z_index) const {}
+h_index MortonTree2::parentIndex(h_index l, h_index z) const {
+  return z - (z % levelResolution(l));
+}
+
+h_index MortonTree2::level(h_index z) const {
+  // if this is not a cell head, then it must be a leaf
+  if (!isCellHead(z))
+    return max_level_;
+  // for head indices, we must find out the level by checking the active
+  // children
+  h_index l = 1;
+  while (!isActive(z + levelResolution(l)))
+    l++;
+  return max_level_ - l;
+}
+
+bool MortonTree2::isLeaf(h_index z) const {
+  return !isCellHead(z) || !isActive(z + 1);
+}
+
+h_index MortonTree2::parentChildIndex(h_index z) const {
+  if (isCellHead(z))
+    return 0;
+  auto l = level(z);
+  auto p = parentIndex(l, z);
+  return (z - p) / levelResolution(l);
+}
+
+hermes::range2 MortonTree2::cellIndexBounds(h_index z) const {
+  HERMES_ASSERT(isActive(z));
+  auto ij = hermes::math::space_filling::mortonDecode2(z);
+  auto l = level(z);
+  auto s = levelResolution(l);
+  return hermes::range2(ij, ij.plus(s, s));
+}
 
 } // namespace naiades::spatial

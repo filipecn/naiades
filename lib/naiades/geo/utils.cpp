@@ -67,4 +67,15 @@ Result<HE2> triangulate(std::vector<hermes::geo::point2> &points) {
   return Result<HE2>(std::move(he));
 }
 
+Result<HE2> convert2HE(const Grid2 &grid) {
+  HE2 he;
+  for (auto v : grid.centers(core::Element::vertex()))
+    he.addVertex(v);
+  for (auto c : grid.elements(core::Element::cell())) {
+    auto vertices = grid.indices(c.globalIndex(), core::Element::vertex());
+    he.addCell(vertices);
+  }
+  return Result<HE2>(std::move(he));
+}
+
 } // namespace naiades::geo

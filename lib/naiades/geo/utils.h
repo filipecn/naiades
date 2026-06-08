@@ -26,11 +26,15 @@
 
 #pragma once
 
+#include <naiades/geo/grid.h>
 #include <naiades/geo/he.h>
 
 namespace naiades::geo {
 
 ///
 Result<HE2> triangulate(std::vector<hermes::geo::point2> &points);
+
+///
+Result<HE2> convert2HE(const Grid2 &grid);
 
 } // namespace naiades::geo

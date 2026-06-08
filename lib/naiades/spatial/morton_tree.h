@@ -61,6 +61,8 @@ public:
   NaResult refine(const std::function<bool(const PredicateData &)> &predicate);
 
 private:
+  /// \return true if the cell indexed by z-index is active.
+  bool isActive(h_index z_index) const;
   /// \return the index length of the side of cells at the given level.
   h_index levelResolution(h_index level) const;
   /// \return true if the given index can be a cell head.
@@ -69,18 +71,40 @@ private:
   /// of the size of the level that is smaller or equal the given index.
   /// \return the index of the parent of the given index at specified level.
   h_index parentIndex(h_index level, h_index z_index) const;
+  /// \note this assumes z_index is active.
   /// \return The level of the given node.
-  h_index level(h_index z_index) const;
+  h_index level(h_index active_z_index) const;
   /// \return true if the given node is a leaf node.
   bool isLeaf(h_index z_index) const;
   /// \return The child index [0-4] of the given node in the parent children
   /// list.
-  h_index childIndex(h_index z_index) const;
+  h_index parentChildIndex(h_index z_index) const;
   /// \return The index area covered by the given cell.
   hermes::range2 cellIndexBounds(h_index z_index) const;
 
   std::bitset<MORTON_TREE_ELEMENT_INDEX_BOUND> active_cells_;
   h_size resolution_{0};
+  h_index max_level_{0};
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<MortonTree2>;
+#endif
 };
 
 } // namespace naiades::spatial
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::spatial::MortonTree2> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::spatial::MortonTree2 &data) {
+    auto m = DebugMessage();
+    return m;
+  }
+};
+
+} // namespace hermes
+
+#endif

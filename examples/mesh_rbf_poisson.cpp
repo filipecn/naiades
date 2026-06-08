@@ -18,18 +18,6 @@ namespace na = naiades;
 int main() {
   // create numerical mesh (a 2d triangle mesh) with RBF-FD discretization
 
-  na::geo::HE2 he_mesh;
-
-  he_mesh.addVertex({0.f, 0.f});
-  he_mesh.addVertex({0.1f, 0.f});
-  he_mesh.addVertex({0.f, 0.1f});
-  he_mesh.addVertex({0.1f, 0.1f});
-
-  he_mesh.addCell({0, 1, 2});
-  he_mesh.addCell({1, 3, 2});
-
-  HERMES_WARN("{}", hermes::to_string(he_mesh));
-
   std::vector<hermes::geo::point2> domain = {
       hermes::geo::point2(0, 0),
       hermes::geo::point2(1, 0),
@@ -55,12 +43,6 @@ int main() {
             tri.star({na::core::Element::cell(), na::core::Index::global(100)},
                      na::core::Element::face()))
       // .draw(*tri)
-      .write();
-
-  na::utils::io::SVG("mesh.svg")
-      .setDimensions(he_mesh.bbounds())
-      .draw(static_cast<const na::core::Mesh2 &>(he_mesh))
-      .draw(he_mesh)
       .write();
 
   return 0;

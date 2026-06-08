@@ -251,6 +251,9 @@ private:
 namespace naiades::numeric {
 
 class HE2RBFFD : public SpatialDiscretization {
+  struct Config {
+    Result<HE2RBFFD> build(geo::HE2::Ptr mesh) const;
+  };
 
   /// \brief
   const geo::HE2 &mesh() const;
@@ -277,6 +280,13 @@ class HE2RBFFD : public SpatialDiscretization {
   virtual DiscreteOperator divergence(const core::Element &loc, h_size index,
                                       const core::Element &vector_loc,
                                       bool staggered) const override;
+
+private:
+  friend struct Config;
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<HE2RBFFD>;
+#endif
 };
 
 } // namespace naiades::numeric
@@ -314,6 +324,19 @@ template <> struct DebugTraits<naiades::geo::HE2> {
                hermes::cstr::join(data.outgoingHEs(vertex.global_index), ","));
     }
 
+    return m;
+  }
+};
+
+template <> struct DebugTraits<naiades::numeric::HE2RBFFD> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::numeric::HE2RBFFD &data) {
+    auto m = DebugMessage();
+    m.addTitle("HE2 - RBF - FD");
+    if (data.topology_)
+      m.add("mesh", data.mesh());
+    m.addMap("fields", data.fields_);
+    m.addMap("boundaries", data.boundaries_);
     return m;
   }
 };
