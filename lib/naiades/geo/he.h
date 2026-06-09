@@ -86,6 +86,8 @@ namespace naiades::geo {
 ///              \/  1
 class HE2 : public core::Mesh2 {
 public:
+  using Ptr = hermes::Ref<HE2>;
+
   HE2() noexcept;
   virtual ~HE2() = default;
 
@@ -251,6 +253,7 @@ private:
 namespace naiades::numeric {
 
 class HE2RBFFD : public SpatialDiscretization {
+public:
   struct Config {
     Result<HE2RBFFD> build(geo::HE2::Ptr mesh) const;
   };

@@ -22,9 +22,12 @@ int main() {
                    .build();
   auto mesh = na::geo::HE2::Ptr::shared();
   *mesh = *na::geo::convert2HE(grid);
+
+  auto rbffd = *na::numeric::HE2RBFFD::Config().build(mesh);
+
   na::utils::io::SVG("mesh.svg")
-      .setDimensions(mesh.bbounds())
-      .draw(mesh)
+      .setDimensions(mesh->bbounds())
+      .draw(*mesh)
       // .draw(fd.mesh(), static_cast<na::core::FieldCRef<f32>>(u_field))
       // .drawText(fd.mesh(), na::core::Element::cell(), x)
       // .draw(fd.mesh(), fd.boundaries())

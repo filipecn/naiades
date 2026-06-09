@@ -24,7 +24,6 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2026-04-08
 
-#include "naiades/core/element.h"
 #include <naiades/geo/he.h>
 
 #include <unordered_set>
