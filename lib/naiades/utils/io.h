@@ -29,6 +29,7 @@
 #include <naiades/core/mesh.h>
 #include <naiades/geo/he.h>
 #include <naiades/numeric/spatial_discretization.h>
+#include <naiades/spatial/morton_tree.h>
 
 #include <hermes/colors/color.h>
 #include <hermes/geometry/transform.h>
@@ -398,6 +399,8 @@ public:
 
     return *this;
   }
+  SVG &draw(const spatial::MortonTree2 &mt) { return *this; }
+
   void write() {
     if (doc_.save()) {
       HERMES_INFO("SVG {} saved.", path_.string());

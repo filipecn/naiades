@@ -39,13 +39,40 @@ namespace naiades::spatial {
 
 class MortonTree2 {
 public:
+  class iterator {
+  public:
+    struct Leaf {
+      hermes::range2 bounds;
+      h_index level;
+      h_index z_index;
+    };
+
+    Leaf operator*() const;
+    iterator &operator++();
+    bool operator==(const iterator &rhs) const;
+
+  private:
+    friend class MortonTree2;
+    iterator(const MortonTree2 &mt, h_index z);
+
+    const MortonTree2 &mt_;
+    h_index z_;
+  };
+
+  /// \brief
+  /// \param max_level
+  /// \return
+  static Result<MortonTree2> fromMaxLevel(h_size max_level);
   /// \brief
   /// \param resolution
   /// \return
-  static Result<MortonTree2> build(h_size resolution);
+  static Result<MortonTree2> fromResolution(h_size resolution);
 
   MortonTree2();
   ~MortonTree2() = default;
+
+  iterator begin() const;
+  iterator end() const;
 
   /// /brief
   void reset();
@@ -61,10 +88,19 @@ public:
   NaResult refine(const std::function<bool(const PredicateData &)> &predicate);
 
 private:
+  ///
+  NaResult split(h_index z_index);
+  ///
+  NaResult merge(h_index z_index, h_index l);
   /// \return true if the cell indexed by z-index is active.
   bool isActive(h_index z_index) const;
-  /// \return the index length of the side of cells at the given level.
+  ///
+  NaResult childrenIndices(h_index z_index, h_index l,
+                           h_index children_indices[4]) const;
+  /// \return the side length of a cell at the given level.
   h_index levelResolution(h_index level) const;
+  /// \return the area of a cell at the given level.
+  h_index levelArea(h_index level) const;
   /// \return true if the given index can be a cell head.
   bool isCellHead(h_index h_index) const;
   /// The parent index at a given level is the largest z-index value multiple
@@ -101,6 +137,8 @@ template <> struct DebugTraits<naiades::spatial::MortonTree2> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
   static DebugMessage message(const naiades::spatial::MortonTree2 &data) {
     auto m = DebugMessage();
+    m.addTitle("Morton Tree");
+    m.add("resolution", data.resolution_);
     return m;
   }
 };

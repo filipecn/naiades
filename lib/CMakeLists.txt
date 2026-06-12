@@ -22,6 +22,7 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_expression.h
   ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_operator.h
   ${NAIADES_SOURCE_DIR}/naiades/numeric/linear_solvers.h
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/rbf.h
   ${NAIADES_SOURCE_DIR}/naiades/numeric/spatial_discretization.h
 
   ${NAIADES_SOURCE_DIR}/naiades/sampling/sampler.h
@@ -55,6 +56,7 @@ set(NAIADES_SOURCES
   ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_expression.cpp
   ${NAIADES_SOURCE_DIR}/naiades/numeric/discrete_operator.cpp
   ${NAIADES_SOURCE_DIR}/naiades/numeric/linear_solvers.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/rbf.cpp
   ${NAIADES_SOURCE_DIR}/naiades/numeric/spatial_discretization.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.cpp

@@ -24,7 +24,6 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2025-06-07
 
-#include "naiades/core/element.h"
 #include <naiades/geo/grid.h>
 
 #include <naiades/numeric/boundary.h>
