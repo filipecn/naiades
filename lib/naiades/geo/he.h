@@ -111,13 +111,18 @@ public:
   /// \return Edge vector of the given half-edge.
   hermes::geo::vec2 heVector(h_index he_index) const;
   /// \return Vertex at the end of the given half-edge.
-  h_index heEnd(h_index he_index) const;
-  /// \return Vertex at the end of the given half-edge.
-  h_index heStart(h_index he_index) const;
-  const hermes::geo::point2 &heStartPosition(h_index he_index) const;
-  const hermes::geo::point2 &heEndPosition(h_index he_index) const;
-  ///
+  h_index heDestination(h_index he_index) const;
+  /// \return Vertex at the start of the given half-edge.
+  h_index heOrigin(h_index he_index) const;
+  const hermes::geo::point2 &heOriginPosition(h_index he_index) const;
+  const hermes::geo::point2 &heDestinationPosition(h_index he_index) const;
+  /// The he loop is the set of half-edges directly connected that form a
+  /// face/boundary.
   std::vector<h_index> heLoop(h_index he_index) const;
+  /// The he siblings is the set of half-edges that share the same origin
+  /// as the given half edge.
+  /// \note the given he is also included in the siblings set.
+  std::vector<h_index> heSiblings(h_index he_index) const;
 
   //  geometry interface
 
@@ -313,9 +318,9 @@ template <> struct DebugTraits<naiades::geo::HE2> {
       auto het = data.heTwin(he);
       m.addFmt("face[{}]: he[{}]({}, {})|{},{}| he[{}]({},{})|{},{}|",
                face.global_index,                                  //
-               he, data.heStart(he), data.heEnd(he),               //
+               he, data.heOrigin(he), data.heDestination(he),      //
                data.computePreviousHE(he), data.computeNextHE(he), //
-               het, data.heStart(het), data.heEnd(het),            //
+               het, data.heOrigin(het), data.heDestination(het),   //
                data.computePreviousHE(het), data.computeNextHE(het));
     }
     m.addFmt("Vertices");

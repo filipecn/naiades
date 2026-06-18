@@ -36,6 +36,7 @@ namespace naiades::core {
 struct Symbol {
   Symbol() = default;
   Symbol(const std::string &name, const Element &loc) : name{name}, loc{loc} {}
+
   std::string name;
   Element loc;
 

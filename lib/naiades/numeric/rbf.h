@@ -29,6 +29,7 @@
 #include <naiades/base/result.h>
 #include <naiades/core/topology.h>
 #include <naiades/numeric/spatial_discretization.h>
+#include <naiades/numeric/stencil.h>
 
 #include <Eigen/Dense>
 
@@ -172,6 +173,7 @@ struct Polynomial2 {
 struct DifferentialRBF2 {
   using MatrixType = Eigen::MatrixX<real_t>;
   using VectorType = Eigen::VectorX<real_t>;
+  using SolverType = Eigen::FullPivLU<Eigen::MatrixX<real_t>>;
   /// \brief Builds the RBF System matrix augmented by a polynomial.
   ///                      | PHI  P |
   ///                  A = |        |
@@ -180,11 +182,10 @@ struct DifferentialRBF2 {
   /// \note The center of the stencil is assumed to be the first index.
   template <typename KernelFunctionPtr>
   static Result<MatrixType>
-  computeA(const std::vector<hermes::geo::point2> &centers,
-           const std::vector<h_index> &indices, KernelFunctionPtr rbf,
+  computeA(const Stencil2 &stencil, KernelFunctionPtr rbf,
            PolynomialType polynomial_type = PolynomialType::ZERO) {
     const h_size poly_terms = Polynomial2::size(polynomial_type);
-    const h_size stencil_size = indices.size();
+    const h_size stencil_size = stencil.size();
     const h_size system_size = stencil_size + poly_terms;
 
     MatrixType A = MatrixType::Zero(system_size, system_size);
@@ -195,15 +196,14 @@ struct DifferentialRBF2 {
         if (i == j)
           A(i, i) = rbf.phi(0.0);
         else
-          A(i, j) = A(j, i) = rbf.phi(
-              hermes::geo::distance(centers[indices[i]], centers[indices[j]]));
+          A(i, j) = A(j, i) = rbf.phi(stencil.distance(i, j));
       }
     }
 
     // P
     if (poly_terms > 0) {
       for (h_index i = 0; i < stencil_size; ++i) {
-        auto polynomial = Polynomial2::f(polynomial_type, centers[indices[i]]);
+        auto polynomial = Polynomial2::f(polynomial_type, stencil[i]);
         for (h_index j = 0; j < polynomial.size(); ++j)
           A(i, stencil_size + j) = polynomial[j];
       }
@@ -216,29 +216,53 @@ struct DifferentialRBF2 {
 
     Eigen::FullPivLU<Eigen::MatrixXd> solver;
     solver.compute(A);
+
+    return Result<MatrixType>(std::move(A));
   }
 
-  /// Computes the weights for the gradient operator.
+  static Result<SolverType> buildSolver(const MatrixType &A) {
+    SolverType solver;
+    solver.compute(A);
+    return Result<SolverType>(std::move(solver));
+  }
+
+  /// Computes the weights for the partial derivative operator.
   /// \note The given matrix must match the given parameters:
   ///       - same kernel function
   ///       - same polynomial type
   ///       - same indices and centers
   template <typename KernelFunctionPtr>
-  static NaResult
-  gradient(DiscreteOperator &dop, const MatrixType &A,
-           const std::vector<hermes::geo::point2> &centers,
-           const std::vector<h_index> &indices, KernelFunctionPtr rbf,
-           PolynomialType polynomial_type = PolynomialType::ZERO) {
+  static Result<DiscreteOperator>
+  derivative(derivative_bits d, const SolverType &solver,
+             const Stencil2 &stencil, KernelFunctionPtr rbf,
+             PolynomialType polynomial_type = PolynomialType::ZERO) {
     const h_size poly_terms = Polynomial2::size(polynomial_type);
-    const h_size stencil_size = indices.size();
+    const h_size stencil_size = stencil.size();
     const h_size system_size = stencil_size + poly_terms;
 
-    HERMES_ASSERT(A.rows() == system_size);
-    HERMES_ASSERT(A.cols() == system_size);
-
-    VectorType v = VectorType::Zero(system_size);
+    VectorType rhs = VectorType::Zero(system_size);
 
     // L(phi(x0))
+    for (h_index i = 0; i < stencil_size; ++i)
+      rhs[i] = rbf->dphi(stencil.distance(0, i));
+
+    if (poly_terms > 0) {
+      auto df = Polynomial2::df(polynomial_type, d, stencil.center());
+      for (h_index i = 0; i < poly_terms; ++i)
+        rhs[i + stencil_size] = df[i];
+    }
+
+    auto w = solver.solve(rhs).head(stencil_size);
+
+    DiscreteOperator dop;
+
+    for (h_index i = 0; i < stencil_size; ++i) {
+      auto ei = stencil.index(i);
+      dop.add(*ei.index, w[i]);
+    }
+    dop.setCenterIndex(*stencil.index(0).index);
+
+    return Result<DiscreteOperator>(std::move(dop));
   }
 };
 

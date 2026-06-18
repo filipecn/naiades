@@ -12,5 +12,6 @@ int main() {
 
     return true;
   });
+  HERMES_LOG_VARIABLE(mt);
   return 0;
 }

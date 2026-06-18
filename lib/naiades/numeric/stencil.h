@@ -24,6 +24,8 @@
 /// \author FilipeCN (filipedecn@gmail.com)
 /// \date   2026-03-28
 
+#include <naiades/core/geometry.h>
+#include <naiades/core/topology.h>
 #include <naiades/numeric/blas.h>
 
 #include <hermes/geometry/point.h>
@@ -33,17 +35,25 @@
 namespace naiades::numeric {
 
 /// A numerical stencil consists of a center element and set of neighbour
-/// elements.
+/// elements. The center is always stored in index 0.
 class Stencil2 {
 public:
-  const hermes::geo::point2 &center() const;
-  const hermes::geo::point2 &operator[](h_index i) const;
+  /// \note the center of the stencil must be in centers[0].
+  static Stencil2 build(core::Geometry2::Ptr geo,
+                        const std::vector<core::Neighbour> &centers);
+
+  Stencil2() = default;
+  virtual ~Stencil2() = default;
+
+  core::ElementIndex index(h_index i) const;
+  hermes::geo::point2 center() const;
+  hermes::geo::point2 operator[](h_index i) const;
   h_size size() const;
+  real_t distance(h_index i, h_index j) const;
 
 private:
-  Stencil2(const std::vector<hermes::geo::point2> &c);
-  const std::vector<hermes::geo::point2> &centers_;
-  std::vector<h_index> indices_;
+  core::Geometry2::Ptr geo_;
+  std::vector<core::Neighbour> elements_;
 };
 
 } // namespace naiades::numeric

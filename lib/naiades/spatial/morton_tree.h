@@ -89,32 +89,34 @@ public:
 
 private:
   ///
-  NaResult split(h_index z_index);
+  NaResult split(h_index z_index, h_index level);
   ///
-  NaResult merge(h_index z_index, h_index l);
+  NaResult merge(h_index z_index, h_index level);
   /// \return true if the cell indexed by z-index is active.
   bool isActive(h_index z_index) const;
   ///
-  NaResult childrenIndices(h_index z_index, h_index l,
+  NaResult childrenIndices(h_index z_index, h_index level,
                            h_index children_indices[4]) const;
   /// \return the side length of a cell at the given level.
-  h_index levelResolution(h_index level) const;
+  h_index levelCellSize(h_index level) const;
   /// \return the area of a cell at the given level.
-  h_index levelArea(h_index level) const;
+  h_index levelCellArea(h_index level) const;
   /// \return true if the given index can be a cell head.
   bool isCellHead(h_index h_index) const;
   /// The parent index at a given level is the largest z-index value multiple
   /// of the size of the level that is smaller or equal the given index.
   /// \return the index of the parent of the given index at specified level.
-  h_index parentIndex(h_index level, h_index z_index) const;
+  h_index parentIndex(h_index child_level, h_index z_index) const;
   /// \note this assumes z_index is active.
   /// \return The level of the given node.
-  h_index level(h_index active_z_index) const;
+  h_index cellLevel(h_index active_z_index) const;
   /// \return true if the given node is a leaf node.
   bool isLeaf(h_index z_index) const;
   /// \return The child index [0-4] of the given node in the parent children
   /// list.
-  h_index parentChildIndex(h_index z_index) const;
+  /// \note This considers the parent at child_level - 1.
+  /// \note child_level > 0
+  h_index parentChildIndex(h_index z_index, h_index child_level) const;
   /// \return The index area covered by the given cell.
   hermes::range2 cellIndexBounds(h_index z_index) const;
 
@@ -139,6 +141,10 @@ template <> struct DebugTraits<naiades::spatial::MortonTree2> {
     auto m = DebugMessage();
     m.addTitle("Morton Tree");
     m.add("resolution", data.resolution_);
+    hermes::cstr s;
+    for (h_index i = 0; i < data.resolution_ * data.resolution_; ++i)
+      s.append(data.active_cells_[i] ? "1" : "0");
+    m.add("active", s.str());
     return m;
   }
 };

@@ -263,9 +263,9 @@ public:
     auto palette = colors::palettes::batlow();
     // get min and max values
     auto value_range = values.valueRange();
-    h_index cell_index = 0;
     if (values.element().is(core::element_primitive_bits::cell)) {
       // cells
+      h_index cell_index = 0;
       for (const auto &cell_vertices :
            mesh.indices(core::Element::cell(), core::Element::vertex())) {
         std::vector<hermes::geo::point2> positions;
@@ -276,6 +276,14 @@ public:
         doc_ << cell(positions, palette(hermes::numeric::smoothStep(
                                     value_range.low, value_range.high,
                                     values[cell_index++])));
+      }
+    } else if (values.element().is(core::element_primitive_bits::vertex)) {
+      for (const auto &vertex : mesh.elements(core::Element::vertex())) {
+
+        auto color = palette(hermes::numeric::smoothStep(
+            value_range.low, value_range.high, values[vertex.global_index]));
+        doc_ << svg::Circle(pos(vertex.center), point_size_,
+                            svg::Fill(toSVG(color)), svg::Stroke(1, bg_color));
       }
     }
     return *this;
@@ -383,7 +391,7 @@ public:
       auto v = mesh.heVector(he);
       auto v_size = v.length();
       auto l = hermes::geo::normalize(v.left()) * v_size * 0.02f;
-      auto o = mesh.heStartPosition(he) + v * 0.4f;
+      auto o = mesh.heOriginPosition(he) + v * 0.4f;
       if (draw_options_.contain(draw_option_bits::indices))
         doc_ << text(hermes::cstr::format("{}[{}]{}", mesh.hePrev(he), he,
                                           mesh.heNext(he)),

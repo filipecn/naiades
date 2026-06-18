@@ -26,4 +26,40 @@
 
 #include <naiades/numeric/stencil.h>
 
-namespace naiades::numeric {} // namespace naiades::numeric
+namespace naiades::numeric {
+
+Stencil2 Stencil2::build(core::Geometry2::Ptr geo,
+                         const std::vector<core::Neighbour> &centers) {
+  Stencil2 stencil;
+  stencil.geo_ = geo;
+  stencil.elements_ = centers;
+  return stencil;
+}
+
+core::ElementIndex Stencil2::index(h_index i) const {
+  HERMES_ASSERT(i < elements_.size());
+  return elements_[i].element_index;
+}
+
+hermes::geo::point2 Stencil2::center() const {
+  HERMES_ASSERT(!elements_.empty());
+  HERMES_ASSERT(geo_);
+  return geo_->center(elements_[0].element_index);
+}
+
+hermes::geo::point2 Stencil2::operator[](h_index i) const {
+  HERMES_ASSERT(i < elements_.size());
+  HERMES_ASSERT(geo_);
+  return geo_->center(elements_[i].element_index);
+}
+
+h_size Stencil2::size() const { return elements_.size(); }
+
+real_t Stencil2::distance(h_index i, h_index j) const {
+  HERMES_ASSERT(std::max(i, j) < elements_.size());
+  HERMES_ASSERT(geo_);
+  return hermes::geo::distance(geo_->center(elements_[i].element_index),
+                               geo_->center(elements_[j].element_index));
+}
+
+} // namespace naiades::numeric

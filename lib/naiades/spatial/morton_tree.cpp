@@ -36,8 +36,9 @@ MortonTree2::iterator::iterator(const MortonTree2 &mt, h_index z)
     : mt_{mt}, z_{z} {}
 
 MortonTree2::iterator::Leaf MortonTree2::iterator::operator*() const {
-  return {
-      .bounds = mt_.cellIndexBounds(z_), .level = mt_.level(z_), .z_index = z_};
+  return {.bounds = mt_.cellIndexBounds(z_),
+          .level = mt_.cellLevel(z_),
+          .z_index = z_};
 }
 
 MortonTree2::iterator &MortonTree2::iterator::operator++() {
@@ -101,7 +102,7 @@ NaResult MortonTree2::refine(
       p_data.bounds = cellIndexBounds(node);
       p_data.level = l;
       if (predicate(p_data))
-        split(node);
+        split(node, l);
     }
     for (h_index i = 0; i < 4; ++i)
       f(children[i], l + 1);
@@ -110,12 +111,12 @@ NaResult MortonTree2::refine(
   return NaResult::noError();
 }
 
-NaResult MortonTree2::split(h_index z) {
+NaResult MortonTree2::split(h_index z, h_index level) {
   HERMES_ASSERT(isActive(z));
   HERMES_ASSERT(isCellHead(z));
-  auto l = level(z);
+  HERMES_ASSERT(level < max_level_);
   h_index children[4];
-  NAIADES_RETURN_BAD_RESULT(childrenIndices(z, l, children));
+  NAIADES_RETURN_BAD_RESULT(childrenIndices(z, level, children));
   for (h_index i = 1; i < 4; ++i) {
     HERMES_ASSERT(!isActive(children[i]));
     active_cells_.set(children[i]);
@@ -145,40 +146,39 @@ NaResult MortonTree2::childrenIndices(h_index z, h_index l,
                                       h_index children_indices[4]) const {
   HERMES_ASSERT(l < max_level_);
   HERMES_ASSERT(isCellHead(z));
-  auto s = levelArea(l + 1);
+  auto s = levelCellArea(l + 1);
   for (h_index i = 0; i < 4; ++i)
     children_indices[i] = z + i * s;
   return NaResult::noError();
 }
 
-h_index MortonTree2::levelResolution(h_index l) const {
+h_index MortonTree2::levelCellSize(h_index l) const {
   HERMES_ASSERT(l <= max_level_);
   return 1 << (max_level_ - l);
 }
 
-h_index MortonTree2::levelArea(h_index l) const {
+h_index MortonTree2::levelCellArea(h_index l) const {
   HERMES_ASSERT(l <= max_level_);
   return 1 << (2 * (max_level_ - l));
 }
 
 bool MortonTree2::isCellHead(h_index z) const { return z % 4 == 0; }
 
-h_index MortonTree2::parentIndex(h_index l, h_index z) const {
-  return z - (z % levelResolution(l));
+h_index MortonTree2::parentIndex(h_index child_level, h_index z) const {
+  HERMES_ASSERT(child_level > 0);
+  return z - (z % levelCellArea(child_level - 1));
 }
 
-h_index MortonTree2::level(h_index z) const {
+h_index MortonTree2::cellLevel(h_index z) const {
   // if this is not a cell head, then it must be a leaf
   if (!isCellHead(z))
     return max_level_;
-  // for head indices, we must find out the level by checking the active
-  // children
+  // for head indices, we descent the levels until the node is not the head
+  // of that level or any of its siblings is active
   h_index l = max_level_;
-  while (l > 0 && !isActive(z + levelArea(l))) {
-    HERMES_ERROR("{}", z, l, levelArea(l), isActive(z + levelArea(l)));
+  while (l > 0 && parentChildIndex(z, l) == 0 &&
+         !isActive(z + levelCellArea(l)))
     l--;
-  }
-  HERMES_ERROR("level of {}: l {}", z, l);
   return l;
 }
 
@@ -186,20 +186,23 @@ bool MortonTree2::isLeaf(h_index z) const {
   return !isCellHead(z) || !isActive(z + 1);
 }
 
-h_index MortonTree2::parentChildIndex(h_index z) const {
-  if (isCellHead(z))
-    return 0;
-  auto l = level(z);
-  auto p = parentIndex(l, z);
-  return (z - p) / levelResolution(l);
+h_index MortonTree2::parentChildIndex(h_index z, h_index child_level) const {
+  // if this is not a cell head, it must be in max_level
+  if (!isCellHead(z)) {
+    HERMES_ASSERT(child_level == max_level_);
+    return z % 4;
+  }
+  HERMES_ASSERT(child_level > 0);
+  auto p = parentIndex(child_level, z);
+
+  return (z - p) / levelCellArea(child_level);
 }
 
 hermes::range2 MortonTree2::cellIndexBounds(h_index z) const {
   HERMES_ASSERT(isActive(z));
   auto ij = hermes::math::space_filling::mortonDecode2(z);
-  auto l = level(z);
-  auto s = levelResolution(l);
-  HERMES_WARN("bounds for {}: ij {} l {} s {}", z, hermes::to_string(ij), l, s);
+  auto l = cellLevel(z);
+  auto s = levelCellSize(l);
   return hermes::range2(ij, ij.plus(s, s));
 }
 
