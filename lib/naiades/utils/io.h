@@ -150,6 +150,9 @@ namespace naiades::utils::io {
 
 class SVG {
 public:
+  using Command =
+      std::variant<std::shared_ptr<svg::Shape>, hermes::geo::Transform2>;
+
   SVG(const std::filesystem::path &path) : path_{path} {}
   SVG &setOptions(draw_options options) {
     draw_options_ = options;
@@ -174,6 +177,14 @@ public:
     doc_ = svg::Document(
         path_.string(),
         svg::Layout(dimensions_, svg::Layout::Origin::BottomLeft));
+    return *this;
+  }
+  SVG &setTextSize(h_index size) {
+    text_size_ = size;
+    return *this;
+  }
+  SVG &setPointSize(f32 size) {
+    point_size_ = size;
     return *this;
   }
   SVG &draw(const core::Mesh2 &mesh) {
@@ -407,7 +418,18 @@ public:
 
     return *this;
   }
-  SVG &draw(const spatial::MortonTree2 &mt) { return *this; }
+  SVG &draw(const spatial::MortonTree2 &mt) {
+    for (auto ij : mt.indexBounds()) {
+      doc_ << circle(mt.position(ij), point_size_, x_color);
+    }
+    for (auto leaf : mt) {
+      auto vertices = leaf.bounds.corners();
+      doc_ << cell(vertices);
+      doc_ << text(hermes::cstr::format("L{}[{}]", leaf.level, leaf.z_index),
+                   leaf.bounds.corner(0), y_color);
+    }
+    return *this;
+  }
 
   void write() {
     if (doc_.save()) {
@@ -469,10 +491,15 @@ private:
       border << pos(position);
     return border;
   }
+  svg::Circle circle(const hermes::geo::point2 &center, f32 radius,
+                     const svg::Color &color) {
+    return svg::Circle(pos(center), radius * 2, svg::Fill(color),
+                       svg::Stroke(1, color));
+  }
   svg::Text text(const std::string &s, const hermes::geo::point2 &position,
                  const svg::Color &color) const {
     return svg::Text(pos(position, {8.0f, 8.f}), s.c_str(), svg::Fill(color),
-                     svg::Font(11, "Verdana"));
+                     svg::Font(text_size_, "Verdana"));
   }
   svg::Polyline link(const hermes::geo::point2 &a, const hermes::geo::point2 &b,
                      const svg::Color &color) const {
@@ -480,6 +507,8 @@ private:
   }
 
   draw_options draw_options_{draw_option_bits::all};
+
+  std::vector<Command> commands_;
 
   hermes::geo::Transform2 transform_;
   hermes::geo::Transform2 inv_scale_;
@@ -489,6 +518,7 @@ private:
   f32 margin_percent_{0.3f};
   f32 vector_scale_{0.01f};
   f32 point_size_{15.f};
+  h_index text_size_{11};
   // palette
   svg::Color x_color{236, 143, 141};
   svg::Color y_color{83, 125, 150};

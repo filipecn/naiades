@@ -17,8 +17,9 @@ namespace na = naiades;
 
 int main() {
   auto grid = *na::geo::Grid2::Config()
-                   .setDomain(hermes::geo::bounds::bbox2::unit())
-                   .setResolution({40, 40})
+                   .setDomain(hermes::geo::bounds::bbox2(hermes::geo::point2(),
+                                                         hermes::geo::point2()))
+                   .setResolution({2, 2})
                    .build();
   auto mesh = na::geo::HE2::Ptr::shared();
   *mesh = *na::geo::convert2HE(grid);
@@ -54,7 +55,6 @@ int main() {
 
   auto u_field = *rbf_fd.getField<f32>(u.symbol);
   /*
-
   na::numeric::solvers::CG()
       .setUnknown(u) //
       .build(-fd.L(u), f)
@@ -71,11 +71,15 @@ int main() {
   f32 rmse = std::sqrt(na::numeric::sum(na::numeric::sqr(diff))) / sol.size();
 
   HERMES_LOG_VARIABLE(rmse);
-
 */
 
   na::utils::io::SVG("rbf_grid.svg")
       .setDimensions(rbf_fd.mesh().bbounds())
+      .disable(na::utils::io::draw_option_bits::indices |
+               na::utils::io::draw_option_bits::normals |
+               na::utils::io::draw_option_bits::faces |
+               na::utils::io::draw_option_bits::cells |
+               na::utils::io::draw_option_bits::vertices)
       //.draw(rbf_fd.mesh(), na::core::Element::cell(), sol)
       .draw(rbf_fd.mesh())
       .draw(rbf_fd.mesh(), static_cast<na::core::FieldCRef<f32>>(f_field))

@@ -36,9 +36,8 @@ MortonTree2::iterator::iterator(const MortonTree2 &mt, h_index z)
     : mt_{mt}, z_{z} {}
 
 MortonTree2::iterator::Leaf MortonTree2::iterator::operator*() const {
-  return {.bounds = mt_.cellIndexBounds(z_),
-          .level = mt_.cellLevel(z_),
-          .z_index = z_};
+  return {
+      .bounds = mt_.cellBounds(z_), .level = mt_.cellLevel(z_), .z_index = z_};
 }
 
 MortonTree2::iterator &MortonTree2::iterator::operator++() {
@@ -101,14 +100,27 @@ NaResult MortonTree2::refine(
       MortonTree2::PredicateData p_data;
       p_data.bounds = cellIndexBounds(node);
       p_data.level = l;
-      if (predicate(p_data))
+      if (predicate(p_data)) {
         split(node, l);
+      } else
+        return;
     }
     for (h_index i = 0; i < 4; ++i)
       f(children[i], l + 1);
   };
   f(0, 0);
   return NaResult::noError();
+}
+
+hermes::geo::bounds::bbox2 MortonTree2::bounds() const {
+  return hermes::geo::bounds::bbox2(
+      hermes::geo::point2(),
+      g2w_(hermes::geo::point2(resolution_, resolution_)));
+}
+
+hermes::range2 MortonTree2::indexBounds() const {
+  return hermes::range2(
+      {0, 0}, {static_cast<i32>(resolution_), static_cast<i32>(resolution_)});
 }
 
 NaResult MortonTree2::split(h_index z, h_index level) {
@@ -135,6 +147,17 @@ NaResult MortonTree2::merge(h_index z, h_index l) {
     active_cells_.reset(children[i]);
   }
   return NaResult::noError();
+}
+
+h_size MortonTree2::maxResolution() const { return resolution_; }
+
+hermes::geo::point2 MortonTree2::indexPosition(h_index z_index) const {
+  auto ij = hermes::math::space_filling::mortonDecode2(z_index);
+  return g2w_(hermes::geo::point2(ij));
+}
+
+hermes::geo::point2 MortonTree2::position(const hermes::geo::point2 &gp) const {
+  return g2w_(gp);
 }
 
 bool MortonTree2::isActive(h_index z_index) const {
@@ -183,7 +206,13 @@ h_index MortonTree2::cellLevel(h_index z) const {
 }
 
 bool MortonTree2::isLeaf(h_index z) const {
-  return !isCellHead(z) || !isActive(z + 1);
+  HERMES_ASSERT(isActive(z));
+  auto level = cellLevel(z);
+  if (level == max_level_)
+    return true;
+  auto s = levelCellArea(level + 1);
+  // check second child
+  return !isActive(z + s);
 }
 
 h_index MortonTree2::parentChildIndex(h_index z, h_index child_level) const {
@@ -199,11 +228,20 @@ h_index MortonTree2::parentChildIndex(h_index z, h_index child_level) const {
 }
 
 hermes::range2 MortonTree2::cellIndexBounds(h_index z) const {
+  if (!isActive(z)) {
+    HERMES_ERROR("{}", z);
+  }
   HERMES_ASSERT(isActive(z));
   auto ij = hermes::math::space_filling::mortonDecode2(z);
   auto l = cellLevel(z);
   auto s = levelCellSize(l);
   return hermes::range2(ij, ij.plus(s, s));
+}
+
+hermes::geo::bounds::bbox2 MortonTree2::cellBounds(h_index z) const {
+  auto range = cellIndexBounds(z);
+  return hermes::geo::bounds::bbox2(g2w_(hermes::geo::point2(range.lower())),
+                                    g2w_(hermes::geo::point2(range.upper())));
 }
 
 } // namespace naiades::spatial

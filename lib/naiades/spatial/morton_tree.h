@@ -28,7 +28,8 @@
 
 #include <naiades/base/result.h>
 
-#include <hermes/base/index.h>
+#include <hermes/geometry/bounds.h>
+#include <hermes/geometry/transform.h>
 
 #include <bitset>
 #include <functional>
@@ -42,7 +43,7 @@ public:
   class iterator {
   public:
     struct Leaf {
-      hermes::range2 bounds;
+      hermes::geo::bounds::bbox2 bounds;
       h_index level;
       h_index z_index;
     };
@@ -87,29 +88,43 @@ public:
   /// /return
   NaResult refine(const std::function<bool(const PredicateData &)> &predicate);
 
+  /// \note The resolution is the number of divisions of space in 1-dimension.
+  /// \return The max supported resolution.
+  h_size maxResolution() const;
+  /// \return The position correspondent to the given z-index in world
+  /// coordinates.
+  hermes::geo::point2 indexPosition(h_index z_index) const;
+  /// \return The full-resolution grid position in world coordinates.
+  hermes::geo::point2 position(const hermes::geo::point2 &gp) const;
+  /// \return true if the cell indexed by z-index is active.
+  bool isActive(h_index z_index) const;
+  /// \return the side length of a cell at the given level.
+  h_index levelCellSize(h_index level) const;
+  /// \return the area of a cell at the given level.
+  h_index levelCellArea(h_index level) const;
+  /// \note this assumes z_index is active.
+  /// \return The level of the given node.
+  h_index cellLevel(h_index active_z_index) const;
+  /// Region in world space covered by the tree.
+  hermes::geo::bounds::bbox2 bounds() const;
+  /// The range of all supported
+  hermes::range2 indexBounds() const;
+
 private:
   ///
   NaResult split(h_index z_index, h_index level);
   ///
   NaResult merge(h_index z_index, h_index level);
-  /// \return true if the cell indexed by z-index is active.
-  bool isActive(h_index z_index) const;
+
   ///
   NaResult childrenIndices(h_index z_index, h_index level,
                            h_index children_indices[4]) const;
-  /// \return the side length of a cell at the given level.
-  h_index levelCellSize(h_index level) const;
-  /// \return the area of a cell at the given level.
-  h_index levelCellArea(h_index level) const;
   /// \return true if the given index can be a cell head.
   bool isCellHead(h_index h_index) const;
   /// The parent index at a given level is the largest z-index value multiple
   /// of the size of the level that is smaller or equal the given index.
   /// \return the index of the parent of the given index at specified level.
   h_index parentIndex(h_index child_level, h_index z_index) const;
-  /// \note this assumes z_index is active.
-  /// \return The level of the given node.
-  h_index cellLevel(h_index active_z_index) const;
   /// \return true if the given node is a leaf node.
   bool isLeaf(h_index z_index) const;
   /// \return The child index [0-4] of the given node in the parent children
@@ -119,8 +134,14 @@ private:
   h_index parentChildIndex(h_index z_index, h_index child_level) const;
   /// \return The index area covered by the given cell.
   hermes::range2 cellIndexBounds(h_index z_index) const;
+  /// \return The area covered by the given cell in space.
+  hermes::geo::bounds::bbox2 cellBounds(h_index z_index) const;
 
   std::bitset<MORTON_TREE_ELEMENT_INDEX_BOUND> active_cells_;
+  /// world to grid coordinates transform
+  hermes::geo::Transform2 w2g_;
+  /// grid to world coordinates transform
+  hermes::geo::Transform2 g2w_;
   h_size resolution_{0};
   h_index max_level_{0};
 
