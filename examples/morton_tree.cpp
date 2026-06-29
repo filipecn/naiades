@@ -21,12 +21,19 @@ int main() {
     return distrib(gen) < 70;
   });
   HERMES_LOG_VARIABLE(mt);
-  na::utils::io::SVG("morton_tree.svg")
-      .setDimensions(mt.bounds())
-      .setTextSize(11)
-      .setPointSize(1)
-      .draw(mt)
-      .write();
+  auto svg = na::utils::io::SVG().setTextSize(11).setPointSize(3.0).draw(mt);
+
+  for (auto leaf : mt) {
+    auto stencil = mt.stencil(leaf.z_index);
+    auto center = mt.cellBounds(leaf.z_index).center();
+    if (leaf.z_index == 192)
+      for (auto nid : stencil) {
+        auto n_center = mt.cellBounds(nid).center();
+        svg.link(center, n_center, hermes::colors::RGB_Color::Purple());
+      }
+  }
+
+  svg.write("morton_tree.svg");
 
   return 0;
 }

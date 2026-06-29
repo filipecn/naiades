@@ -25,8 +25,7 @@ int main() {
       hermes::geo::point2(0, 1),
   };
   auto tri = *na::geo::triangulate(domain);
-  na::utils::io::SVG("tri.svg")
-      .setDimensions((tri).bbounds())
+  na::utils::io::SVG()
       .disable(na::utils::io::draw_option_bits::indices |
                na::utils::io::draw_option_bits::normals |
                na::utils::io::draw_option_bits::faces |
@@ -44,7 +43,7 @@ int main() {
           tri.star({na::core::Element::vertex(), na::core::Index::global(100)},
                    na::core::Element::vertex()))
       // .draw(*tri)
-      .write();
+      .write("tri.svg");
 
   return 0;
 }

@@ -73,8 +73,7 @@ int main() {
   HERMES_LOG_VARIABLE(rmse);
 */
 
-  na::utils::io::SVG("rbf_grid.svg")
-      .setDimensions(rbf_fd.mesh().bbounds())
+  na::utils::io::SVG()
       .disable(na::utils::io::draw_option_bits::indices |
                na::utils::io::draw_option_bits::normals |
                na::utils::io::draw_option_bits::faces |
@@ -85,7 +84,7 @@ int main() {
       .draw(rbf_fd.mesh(), static_cast<na::core::FieldCRef<f32>>(f_field))
       // .drawText(fd.mesh(), na::core::Element::cell(), x)
       // .draw(fd.mesh(), fd.boundaries())
-      .write();
+      .write("rbf_grid.svg");
 
   return 0;
 }

@@ -123,6 +123,70 @@ hermes::range2 MortonTree2::indexBounds() const {
       {0, 0}, {static_cast<i32>(resolution_), static_cast<i32>(resolution_)});
 }
 
+h_index MortonTree2::cell(const hermes::index2 &gp) const {
+  h_index z = hermes::math::space_filling::mortonEncode(gp);
+  if (isActive(z))
+    return z;
+  // TODO this can be solved faster!
+  for (h_index i = z - 1; i > 0; --i) {
+    if (isActive(i))
+      return i;
+  }
+  return 0;
+}
+
+std::vector<h_index> MortonTree2::stencil(h_index z) const {
+  auto domain = hermes::range2(
+      {0, 0}, {static_cast<i32>(resolution_), static_cast<i32>(resolution_)});
+  auto cell_bounds = cellIndexBounds(z);
+  // The stencil is constructed by iterating over the neighboring
+  // z-codes of the cell.
+  //                           upper
+  //       x    x  x  x  x   x
+  //          -------------
+  //       x |             | x
+  //       x |             | x
+  //       x |             | x
+  //          -------------
+  //       x    x  x  x  x   x
+  // lower
+  auto lower = cell_bounds.lower().plus(-1, -1);
+  auto upper = cell_bounds.upper();
+
+  std::vector<h_index> stencil_cells;
+
+  // upper row
+  for (i32 i = lower.i; i <= upper.i; ++i) {
+    auto ij = hermes::index2(i, upper.j);
+    if (domain.contains(ij)) {
+      stencil_cells.emplace_back(cell(ij));
+    }
+  }
+  // left
+  for (i32 j = lower.j + 1; j < upper.j; ++j) {
+    auto ij = hermes::index2(lower.i, j);
+    if (domain.contains(ij)) {
+      stencil_cells.emplace_back(cell(ij));
+    }
+  }
+  // right
+  for (i32 j = lower.j + 1; j < upper.j; ++j) {
+    auto ij = hermes::index2(upper.i, j);
+    if (domain.contains(ij)) {
+      stencil_cells.emplace_back(cell(ij));
+    }
+  }
+  // lower row
+  for (i32 i = lower.i; i <= upper.i; ++i) {
+    auto ij = hermes::index2(i, lower.j);
+    if (domain.contains(ij)) {
+      stencil_cells.emplace_back(cell(ij));
+    }
+  }
+
+  return stencil_cells;
+}
+
 NaResult MortonTree2::split(h_index z, h_index level) {
   HERMES_ASSERT(isActive(z));
   HERMES_ASSERT(isCellHead(z));
@@ -228,9 +292,6 @@ h_index MortonTree2::parentChildIndex(h_index z, h_index child_level) const {
 }
 
 hermes::range2 MortonTree2::cellIndexBounds(h_index z) const {
-  if (!isActive(z)) {
-    HERMES_ERROR("{}", z);
-  }
   HERMES_ASSERT(isActive(z));
   auto ij = hermes::math::space_filling::mortonDecode2(z);
   auto l = cellLevel(z);

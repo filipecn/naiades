@@ -96,6 +96,8 @@ public:
   hermes::geo::point2 indexPosition(h_index z_index) const;
   /// \return The full-resolution grid position in world coordinates.
   hermes::geo::point2 position(const hermes::geo::point2 &gp) const;
+  /// \return The centroid in world space of the given cell.
+  hermes::geo::point2 cellCenter(h_index z_index) const;
   /// \return true if the cell indexed by z-index is active.
   bool isActive(h_index z_index) const;
   /// \return the side length of a cell at the given level.
@@ -107,8 +109,17 @@ public:
   h_index cellLevel(h_index active_z_index) const;
   /// Region in world space covered by the tree.
   hermes::geo::bounds::bbox2 bounds() const;
-  /// The range of all supported
+  /// The range of all indices covered by the tree.
   hermes::range2 indexBounds() const;
+  /// \return The index area covered by the given cell.
+  hermes::range2 cellIndexBounds(h_index z_index) const;
+  /// \return The area covered by the given cell in space.
+  hermes::geo::bounds::bbox2 cellBounds(h_index z_index) const;
+
+  /// find the cell that contains gp
+  h_index cell(const hermes::index2 &gp) const;
+  /// compute cell stencil
+  std::vector<h_index> stencil(h_index z) const;
 
 private:
   ///
@@ -132,10 +143,6 @@ private:
   /// \note This considers the parent at child_level - 1.
   /// \note child_level > 0
   h_index parentChildIndex(h_index z_index, h_index child_level) const;
-  /// \return The index area covered by the given cell.
-  hermes::range2 cellIndexBounds(h_index z_index) const;
-  /// \return The area covered by the given cell in space.
-  hermes::geo::bounds::bbox2 cellBounds(h_index z_index) const;
 
   std::bitset<MORTON_TREE_ELEMENT_INDEX_BOUND> active_cells_;
   /// world to grid coordinates transform

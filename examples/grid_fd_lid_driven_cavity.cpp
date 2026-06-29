@@ -75,14 +75,13 @@ int main() {
 
   HERMES_LOG_VARIABLE(rmse);
 
-  na::utils::io::SVG("grid.svg")
-      .setDimensions(fd.mesh().bbounds())
+  na::utils::io::SVG()
       //   .draw(fd.mesh(), na::core::Element::cell(), sol)
       //   .draw(fd.mesh())
       .draw(fd.mesh(), static_cast<na::core::FieldCRef<f32>>(u_field))
       // .drawText(fd.mesh(), na::core::Element::cell(), x)
       // .draw(fd.mesh(), fd.boundaries())
-      .write();
+      .write("grid.svg");
 
   return 0;
 }
