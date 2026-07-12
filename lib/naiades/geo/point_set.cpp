@@ -20,10 +20,39 @@
  * IN THE SOFTWARE.
  */
 
-/// \file   mesh.cpp
+/// \file   point_set.cpp
 /// \author FilipeCN (filipedecn@gmail.com)
-/// \date   2026-03-28
+/// \date   2026-07-06
 
-#include <naiades/core/mesh.h>
+#include <naiades/geo/point_set.h>
 
-namespace naiades::core {} // namespace naiades::core
+namespace naiades::geo {
+
+h_size PointSet2::size() const { return points_.size(); }
+
+void PointSet2::applyTransform(const hermes::geo::Transform2 &t) {
+  bounds_ = hermes::geo::bounds::bbox2();
+  for (auto &point : points_) {
+    point = t(point);
+    bounds_ += point;
+  }
+}
+
+hermes::geo::bounds::bbox2 PointSet2::bbounds() const { return bounds_; }
+
+hermes::geo::point2
+PointSet2::center(const naiades::core::ElementIndex &iloc) const {
+  return points_[*iloc.index];
+}
+std::vector<hermes::geo::point2>
+PointSet2::centers(naiades::core::Element loc) const {
+  return points_;
+}
+
+hermes::geo::normal2
+PointSet2::normal(const naiades::core::ElementIndex &iloc) const {
+  HERMES_UNUSED_VARIABLE(iloc);
+  return hermes::geo::normal2(0, 1);
+}
+
+} // namespace naiades::geo

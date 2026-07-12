@@ -27,6 +27,7 @@
 #include <naiades/core/geometry.h>
 #include <naiades/core/topology.h>
 #include <naiades/numeric/blas.h>
+#include <naiades/numeric/spatial_discretization.h>
 
 #include <hermes/geometry/point.h>
 
@@ -50,10 +51,35 @@ public:
   hermes::geo::point2 operator[](h_index i) const;
   h_size size() const;
   real_t distance(h_index i, h_index j) const;
+  /// Signed distance distance between 0 and i in dimension d.
+  /// (x[0][d] - x[i][d])
+  real_t delta(derivative_bits d, h_index i) const;
 
 private:
   core::Geometry2::Ptr geo_;
   std::vector<core::Neighbour> elements_;
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<Stencil2>;
+#endif
 };
 
 } // namespace naiades::numeric
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+
+template <> struct DebugTraits<naiades::numeric::Stencil2> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::numeric::Stencil2 &data) {
+    auto m = DebugMessage();
+    m.add("geo", data.geo_);
+    m.addArray("nodes", data.elements_);
+    return m;
+  }
+};
+
+} // namespace hermes
+
+#endif

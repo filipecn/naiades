@@ -29,6 +29,8 @@
 
 #include <naiades/base/result.h>
 #include <naiades/core/element.h>
+#include <naiades/core/element_set.h>
+#include <naiades/numeric/blas.h>
 
 #include <hermes/core/ref.h>
 #include <hermes/geometry/bounds.h>
@@ -44,9 +46,58 @@ namespace naiades::core {
 /// that is commonly required by simulation algorithms. The discretization
 /// geometry may have the positions of different discretization elements, such
 /// as centers of cells and faces.
-class Geometry2 {
+class Geometry2 : public ElementSet {
 public:
   using Ptr = hermes::Ref<Geometry2>;
+
+  class element_view;
+  ///
+  class iterator {
+  public:
+    struct ElementInstance {
+      hermes::geo::point2 center;
+      h_index local_index;
+      h_index global_index;
+      Element element;
+      ElementIndex globalIndex() const;
+      ElementIndex localIndex() const;
+    };
+
+    ElementInstance operator*() const;
+
+    iterator &operator++();
+    bool operator==(const iterator &rhs) const;
+
+  private:
+    friend class element_view;
+    iterator(const Geometry2 *geometry, const ElementIndex &iloc);
+
+    const Geometry2 *geo_;
+    ElementIndex iloc_;
+  };
+
+  class element_view {
+  public:
+    iterator begin() const;
+    iterator end() const;
+
+  private:
+    friend class Geometry2;
+    element_view(const Geometry2 *geometry, const Element &loc);
+
+    const Geometry2 *geo_;
+    Element loc_;
+  };
+
+  /// \param loc Element filter.
+  /// \return View for iterating over instances of the given element.
+  element_view elements(const Element &loc) const;
+
+  /// \return center's x coordinate.
+  numeric::Scalar x(const Element &loc) const;
+  /// \return center's y coordinate.
+  numeric::Scalar y(const Element &loc) const;
+
   /// \return The bounding box containing the whole geometry.
   virtual hermes::geo::bounds::bbox2 bbounds() const = 0;
   /// Get the position of an element center.

@@ -10,6 +10,7 @@
 #include <naiades/geo/utils.h>
 #include <naiades/numeric/boundary_conditions.h>
 #include <naiades/numeric/linear_solvers.h>
+#include <naiades/numeric/rbf.h>
 #include <naiades/utils/fields.h>
 #include <naiades/utils/io.h>
 
@@ -17,8 +18,7 @@ namespace na = naiades;
 
 int main() {
   auto grid = *na::geo::Grid2::Config()
-                   .setDomain(hermes::geo::bounds::bbox2(hermes::geo::point2(),
-                                                         hermes::geo::point2()))
+                   .setCellSize(0.01f)
                    .setResolution({2, 2})
                    .build();
   auto mesh = na::geo::HE2::Ptr::shared();
@@ -53,12 +53,11 @@ int main() {
             na::numeric::sin(hermes::math::constants::pi * x) *
             na::numeric::sin(hermes::math::constants::pi * y);
 
-  auto u_field = *rbf_fd.getField<f32>(u.symbol);
-  /*
-  na::numeric::solvers::CG()
-      .setUnknown(u) //
-      .build(-fd.L(u), f)
-      .solve(u_field, {f_field});
+  // auto u_field = *rbf_fd.getField<f32>(u.symbol);
+  // na::numeric::solvers::CG()
+  //     .setUnknown(u) //
+  //     .build(-fd.L(u), f)
+  //     .solve(u_field, {f_field});
 
   // compute rmse error
 
@@ -66,22 +65,57 @@ int main() {
              na::numeric::sin(hermes::math::constants::pi * y);
 
   // take the difference
-  auto diff = na::numeric::abs(u_field - sol);
+  // auto diff = na::numeric::abs(u_field - sol);
 
-  f32 rmse = std::sqrt(na::numeric::sum(na::numeric::sqr(diff))) / sol.size();
+  // f32 rmse = std::sqrt(na::numeric::sum(na::numeric::sqr(diff))) /
+  // sol.size();
 
-  HERMES_LOG_VARIABLE(rmse);
-*/
+  // HERMES_LOG_VARIABLE(rmse);
 
+  auto star = rbf_fd.mesh().star(
+      {na::core::Element::vertex(), na::core::Index::global(4)},
+      na::core::Element::vertex());
+
+  auto stencil = na::numeric::Stencil2::build(mesh, star);
+  auto kernel = na::numeric::rbf::CubicKernel();
+  auto A = na::numeric::DifferentialRBF2::computeA(
+      stencil, &kernel, na::numeric::PolynomialType::ZERO);
+  if (!A) {
+    return -1;
+  }
+  std::cout << *A << std::endl;
+  auto solver = na::numeric::DifferentialRBF2::buildSolver(*A);
+  if (!solver) {
+    return -1;
+  }
+  auto dop = na::numeric::DifferentialRBF2::derivative(
+      na::numeric::derivative_bits::x, *solver, stencil, &kernel,
+      na::numeric::PolynomialType::ZERO);
+  if (!dop) {
+    return -1;
+  }
+  HERMES_LOG_VARIABLE(*dop);
+
+  HERMES_LOG_VARIABLE((*dop)(f_field));
+
+  for (const auto &v : star) {
+    HERMES_LOG_VARIABLE(v);
+  }
+
+  HERMES_LOG_VARIABLE(rbf_fd);
   na::utils::io::SVG()
-      .disable(na::utils::io::draw_option_bits::indices |
-               na::utils::io::draw_option_bits::normals |
-               na::utils::io::draw_option_bits::faces |
-               na::utils::io::draw_option_bits::cells |
-               na::utils::io::draw_option_bits::vertices)
+      .disable(
+          // na::utils::io::draw_option_bits::indices |
+          na::utils::io::draw_option_bits::normals |
+          na::utils::io::draw_option_bits::faces |
+          na::utils::io::draw_option_bits::cells |
+          na::utils::io::draw_option_bits::vertices)
       //.draw(rbf_fd.mesh(), na::core::Element::cell(), sol)
       .draw(rbf_fd.mesh())
-      .draw(rbf_fd.mesh(), static_cast<na::core::FieldCRef<f32>>(f_field))
+      .draw(rbf_fd.mesh(), rbf_fd.mesh().star({na::core::Element::vertex(),
+                                               na::core::Index::global(4)},
+                                              na::core::Element::vertex()))
+      // .draw(rbf_fd.mesh(), static_cast<na::core::FieldCRef<f32>>(f_field))
       // .drawText(fd.mesh(), na::core::Element::cell(), x)
       // .draw(fd.mesh(), fd.boundaries())
       .write("rbf_grid.svg");

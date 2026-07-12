@@ -41,7 +41,7 @@ MortonTree2::iterator::Leaf MortonTree2::iterator::operator*() const {
 }
 
 MortonTree2::iterator &MortonTree2::iterator::operator++() {
-  z_ = mt_.active_cells_._Find_next(z_);
+  // z_ = mt_.active_cells_._Find_next(z_);
   return *this;
 }
 

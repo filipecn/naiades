@@ -32,6 +32,7 @@
 #include <naiades/numeric/stencil.h>
 
 #include <Eigen/Dense>
+#include <Eigen/QR>
 
 namespace naiades::numeric::rbf {
 
@@ -72,8 +73,9 @@ private:
 class CubicKernel {
 public:
   static inline real_t phi(real_t r) { return r * r * r; }
-  static inline real_t dphi(real_t r) { return 3 * r; }
+  static inline real_t dphi(real_t r) { return 3 * r * r; }
   static inline real_t d2phi(real_t r) { return 6 * r; }
+  static inline real_t dphi_dx(real_t dx, real_t r) { return dx * 3 * r; }
 };
 
 class QuinticKernel {
@@ -84,7 +86,7 @@ public:
   }
   static inline real_t dphi(real_t r) {
     real_t r2 = r * r;
-    return 5 * r2 * r;
+    return 5 * r2 * r2;
   }
   static inline real_t d2phi(real_t r) {
     real_t r2 = r * r;
@@ -100,7 +102,7 @@ public:
   }
   static inline real_t dphi(real_t r) {
     real_t r2 = r * r;
-    return 7 * r2 * r2 * r;
+    return 7 * r2 * r2 * r2;
   }
   static inline real_t d2phi(real_t r) {
     real_t r2 = r * r;
@@ -173,7 +175,8 @@ struct Polynomial2 {
 struct DifferentialRBF2 {
   using MatrixType = Eigen::MatrixX<real_t>;
   using VectorType = Eigen::VectorX<real_t>;
-  using SolverType = Eigen::FullPivLU<Eigen::MatrixX<real_t>>;
+  using SolverType = Eigen::FullPivLU<MatrixType>;
+  // using SolverType = Eigen::ColPivHouseholderQR<MatrixType>;
   /// \brief Builds the RBF System matrix augmented by a polynomial.
   ///                      | PHI  P |
   ///                  A = |        |
@@ -194,16 +197,17 @@ struct DifferentialRBF2 {
     for (h_index i = 0; i < stencil_size; ++i) {
       for (h_index j = i; j < stencil_size; ++j) {
         if (i == j)
-          A(i, i) = rbf.phi(0.0);
+          A(i, i) = rbf->phi(0.0);
         else
-          A(i, j) = A(j, i) = rbf.phi(stencil.distance(i, j));
+          A(i, j) = A(j, i) = rbf->phi(stencil.distance(i, j));
       }
     }
 
     // P
     if (poly_terms > 0) {
       for (h_index i = 0; i < stencil_size; ++i) {
-        auto polynomial = Polynomial2::f(polynomial_type, stencil[i]);
+        auto polynomial = Polynomial2::f(
+            polynomial_type, stencil[i] - hermes::geo::vec2(stencil.center()));
         for (h_index j = 0; j < polynomial.size(); ++j)
           A(i, stencil_size + j) = polynomial[j];
       }
@@ -211,11 +215,6 @@ struct DifferentialRBF2 {
       A.bottomLeftCorner(poly_terms, stencil_size) =
           A.topRightCorner(stencil_size, poly_terms).transpose();
     }
-
-    return Result<MatrixType>(std::move(A));
-
-    Eigen::FullPivLU<Eigen::MatrixXd> solver;
-    solver.compute(A);
 
     return Result<MatrixType>(std::move(A));
   }
@@ -244,16 +243,15 @@ struct DifferentialRBF2 {
 
     // L(phi(x0))
     for (h_index i = 0; i < stencil_size; ++i)
-      rhs[i] = rbf->dphi(stencil.distance(0, i));
+      rhs[i] = rbf->dphi_dx(stencil.distance(0, i), stencil.delta(d, i));
 
     if (poly_terms > 0) {
-      auto df = Polynomial2::df(polynomial_type, d, stencil.center());
+      auto df = Polynomial2::df(polynomial_type, d, hermes::geo::point2(0, 0));
       for (h_index i = 0; i < poly_terms; ++i)
         rhs[i + stencil_size] = df[i];
     }
 
-    auto w = solver.solve(rhs).head(stencil_size);
-
+    auto w = solver.solve(rhs);
     DiscreteOperator dop;
 
     for (h_index i = 0; i < stencil_size; ++i) {

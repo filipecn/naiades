@@ -27,7 +27,6 @@
 #include <naiades/core/element_set.h>
 #include <naiades/core/geometry.h>
 #include <naiades/core/topology.h>
-#include <naiades/numeric/blas.h>
 
 #pragma once
 
@@ -36,57 +35,9 @@ namespace naiades::core {
 /// \brief Interface for 2-dimensional numeric discretization meshes.
 /// A discretization mesh holds geometric and topological information that fully
 /// represents a spatial discretization structure.
-class Mesh2 : public Geometry2, public Topology {
+class Mesh2 : virtual public Geometry2, virtual public Topology {
 public:
   using Ptr = hermes::Ref<Mesh2>;
-
-  class element_view;
-  ///
-  class iterator {
-  public:
-    struct ElementInstance {
-      hermes::geo::point2 center;
-      h_index local_index;
-      h_index global_index;
-      Element element;
-      ElementIndex globalIndex() const;
-      ElementIndex localIndex() const;
-    };
-
-    ElementInstance operator*() const;
-
-    iterator &operator++();
-    bool operator==(const iterator &rhs) const;
-
-  private:
-    friend class element_view;
-    iterator(const Mesh2 *mesh, const ElementIndex &iloc);
-
-    const Mesh2 *mesh_;
-    ElementIndex iloc_;
-  };
-
-  class element_view {
-  public:
-    iterator begin() const;
-    iterator end() const;
-
-  private:
-    friend class Mesh2;
-    element_view(const Mesh2 *mesh, const Element &loc);
-
-    const Mesh2 *mesh_;
-    Element loc_;
-  };
-
-  /// \param loc Element filter.
-  /// \return View for iterating over instances of the given element.
-  element_view elements(const Element &loc) const;
-
-  /// \return center's x coordinate.
-  numeric::Scalar x(const Element &loc) const;
-  /// \return center's y coordinate.
-  numeric::Scalar y(const Element &loc) const;
 };
 
 } // namespace naiades::core

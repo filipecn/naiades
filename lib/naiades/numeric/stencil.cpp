@@ -62,4 +62,21 @@ real_t Stencil2::distance(h_index i, h_index j) const {
                                geo_->center(elements_[j].element_index));
 }
 
+real_t Stencil2::delta(derivative_bits d, h_index i) const {
+  if (i == 0)
+    return 0.0;
+  HERMES_ASSERT(i < elements_.size());
+  HERMES_ASSERT(geo_);
+  h_index dimension = 0;
+  if (d == derivative_bits::y)
+    dimension = 1;
+  else if (d == derivative_bits::z)
+    dimension = 2;
+  else if (d != derivative_bits::x) {
+    HERMES_ERROR("invalid derivative bit value");
+  }
+  return geo_->center(elements_[0].element_index)[dimension] -
+         geo_->center(elements_[i].element_index)[dimension];
+}
+
 } // namespace naiades::numeric

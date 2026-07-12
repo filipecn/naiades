@@ -28,7 +28,9 @@
 
 #include <naiades/core/mesh.h>
 #include <naiades/geo/he.h>
+#include <naiades/geo/point_set.h>
 #include <naiades/numeric/spatial_discretization.h>
+#include <naiades/numeric/stencil.h>
 #include <naiades/spatial/morton_tree.h>
 
 #include <hermes/colors/color.h>
@@ -161,7 +163,8 @@ public:
   struct Element {
     virtual hermes::geo::bounds::bbox2 bounds() const = 0;
     virtual std::shared_ptr<svg::Shape>
-    shape(const hermes::geo::Transform2 &t) const = 0;
+    shape(const hermes::geo::Transform2 &t,
+          const hermes::geo::Transform2 &svg_transform) const = 0;
     svg::Fill fill() const {
       return fill_color ? svg::Fill(toSVG(fill_color.value())) : svg::Fill();
     }
@@ -175,12 +178,64 @@ public:
     real_t radius;
     hermes::geo::point2 center;
     hermes::geo::bounds::bbox2 bounds() const override {
-      return {center, center};
+      return {center - hermes::geo::vec2(radius),
+              center + hermes::geo::vec2(radius)};
     }
     std::shared_ptr<svg::Shape>
-    shape(const hermes::geo::Transform2 &t) const override {
+    shape(const hermes::geo::Transform2 &t,
+          const hermes::geo::Transform2 &svg_transform) const override {
       return std::shared_ptr<svg::Shape>(
           new svg::Circle(toSVG(t(center)), radius * 2, fill(), stroke()));
+    }
+  };
+
+  struct Arrow : public Element {
+    hermes::geo::point2 p;
+    hermes::geo::vec2 v;
+    hermes::geo::bounds::bbox2 bounds() const override {
+      hermes::geo::bounds::bbox2 bbox;
+      bbox = hermes::geo::bounds::make_union(bbox, p);
+      bbox = hermes::geo::bounds::make_union(bbox, p + v);
+      return bbox;
+    }
+    std::shared_ptr<svg::Shape>
+    shape(const hermes::geo::Transform2 &t,
+          const hermes::geo::Transform2 &svg_transform) const override {
+      //             _____
+      //          / \      h
+      //         -   -____
+      //          | |
+      //          | |     |v| - h
+      //          | |______
+      //           | |
+      //            w
+
+      std::vector<hermes::geo::point2> vertices;
+      // control w and h in pixel space and transform to object space
+      auto wh = svg_transform(hermes::geo::vec2(5, 7.5));
+      f32 w = wh.x;
+      f32 h = wh.y;
+      f32 half_w = w * 0.5f;
+      f32 rod = v.length() - h;
+      auto d = hermes::geo::normalize(v);
+      // right side
+      auto right = d.right();
+      vertices.emplace_back(p + half_w * right);
+      vertices.emplace_back(p + half_w * right + d * rod);
+      vertices.emplace_back(p + d * rod + w * right);
+      vertices.emplace_back(p + v);
+      // make the inverse on the left side
+      auto left = d.left();
+      vertices.emplace_back(p + d * rod + w * left);
+      vertices.emplace_back(p + d * rod + half_w * left);
+      vertices.emplace_back(p + half_w * left);
+
+      std::shared_ptr<svg::Shape> shape(new svg::Polygon(fill(), stroke()));
+      svg::Polygon *border = reinterpret_cast<svg::Polygon *>(shape.get());
+      for (const auto &position : vertices) {
+        *border << toSVG(t(position));
+      }
+      return shape;
     }
   };
 
@@ -192,7 +247,8 @@ public:
       return bbox;
     }
     std::shared_ptr<svg::Shape>
-    shape(const hermes::geo::Transform2 &t) const override {
+    shape(const hermes::geo::Transform2 &t,
+          const hermes::geo::Transform2 &svg_transform) const override {
       std::shared_ptr<svg::Shape> shape(new svg::Polygon(fill(), stroke()));
       svg::Polygon *border = reinterpret_cast<svg::Polygon *>(shape.get());
       for (const auto &position : vertices) {
@@ -211,7 +267,8 @@ public:
       return bbox;
     }
     std::shared_ptr<svg::Shape>
-    shape(const hermes::geo::Transform2 &t) const override {
+    shape(const hermes::geo::Transform2 &t,
+          const hermes::geo::Transform2 &svg_transform) const override {
       std::shared_ptr<svg::Shape> shape(new svg::Polyline(fill(), stroke()));
       svg::Polygon *border = reinterpret_cast<svg::Polygon *>(shape.get());
       for (const auto &position : vertices) {
@@ -232,7 +289,8 @@ public:
       return bbox;
     }
     std::shared_ptr<svg::Shape>
-    shape(const hermes::geo::Transform2 &t) const override {
+    shape(const hermes::geo::Transform2 &t,
+          const hermes::geo::Transform2 &svg_transform) const override {
       return std::shared_ptr<svg::Shape>(new svg::Text(
           toSVG(t(position) + offset), text.c_str(), fill(), font));
     }
@@ -478,13 +536,22 @@ public:
         text(hermes::cstr::format("{}[{}]{}", mesh.hePrev(he), he,
                                   mesh.heNext(he)),
              o + l * 2.5f, color);
-      arrow(o + l, v * 0.3f, color);
+      // arrow(o + l, v * 0.3f, color);
     };
     // faces
     for (const auto &face : mesh.elements(core::Element::face())) {
       // first half-edge
       drawHE(face, face.global_index * 2, y_color);
       drawHE(face, face.global_index * 2 + 1, z_color);
+      link(mesh.heOriginPosition(face.global_index * 2),
+           mesh.heOriginPosition(face.global_index * 2 + 1), x_color);
+    }
+    // vertices
+    for (const auto &vertex : mesh.elements(core::Element::vertex())) {
+      if (draw_options_.contain(draw_option_bits::indices))
+        text(hermes::cstr::format("{}", vertex.local_index), vertex.center,
+             bg_color);
+      point(vertex.center, point_size_, bg_color);
     }
 
     return *this;
@@ -517,23 +584,45 @@ public:
     }
     return *this;
   }
-
-  void write(
-
-      const std::filesystem::path &path,
-      hermes::size2 resolution = {1500, 1500}) {
-
-    svg::Dimensions dimensions(resolution.width, resolution.height);
-    svg::Document doc(path.string(),
-                      svg::Layout(dimensions, svg::Layout::Origin::BottomLeft));
+  SVG &draw(const geo::PointSet2 &ps) {
+    HERMES_NOT_IMPLEMENTED;
+    // for (const auto &p : ps)
+    //   point(p, point_size_, bg_color);
+    return *this;
+  }
+  SVG &draw(const numeric::Stencil2 &stencil) {
+    for (h_index i = 1; i < stencil.size(); ++i) {
+      link(stencil[0], stencil[i], x_color);
+    }
+    for (h_index i = 0; i < stencil.size(); ++i) {
+      point(stencil[i], point_size_, y_color);
+      if (i == 0)
+        text(hermes::cstr::format("({},{})", stencil[i].x, stencil[i].y),
+             stencil[i], z_color);
+    }
+    return *this;
+  }
+  void write(const std::filesystem::path &path,
+             hermes::size2 resolution = {1500, 1500}) {
     // compute bounds
     hermes::geo::bounds::bbox2 bounds;
     for (auto command : commands_)
       if (std::holds_alternative<std::shared_ptr<Element>>(command))
         bounds += std::get<std::shared_ptr<Element>>(command)->bounds();
 
+    auto aspect_ratio = bounds.size(0) / bounds.size(1);
+    resolution.width = resolution.height * aspect_ratio;
+
+    svg::Dimensions dimensions(resolution.width, resolution.height);
+    svg::Document doc(path.string(),
+                      svg::Layout(dimensions, svg::Layout::Origin::BottomLeft));
+
+    HERMES_LOG_VARIABLE(aspect_ratio);
+    HERMES_LOG_VARIABLE(resolution);
     // compute world transform
     auto extended_bounds = bounds.extends() * (1.0f + margin_percent_);
+    HERMES_LOG_VARIABLE(bounds.extends());
+    HERMES_LOG_VARIABLE(extended_bounds);
     auto origin_translate = hermes::geo::Transform2::translate(
         -1.f * hermes::geo::vec2(bounds.center()));
     auto unit_scale = hermes::geo::Transform2::scale(1.0f / extended_bounds);
@@ -543,12 +632,14 @@ public:
         hermes::geo::vec2(resolution.width, resolution.height));
     auto world_transform =
         center_translate * scale * unit_scale * origin_translate;
+    auto svg_transform = hermes::geo::Transform2::scale(
+        hermes::geo::vec2(1. / resolution.width, 1. / resolution.height));
 
     // draw into doc
     for (auto command : commands_) {
       if (std::holds_alternative<std::shared_ptr<Element>>(command)) {
         doc << *std::get<std::shared_ptr<Element>>(command)->shape(
-            world_transform);
+            world_transform, svg_transform);
       }
     }
 
@@ -559,35 +650,13 @@ public:
 
   SVG &arrow(const hermes::geo::point2 &p, const hermes::geo::vec2 &v,
              const hermes::colors::RGB_Color &color) {
-    //             _____
-    //          / \      h
-    //         -   -____
-    //          | |
-    //          | |     |v| - h
-    //          | |______
-    //           | |
-    //            w
-
-    std::vector<hermes::geo::point2> vertices;
-    // control w and h in pixel space and transform to object space
-    auto wh = hermes::geo::vec2(5, 7.5);
-    f32 w = wh.x;
-    f32 h = wh.y;
-    f32 half_w = w * 0.5f;
-    f32 rod = v.length() - h;
-    auto d = hermes::geo::normalize(v);
-    // right side
-    auto right = d.right();
-    vertices.emplace_back(p + half_w * right);
-    vertices.emplace_back(p + half_w * right + d * rod);
-    vertices.emplace_back(p + d * rod + w * right);
-    vertices.emplace_back(p + v);
-    // make the inverse on the left side
-    auto left = d.left();
-    vertices.emplace_back(p + d * rod + w * left);
-    vertices.emplace_back(p + d * rod + half_w * left);
-    vertices.emplace_back(p + half_w * left);
-    return polygon(vertices, color);
+    std::shared_ptr<Element> shape(new Arrow());
+    shape->fill_color = color;
+    Arrow *border = reinterpret_cast<Arrow *>(shape.get());
+    border->p = p;
+    border->v = v;
+    commands_.emplace_back(shape);
+    return *this;
   }
   SVG &polygon(const std::vector<hermes::geo::point2> &positions) {
     std::shared_ptr<Element> shape(new Polygon());
@@ -653,22 +722,27 @@ public:
     return *this;
   }
 
+  static inline hermes::colors::RGB_Color x_color{236 / 255.0f, 143 / 255.0f,
+                                                  141 / 255.0f};
+  static inline hermes::colors::RGB_Color y_color{83 / 255.0f, 125 / 255.0f,
+                                                  150 / 255.0f};
+  static inline hermes::colors::RGB_Color z_color{68 / 255.0f, 161 / 255.0f,
+                                                  148 / 255.0f};
+  static inline hermes::colors::RGB_Color bg_color{244 / 255.0f, 240 / 255.0f,
+                                                   228 / 255.0f};
+  static inline hermes::colors::RGB_Color neighbor_color{
+      244 / 255.0f, 240 / 255.0f, 11 / 255.0f};
+
 private:
   draw_options draw_options_{draw_option_bits::all};
 
   std::vector<Command> commands_;
 
-  f32 margin_percent_{0.3f};
+  f32 margin_percent_{0.1f};
   f32 vector_scale_{0.01f};
   f32 point_size_{15.f};
   h_index text_size_{11};
   // palette
-  hermes::colors::RGB_Color x_color{236 / 255.0, 143 / 255.0, 141 / 255.0};
-  hermes::colors::RGB_Color y_color{83 / 255.0, 125 / 255.0, 150 / 255.0};
-  hermes::colors::RGB_Color z_color{68 / 255.0, 161 / 255.0, 148 / 255.0};
-  hermes::colors::RGB_Color bg_color{244 / 255.0, 240 / 255.0, 228 / 255.0};
-  hermes::colors::RGB_Color neighbor_color{244 / 255.0, 240 / 255.0,
-                                           11 / 255.0};
 };
 
 } // namespace naiades::utils::io

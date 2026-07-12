@@ -28,6 +28,7 @@ target_link_libraries(naiades_tests PRIVATE
   naiades
   hermes
   Catch2::Catch2WithMain
+  DEPS
 )
 
 if (UNIX)

@@ -256,8 +256,10 @@ std::vector<hermes::geo::point2> Grid2::centers(core::Element loc) const {
   return ps;
 }
 
-std::vector<h_size> Grid2::indices(const core::ElementIndex &iloc,
+std::vector<h_size> Grid2::indices(const core::ElementIndex &_iloc,
                                    core::Element sub_element) const {
+  // refine element type
+  auto iloc = computeGlobalIndex(_iloc);
   // vertices have no sub elements
   if (iloc.element == core::Element::VERTEX)
     return {};
@@ -305,6 +307,10 @@ std::vector<h_size> Grid2::indices(const core::ElementIndex &iloc,
     is.emplace_back(safeFlatIndex(sub_element, ij.plus(0, 0)));
     is.emplace_back(safeFlatIndex(sub_element, ij.plus(0, 1)));
   } else {
+    HERMES_ERROR("Indexing sub-elements of type {} from element type {} is not "
+                 "supported!",
+                 hermes::to_string(sub_element),
+                 hermes::to_string(iloc.element));
     HERMES_NOT_IMPLEMENTED;
   }
   return is;

@@ -14,6 +14,7 @@ set(NAIADES_HEADERS
 
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.h
   ${NAIADES_SOURCE_DIR}/naiades/geo/he.h
+  ${NAIADES_SOURCE_DIR}/naiades/geo/point_set.h
   ${NAIADES_SOURCE_DIR}/naiades/geo/utils.h
 
   ${NAIADES_SOURCE_DIR}/naiades/numeric/blas.h
@@ -44,11 +45,13 @@ set(NAIADES_SOURCES
   ${NAIADES_SOURCE_DIR}/naiades/core/element.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/element_set.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/core/geometry.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/mesh.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/topology.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.cpp
   ${NAIADES_SOURCE_DIR}/naiades/geo/he.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/geo/point_set.cpp
   ${NAIADES_SOURCE_DIR}/naiades/geo/utils.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/numeric/blas.cpp
@@ -58,6 +61,7 @@ set(NAIADES_SOURCES
   ${NAIADES_SOURCE_DIR}/naiades/numeric/linear_solvers.cpp
   ${NAIADES_SOURCE_DIR}/naiades/numeric/rbf.cpp
   ${NAIADES_SOURCE_DIR}/naiades/numeric/spatial_discretization.cpp
+  ${NAIADES_SOURCE_DIR}/naiades/numeric/stencil.cpp
 
   ${NAIADES_SOURCE_DIR}/naiades/sampling/stencil.cpp
 
