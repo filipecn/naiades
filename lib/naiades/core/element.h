@@ -181,6 +181,7 @@ struct Index {
   }
 
 private:
+  friend struct std::hash<Index>;
   IndexSpace space_{IndexSpace::GLOBAL};
   h_size value_;
   static h_size s_invalid_value_;
@@ -194,6 +195,7 @@ public:
   static Element vFace();
   static Element wFace();
   static Element vertex();
+  static Element point();
 
   ///      v --- V ---- v    v - VERTEX
   ///      |            |    C - CELL
@@ -376,6 +378,8 @@ struct ElementIndex {
 
   ElementIndex &operator++();
   bool operator==(const ElementIndex &rhs) const;
+
+  friend struct std::hash<ElementIndex>;
 };
 
 #undef NAIADES_ELEMENT_MASK
@@ -404,6 +408,21 @@ template <> struct hash<naiades::core::element_alignments> {
 template <> struct hash<naiades::core::element_orientations> {
   inline size_t operator()(const naiades::core::element_orientations &x) const {
     return static_cast<u32>(x);
+  }
+};
+
+template <> struct hash<naiades::core::Index> {
+  inline size_t operator()(const naiades::core::Index &x) const {
+    return static_cast<h_index>(x);
+  }
+};
+
+template <> struct hash<naiades::core::ElementIndex> {
+  inline size_t operator()(const naiades::core::ElementIndex &x) const {
+    std::size_t seed = std::hash<naiades::core::Index>{}(x.index);
+    seed ^= std::hash<naiades::core::Element>{}(x.element) + 0x9e3779b9 +
+            (seed << 6) + (seed >> 2);
+    return seed;
   }
 };
 

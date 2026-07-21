@@ -35,7 +35,7 @@ namespace naiades::core {
 /// \brief Interface for 2-dimensional numeric discretization meshes.
 /// A discretization mesh holds geometric and topological information that fully
 /// represents a spatial discretization structure.
-class Mesh2 : virtual public Geometry2, virtual public Topology {
+class Mesh2 : public Geometry2, public Topology {
 public:
   using Ptr = hermes::Ref<Mesh2>;
 };

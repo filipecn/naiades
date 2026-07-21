@@ -113,7 +113,6 @@ TEST_CASE("Grid2FD", "[numeric]") {
   //  HERMES_WARN("{}", naiades::to_string(op));
   //}
 }
-
 TEST_CASE("Differential RBF", "[numeric]") {
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -126,7 +125,7 @@ TEST_CASE("Differential RBF", "[numeric]") {
     auto fy = [](const hermes::geo::point2 &p) -> f32 {
       return -p.x + 2 * p.y;
     };
-    auto loc = naiades::core::Element::vertex();
+    auto loc = naiades::core::Element::point();
     std::vector<f32> scales = {1.0f, 0.1f, 0.01f};
     auto polynomial_type = naiades::numeric::PolynomialType::CUBIC;
     for (auto scale : scales) {
@@ -197,6 +196,87 @@ TEST_CASE("Differential RBF", "[numeric]") {
                   ps.bbounds().corner(0), naiades::utils::io::SVG::z_color);
       }
       svg.write(hermes::cstr::format("test_{}.svg", scale));
+    }
+  }
+  SECTION("2D - laplacian") {
+    auto f = [](const hermes::geo::point2 &p) -> f32 {
+      return std::exp(p.x) * std::sin(p.x);
+    };
+    auto fx = [](const hermes::geo::point2 &p) -> f32 {
+      return std::exp(p.x) * (std::sin(p.x) + std::cos(p.x));
+    };
+    auto Lf = [](const hermes::geo::point2 &p) -> f32 {
+      return 2.0f * std::exp(p.x) * std::cos(p.x);
+    };
+    auto loc = naiades::core::Element::point();
+    std::vector<f32> scales = {1.0f, 0.1f, 0.01f};
+    auto polynomial_type = naiades::numeric::PolynomialType::CUBIC;
+    for (auto scale : scales) {
+      auto svg = naiades::utils::io::SVG();
+      h_index index = 0;
+      for (h_index stencil_size = 20; stencil_size < 21; ++stencil_size) {
+        hermes::geo::Transform2 transform =
+            hermes::geo::Transform2::translate({0.5f, 0.5f}) *
+            hermes::geo::Transform2::scale({scale, scale});
+        naiades::geo::PointSet2 ps;
+        ps.emplace_back(hermes::geo::point2(0, 0));
+        for (h_index i = 1; i < stencil_size; ++i)
+          ps.emplace_back(hermes::geo::point2(distrib(gen), distrib(gen)));
+
+        ps.applyTransform(transform);
+
+        std::vector<naiades::core::Neighbour> neighbors;
+        for (h_index i = 0; i < ps.centers(loc).size(); ++i) {
+          neighbors.emplace_back(naiades::core::Neighbour{
+              naiades::core::ElementIndex(loc, naiades::core::Index::global(i)),
+              hermes::geo::distance(
+                  ps.center(naiades::core::ElementIndex(
+                      loc, naiades::core::Index::global(i))),
+                  ps.center(naiades::core::ElementIndex(
+                      loc, naiades::core::Index::global(0))))});
+        }
+
+        auto stencil = naiades::numeric::Stencil2::build(&ps, neighbors);
+        naiades::numeric::rbf::CubicKernel kernel;
+        auto A = naiades::numeric::DifferentialRBF2::computeA(stencil, &kernel,
+                                                              polynomial_type);
+        REQUIRE(A);
+
+        auto solver = naiades::numeric::DifferentialRBF2::buildSolver(*A);
+        REQUIRE(solver);
+
+        naiades::core::FieldSet fields;
+        REQUIRE(fields.add<f32>(loc, 0, {"f"}) == NaResult::noError());
+        fields.setElementCount(loc, ps.size());
+        for (h_index i = 0; i < ps.size(); ++i) {
+          auto ei =
+              naiades::core::ElementIndex(loc, naiades::core::Index::global(i));
+          fields.get<f32>("f").value()[*ei.index] = f(ps.center(ei));
+        }
+
+        auto dop = naiades::numeric::DifferentialRBF2::laplacian(
+            *solver, stencil, &kernel, polynomial_type);
+
+        // auto dop = naiades::numeric::DifferentialRBF2::derivative(
+        //     naiades::numeric::derivative_bits::x, *solver, stencil, &kernel,
+        //     polynomial_type);
+
+        REQUIRE(dop);
+
+        // HERMES_LOG_VARIABLE(ps);
+
+        svg.setPointSize(scale)
+            .setTextSize(5 + 10 * hermes::numeric::smoothStep(
+                                      scales.front(), scales.back(), scale))
+            .draw(stencil)
+            .text(hermes::cstr::format("scale={}", scale),
+                  ps.bbounds().corner(2), naiades::utils::io::SVG::z_color)
+            .text(hermes::cstr::format(
+                      "err={}", std::fabs((*dop)(fields.get<f32>("f").value()) -
+                                          Lf(stencil[0]))),
+                  ps.bbounds().corner(0), naiades::utils::io::SVG::z_color);
+      }
+      svg.write(hermes::cstr::format("test_laplacian_{}.svg", scale));
     }
   }
 }

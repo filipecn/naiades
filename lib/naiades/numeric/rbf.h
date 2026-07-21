@@ -74,6 +74,7 @@ class CubicKernel {
 public:
   static inline real_t phi(real_t r) { return r * r * r; }
   static inline real_t dphi(real_t r) { return 3 * r * r; }
+  static inline real_t dphi_over_r(real_t r) { return 3 * r; }
   static inline real_t d2phi(real_t r) { return 6 * r; }
   static inline real_t dphi_dx(real_t dx, real_t r) { return dx * 3 * r; }
 };
@@ -262,6 +263,57 @@ struct DifferentialRBF2 {
 
     return Result<DiscreteOperator>(std::move(dop));
   }
-};
 
+  /// Computes the weights for the partial derivative operator.
+  /// \note The given matrix must match the given parameters:
+  ///       - same kernel function
+  ///       - same polynomial type
+  ///       - same indices and centers
+  template <typename KernelFunctionPtr>
+  static Result<DiscreteOperator>
+  laplacian(const SolverType &solver, const Stencil2 &stencil,
+            KernelFunctionPtr rbf,
+            PolynomialType polynomial_type = PolynomialType::ZERO) {
+    const h_size poly_terms = Polynomial2::size(polynomial_type);
+    const h_size stencil_size = stencil.size();
+    const h_size system_size = stencil_size + poly_terms;
+
+    VectorType rhs = VectorType::Zero(system_size);
+
+    // L(phi(x0))
+    for (h_index i = 0; i < stencil_size; ++i) {
+      auto r = stencil.distance(0, i);
+      rhs[i] = rbf->d2phi(r) + rbf->dphi_over_r(r);
+      rhs[i] = rbf->dphi_dx(r, stencil.delta(derivative_bits::x, i)) *
+                   rbf->dphi_dx(r, stencil.delta(derivative_bits::x, i)) +
+               rbf->dphi_dx(r, stencil.delta(derivative_bits::y, i)) *
+                   rbf->dphi_dx(r, stencil.delta(derivative_bits::y, i));
+    }
+
+    if (poly_terms > 0) {
+      auto fx = Polynomial2::df(polynomial_type, derivative_bits::x,
+                                hermes::geo::point2(0, 0));
+      auto fy = Polynomial2::df(polynomial_type, derivative_bits::y,
+                                hermes::geo::point2(0, 0));
+      auto lfx = Polynomial2::ddf(polynomial_type, derivative_bits::x,
+                                  hermes::geo::point2(0, 0));
+      auto lfy = Polynomial2::ddf(polynomial_type, derivative_bits::y,
+                                  hermes::geo::point2(0, 0));
+      for (h_index i = 0; i < poly_terms; ++i)
+        rhs[i + stencil_size] = lfx[i] + lfy[i];
+      // rhs[i + stencil_size] = fx[i] * fx[i] + fy[i] * fy[i];
+    }
+
+    auto w = solver.solve(rhs);
+    DiscreteOperator dop;
+
+    for (h_index i = 0; i < stencil_size; ++i) {
+      auto ei = stencil.index(i);
+      dop.add(*ei.index, w[i]);
+    }
+    dop.setCenterIndex(*stencil.index(0).index);
+
+    return Result<DiscreteOperator>(std::move(dop));
+  }
+};
 } // namespace naiades::numeric

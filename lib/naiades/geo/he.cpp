@@ -26,6 +26,7 @@
 
 #include <naiades/geo/he.h>
 
+#include <queue>
 #include <unordered_set>
 
 namespace naiades::geo {
@@ -555,51 +556,8 @@ HE2::star(const core::ElementIndex &iloc, core::Element star_loc,
   std::vector<core::Neighbour> s;
   // insert the center of the star
   s.push_back({.element_index = iloc, .distance = 0});
-  auto center_pos = center(iloc);
-  if (iloc.element.is(core::element_primitive_bits::cell)) {
-    HERMES_ASSERT(iloc.index < cells_.size());
-    if (star_loc.is(core::element_primitive_bits::cell)) {
-      HERMES_ASSERT(cells_[iloc.index].he_index < half_edges_.size());
-      for (auto he : heLoop(cells_[iloc.index].he_index)) {
-        auto he_t = heTwin(he);
-        auto n_cell = half_edges_[he_t].cell_index;
-        if (n_cell != null_index_) {
-          auto cell_iloc = core::ElementIndex::global(iloc.element, n_cell);
-          s.push_back({.element_index = cell_iloc,
-                       .distance = hermes::geo::distance(center_pos,
-                                                         center(cell_iloc))});
-        } else if (boundary_loc) {
-          HERMES_ASSERT(*boundary_loc == core::Element::FACE);
-          // the boundary is represented by the center of the face
-          auto n_face = heFace(he_t);
-          auto face_iloc = core::ElementIndex::global(*boundary_loc, n_face);
-          s.push_back({.element_index = face_iloc,
-                       .distance = hermes::geo::distance(center_pos,
-                                                         center(face_iloc))});
-        }
-      }
-    } else if (star_loc.is(core::element_primitive_bits::face)) {
-      HERMES_NOT_IMPLEMENTED;
-    } else {
-      HERMES_NOT_IMPLEMENTED;
-    }
-  } else if (iloc.element.is(core::element_primitive_bits::vertex)) {
-    HERMES_ASSERT(iloc.index < vertices_.size());
-    if (star_loc.is(core::element_primitive_bits::vertex)) {
-      for (auto he : heSiblings(vertices_[iloc.index].he_index)) {
-        HERMES_ASSERT(he < half_edges_.size());
-        auto vertex_iloc =
-            core::ElementIndex::global(iloc.element, heDestination(he));
-        s.push_back({.element_index = vertex_iloc,
-                     .distance = hermes::geo::distance(center_pos,
-                                                       center(vertex_iloc))});
-      }
-    } else {
-      HERMES_NOT_IMPLEMENTED;
-    }
-  } else {
-    HERMES_NOT_IMPLEMENTED;
-  }
+  auto ns = neighbours(iloc, 1, star_loc, boundary_loc);
+  s.insert(s.end(), ns.begin(), ns.end());
   return s;
 }
 
@@ -610,12 +568,101 @@ HE2::k_ring(const core::ElementIndex &iloc, h_size k, core::Element ring_loc,
   return {};
 }
 
-std::vector<std::pair<h_size, real_t>>
-HE2::neighbours(const core::ElementIndex &iloc, h_size radius,
-                core::Element neighbour_loc,
-                std::optional<core::Element> boundary_loc) const {
-  HERMES_NOT_IMPLEMENTED;
+std::vector<core::Neighbour>
+HE2::knn(const core::ElementIndex &iloc, h_size n, core::Element n_loc,
+         std::optional<core::Element> boundary_loc) const {
   return {};
+}
+
+std::vector<core::Neighbour>
+HE2::neighbours(const core::ElementIndex &iloc, h_size radius,
+                core::Element n_loc, std::optional<core::Element> b_loc) const {
+  auto center_pos = center(iloc);
+  std::unordered_set<core::ElementIndex> listed;
+  std::function<std::vector<core::ElementIndex>(const core::ElementIndex &)>
+      get_nids;
+
+  auto bfs = [&](const core::ElementIndex &center_iloc) {
+    // (iloc, level)
+    std::queue<std::pair<core::ElementIndex, h_index>> q;
+    q.push(std::make_pair(center_iloc, 0));
+    while (!q.empty()) {
+      auto cur_iloc = q.front().first;
+      auto cur_level = q.front().second;
+      q.pop();
+      listed.insert(cur_iloc);
+      if (cur_level == radius)
+        continue;
+      if (b_loc && cur_iloc.element == *b_loc)
+        continue;
+      for (auto nid : get_nids(cur_iloc)) {
+        if (!listed.count(nid)) {
+          q.push(std::make_pair(nid, cur_level + 1));
+        }
+      }
+    }
+  };
+
+  std::vector<core::Neighbour> s;
+  if (iloc.element.is(core::element_primitive_bits::cell)) {
+    HERMES_ASSERT(iloc.index < cells_.size());
+    if (n_loc.is(core::element_primitive_bits::cell)) {
+      get_nids = [&](const core::ElementIndex &ciloc)
+          -> std::vector<core::ElementIndex> {
+        HERMES_ASSERT(cells_[ciloc.index].he_index < half_edges_.size());
+        std::vector<core::ElementIndex> nids;
+        for (auto he : heLoop(cells_[ciloc.index].he_index)) {
+          auto he_t = heTwin(he);
+          auto n_cell = half_edges_[he_t].cell_index;
+          if (n_cell != null_index_) {
+            auto cell_iloc = core::ElementIndex::global(ciloc.element, n_cell);
+            s.push_back({.element_index = cell_iloc,
+                         .distance = hermes::geo::distance(center_pos,
+                                                           center(cell_iloc))});
+            nids.emplace_back(cell_iloc);
+          } else if (b_loc) {
+            HERMES_ASSERT(*b_loc == core::Element::FACE);
+            // the boundary is represented by the center of the face
+            auto n_face = heFace(he_t);
+            auto face_iloc = core::ElementIndex::global(*b_loc, n_face);
+            s.push_back({.element_index = face_iloc,
+                         .distance = hermes::geo::distance(center_pos,
+                                                           center(face_iloc))});
+            nids.emplace_back(face_iloc);
+          }
+        }
+        return nids;
+      };
+    } else {
+      HERMES_NOT_IMPLEMENTED;
+    }
+  } else if (iloc.element.is(core::element_primitive_bits::vertex)) {
+    HERMES_ASSERT(iloc.index < vertices_.size());
+    if (n_loc.is(core::element_primitive_bits::vertex)) {
+      get_nids = [&](const core::ElementIndex &ciloc)
+          -> std::vector<core::ElementIndex> {
+        std::vector<core::ElementIndex> nids;
+        HERMES_ASSERT(*ciloc.index < vertices_.size());
+        for (auto he : heSiblings(vertices_[*ciloc.index].he_index)) {
+          auto nid = heDestination(he);
+          auto vertex_iloc = core::ElementIndex::global(n_loc, nid);
+          if (!listed.count(vertex_iloc)) {
+            s.push_back({.element_index = vertex_iloc,
+                         .distance = hermes::geo::distance(
+                             center_pos, center(vertex_iloc))});
+            nids.emplace_back(vertex_iloc);
+          }
+        }
+        return nids;
+      };
+    } else {
+      HERMES_NOT_IMPLEMENTED;
+    }
+  } else {
+    HERMES_NOT_IMPLEMENTED;
+  }
+  bfs(iloc);
+  return s;
 }
 
 } // namespace naiades::geo

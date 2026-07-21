@@ -64,4 +64,6 @@ Element Element::wFace() { return Element(Element::Type::W_FACE); }
 
 Element Element::vertex() { return Element(Element::Type::VERTEX); }
 
+Element Element::point() { return Element(Element::Type::POINT); }
+
 } // namespace naiades::core

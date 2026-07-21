@@ -38,19 +38,39 @@ void PointSet2::applyTransform(const hermes::geo::Transform2 &t) {
   }
 }
 
+h_size PointSet2::elementCount(core::Element loc) const {
+  if (loc.is(core::element_primitive_bits::point))
+    return points_.size();
+  return 0;
+}
+
+h_size PointSet2::elementIndexOffset(core::Element loc) const {
+  HERMES_UNUSED_VARIABLE(loc);
+  return 0;
+}
+
+core::element_alignments
+PointSet2::elementAlignment(const core::ElementIndex &loci) const {
+  return core::element_alignment_bits::any;
+}
+
+core::element_orientations
+PointSet2::elementOrientation(const core::ElementIndex &iloc) const {
+  return core::element_orientation_bits::any;
+}
+
 hermes::geo::bounds::bbox2 PointSet2::bbounds() const { return bounds_; }
 
-hermes::geo::point2
-PointSet2::center(const naiades::core::ElementIndex &iloc) const {
+hermes::geo::point2 PointSet2::center(const core::ElementIndex &iloc) const {
   return points_[*iloc.index];
 }
-std::vector<hermes::geo::point2>
-PointSet2::centers(naiades::core::Element loc) const {
-  return points_;
+std::vector<hermes::geo::point2> PointSet2::centers(core::Element loc) const {
+  if (loc.is(core::element_primitive_bits::point))
+    return points_;
+  return {};
 }
 
-hermes::geo::normal2
-PointSet2::normal(const naiades::core::ElementIndex &iloc) const {
+hermes::geo::normal2 PointSet2::normal(const core::ElementIndex &iloc) const {
   HERMES_UNUSED_VARIABLE(iloc);
   return hermes::geo::normal2(0, 1);
 }

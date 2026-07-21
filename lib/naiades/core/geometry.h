@@ -46,7 +46,7 @@ namespace naiades::core {
 /// that is commonly required by simulation algorithms. The discretization
 /// geometry may have the positions of different discretization elements, such
 /// as centers of cells and faces.
-class Geometry2 : public ElementSet {
+class Geometry2 : virtual public ElementSet {
 public:
   using Ptr = hermes::Ref<Geometry2>;
 

@@ -48,7 +48,7 @@ struct Neighbour {
 /// \brief Interface for discretization neighbourhoods.
 /// A stencil represents a set of discretization elements grouped by some
 /// criteria, such as neighbourhood.
-class Topology : public ElementSet {
+class Topology : virtual public ElementSet {
 public:
   using Ptr = hermes::Ref<Topology>;
 
@@ -104,16 +104,24 @@ public:
   virtual std::vector<Neighbour>
   k_ring(const ElementIndex &iloc, h_size k, Element ring_loc,
          std::optional<Element> boundary_loc) const = 0;
-  /// \brief The direct neighbourhood of elements for a given element.
-  /// The neighborhood (here, the 1-neighbour) consists of the set of elements
-  /// of topological distance of 1.
+  /// \brief The list of elements within the given topological distance.
   /// \param iloc Center element index.
-  /// \param radius Topological distance.
+  /// \param t_radius Topological distance.
   /// \param neighbour_loc neighbour element type.
+  /// \param boundary_loc Boundary elements included in the ring.
   /// \return List of pairs neighbour <index, distance> of the given element.
-  virtual std::vector<std::pair<h_size, real_t>>
-  neighbours(const ElementIndex &iloc, h_size radius, Element neighbour_loc,
-             std::optional<core::Element> boundary_loc) const = 0;
+  virtual std::vector<Neighbour>
+  neighbours(const ElementIndex &iloc, h_size t_radius, Element neighbour_loc,
+             std::optional<Element> boundary_loc) const = 0;
+  /// \brief The k nearest neighbours.
+  /// \param iloc Center element index.
+  /// \param k Neighbour count.
+  /// \param neighbour_loc neighbour element type.
+  /// \param boundary_loc Boundary elements included in the ring.
+  /// \return List of size up to n neighbours.
+  virtual std::vector<Neighbour>
+  knn(const ElementIndex &iloc, h_size k, Element neighbour_loc,
+      std::optional<Element> boundary_loc) const = 0;
   /// \param boundary_element
   /// \param interior_loc
   virtual h_size interiorNeighbour(const ElementIndex &boundary_element,

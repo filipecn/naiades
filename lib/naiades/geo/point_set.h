@@ -48,15 +48,34 @@ public:
   h_size size() const;
   void applyTransform(const hermes::geo::Transform2 &t);
 
+  // element set interface
+
+  /// \param loc
+  /// \return Total number of locations of a given element.
+  h_size elementCount(core::Element loc) const override;
+  /// Some structures may store elements in single sequences so element
+  /// indices may have an offset.
+  /// @param loc
+  h_size elementIndexOffset(core::Element loc) const override;
+  /// Get element alignment.
+  /// \note This considers the element primitive.
+  /// \param iloc Element location index.
+  /// \return The element alignment at the given index.
+  core::element_alignments
+  elementAlignment(const core::ElementIndex &loci) const override;
+  /// Get element orientation.
+  /// \note This considers the element primitive.
+  /// \param iloc Element location index.
+  /// \return The element orientation at the given index.
+  core::element_orientations
+  elementOrientation(const core::ElementIndex &iloc) const override;
+
   // geometry interface
 
   hermes::geo::bounds::bbox2 bbounds() const override;
-  hermes::geo::point2
-  center(const naiades::core::ElementIndex &iloc) const override;
-  std::vector<hermes::geo::point2>
-  centers(naiades::core::Element loc) const override;
-  hermes::geo::normal2
-  normal(const naiades::core::ElementIndex &iloc) const override;
+  hermes::geo::point2 center(const core::ElementIndex &iloc) const override;
+  std::vector<hermes::geo::point2> centers(core::Element loc) const override;
+  hermes::geo::normal2 normal(const core::ElementIndex &iloc) const override;
 
 private:
   hermes::geo::bounds::bbox2 bounds_;

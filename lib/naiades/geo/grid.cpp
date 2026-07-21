@@ -476,6 +476,14 @@ core::Neighbour Grid2::neighbour(core::Element loc, const hermes::index2 &index,
 }
 
 std::vector<core::Neighbour>
+Grid2::knn(const core::ElementIndex &iloc, h_size n,
+           core::Element neighbour_loc,
+           std::optional<core::Element> boundary_loc) const {
+  HERMES_NOT_IMPLEMENTED;
+  return {};
+}
+
+std::vector<core::Neighbour>
 Grid2::star(const core::ElementIndex &eloc, core::Element star_loc,
             std::optional<core::Element> boundary_loc) const {
   HERMES_NOT_IMPLEMENTED;
@@ -489,7 +497,7 @@ Grid2::k_ring(const core::ElementIndex &eloc, h_size k, core::Element ring_loc,
   return {};
 }
 
-std::vector<std::pair<h_size, real_t>>
+std::vector<core::Neighbour>
 Grid2::neighbours(const core::ElementIndex &eloc, h_size radius,
                   core::Element neighbour_loc,
                   std::optional<core::Element> boundary_loc) const {

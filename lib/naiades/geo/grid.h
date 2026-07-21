@@ -195,10 +195,19 @@ public:
   /// \param index Center index.
   /// \param neighbour_loc neighbour element type.
   /// \return List of pairs neighbour <index, distance> of the given element.
-  std::vector<std::pair<h_size, real_t>>
+  std::vector<core::Neighbour>
   neighbours(const core::ElementIndex &iloc, h_size radius,
              core::Element neighbour_loc,
              std::optional<core::Element> boundary_loc) const override;
+  /// \brief The n topologically closest neighbours.
+  /// \param iloc Center element index.
+  /// \param n Neighbour count.
+  /// \param neighbour_loc neighbour element type.
+  /// \param boundary_loc Boundary elements included in the ring.
+  /// \return List of size up to n neighbours.
+  std::vector<core::Neighbour>
+  knn(const core::ElementIndex &iloc, h_size n, core::Element neighbour_loc,
+      std::optional<core::Element> boundary_loc) const override;
   h_size interiorNeighbour(const core::ElementIndex &boundary_element,
                            const core::Element &interior_loc) const override;
 
