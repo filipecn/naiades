@@ -165,7 +165,7 @@ std::vector<real_t> Polynomial2::f(PolynomialType polynomial_type,
 std::vector<real_t> Polynomial2::df(PolynomialType polynomial_type,
                                     derivative_bits d,
                                     const hermes::geo::point2 &center) {
-  HERMES_ASSERT(d == derivative_bits::x || d == derivative_bits::y);
+  HERMES_ASSERT((d == derivative_bits::x || d == derivative_bits::y));
   const real_t x = center.x;
   const real_t y = center.y;
   switch (polynomial_type) {
@@ -192,7 +192,7 @@ std::vector<real_t> Polynomial2::df(PolynomialType polynomial_type,
 std::vector<real_t> Polynomial2::ddf(PolynomialType polynomial_type,
                                      derivative_bits d,
                                      const hermes::geo::point2 &center) {
-  HERMES_ASSERT(d == derivative_bits::x || d == derivative_bits::y);
+  HERMES_ASSERT((d == derivative_bits::x || d == derivative_bits::y));
   const real_t x = center.x;
   const real_t y = center.y;
   switch (polynomial_type) {

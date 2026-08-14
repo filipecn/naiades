@@ -32,15 +32,15 @@ TEST_CASE("Discrete Operator", "[numeric]") {
   }
 }
 TEST_CASE("Grid2FD", "[numeric]") {
-  auto fd = numeric::Grid2FD::Config()
-                .setCellSize({0.1f, 0.2f})
-                .setResolution({3, 4})
-                .build()
-                .value();
+  // auto fd = numeric::Grid2FD::Config()
+  //               .setCellSize({0.1f, 0.2f})
+  //               .setResolution({3, 4})
+  //               .build()
+  //               .value();
 
-  auto boundary_element_types = {
-      core::Element::Type::LEFT_FACE, core::Element::Type::DOWN_FACE,
-      core::Element::Type::RIGHT_FACE, core::Element::Type::UP_FACE};
+  // auto boundary_element_types = {
+  //     core::Element::Type::LEFT_FACE, core::Element::Type::DOWN_FACE,
+  //     core::Element::Type::RIGHT_FACE, core::Element::Type::UP_FACE};
   // for (auto b : boundary_element_types)
   //   fd.addBoundary("p", core::Element::Type::FACE,
   //                  fd.mesh().boundaryIndices(b));
@@ -122,9 +122,9 @@ TEST_CASE("Differential RBF", "[numeric]") {
       return p.x * p.x - p.x * p.y + p.y * p.y;
     };
     auto fx = [](const hermes::geo::point2 &p) -> f32 { return 2 * p.x - p.y; };
-    auto fy = [](const hermes::geo::point2 &p) -> f32 {
-      return -p.x + 2 * p.y;
-    };
+    // auto fy = [](const hermes::geo::point2 &p) -> f32 {
+    //   return -p.x + 2 * p.y;
+    // };
     auto loc = naiades::core::Element::point();
     std::vector<f32> scales = {1.0f, 0.1f, 0.01f};
     auto polynomial_type = naiades::numeric::PolynomialType::CUBIC;
@@ -150,12 +150,11 @@ TEST_CASE("Differential RBF", "[numeric]") {
         std::vector<naiades::core::Neighbour> neighbors;
         for (h_index i = 0; i < ps.centers(loc).size(); ++i) {
           neighbors.emplace_back(naiades::core::Neighbour{
-              naiades::core::ElementIndex(loc, naiades::core::Index::global(i)),
-              hermes::geo::distance(
-                  ps.center(naiades::core::ElementIndex(
-                      loc, naiades::core::Index::global(i))),
-                  ps.center(naiades::core::ElementIndex(
-                      loc, naiades::core::Index::global(0))))});
+              naiades::core::ElementIndex(loc, naiades::Index::global(i)),
+              hermes::geo::distance(ps.center(naiades::core::ElementIndex(
+                                        loc, naiades::Index::global(i))),
+                                    ps.center(naiades::core::ElementIndex(
+                                        loc, naiades::Index::global(0))))});
         }
 
         auto stencil = naiades::numeric::Stencil2::build(&ps, neighbors);
@@ -171,8 +170,7 @@ TEST_CASE("Differential RBF", "[numeric]") {
         REQUIRE(fields.add<f32>(loc, 0, {"f"}) == NaResult::noError());
         fields.setElementCount(loc, ps.size());
         for (h_index i = 0; i < ps.size(); ++i) {
-          auto ei =
-              naiades::core::ElementIndex(loc, naiades::core::Index::global(i));
+          auto ei = naiades::core::ElementIndex(loc, naiades::Index::global(i));
           fields.get<f32>("f").value()[*ei.index] = f(ps.center(ei));
         }
 
@@ -202,9 +200,9 @@ TEST_CASE("Differential RBF", "[numeric]") {
     auto f = [](const hermes::geo::point2 &p) -> f32 {
       return std::exp(p.x) * std::sin(p.x);
     };
-    auto fx = [](const hermes::geo::point2 &p) -> f32 {
-      return std::exp(p.x) * (std::sin(p.x) + std::cos(p.x));
-    };
+    // auto fx = [](const hermes::geo::point2 &p) -> f32 {
+    //   return std::exp(p.x) * (std::sin(p.x) + std::cos(p.x));
+    // };
     auto Lf = [](const hermes::geo::point2 &p) -> f32 {
       return 2.0f * std::exp(p.x) * std::cos(p.x);
     };
@@ -213,7 +211,7 @@ TEST_CASE("Differential RBF", "[numeric]") {
     auto polynomial_type = naiades::numeric::PolynomialType::CUBIC;
     for (auto scale : scales) {
       auto svg = naiades::utils::io::SVG();
-      h_index index = 0;
+      // h_index index = 0;
       for (h_index stencil_size = 20; stencil_size < 21; ++stencil_size) {
         hermes::geo::Transform2 transform =
             hermes::geo::Transform2::translate({0.5f, 0.5f}) *
@@ -228,12 +226,11 @@ TEST_CASE("Differential RBF", "[numeric]") {
         std::vector<naiades::core::Neighbour> neighbors;
         for (h_index i = 0; i < ps.centers(loc).size(); ++i) {
           neighbors.emplace_back(naiades::core::Neighbour{
-              naiades::core::ElementIndex(loc, naiades::core::Index::global(i)),
-              hermes::geo::distance(
-                  ps.center(naiades::core::ElementIndex(
-                      loc, naiades::core::Index::global(i))),
-                  ps.center(naiades::core::ElementIndex(
-                      loc, naiades::core::Index::global(0))))});
+              naiades::core::ElementIndex(loc, naiades::Index::global(i)),
+              hermes::geo::distance(ps.center(naiades::core::ElementIndex(
+                                        loc, naiades::Index::global(i))),
+                                    ps.center(naiades::core::ElementIndex(
+                                        loc, naiades::Index::global(0))))});
         }
 
         auto stencil = naiades::numeric::Stencil2::build(&ps, neighbors);
@@ -249,8 +246,7 @@ TEST_CASE("Differential RBF", "[numeric]") {
         REQUIRE(fields.add<f32>(loc, 0, {"f"}) == NaResult::noError());
         fields.setElementCount(loc, ps.size());
         for (h_index i = 0; i < ps.size(); ++i) {
-          auto ei =
-              naiades::core::ElementIndex(loc, naiades::core::Index::global(i));
+          auto ei = naiades::core::ElementIndex(loc, naiades::Index::global(i));
           fields.get<f32>("f").value()[*ei.index] = f(ps.center(ei));
         }
 

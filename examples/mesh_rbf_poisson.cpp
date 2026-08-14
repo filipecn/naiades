@@ -25,25 +25,28 @@ int main() {
       hermes::geo::point2(0, 1),
   };
   auto tri = *na::geo::triangulate(domain);
-  na::utils::io::SVG()
-      .disable(na::utils::io::draw_option_bits::indices |
-               na::utils::io::draw_option_bits::normals |
-               na::utils::io::draw_option_bits::faces |
-               na::utils::io::draw_option_bits::cells |
-               na::utils::io::draw_option_bits::vertices)
-      .draw(static_cast<const na::core::Mesh2 &>(tri))
-      .draw(static_cast<const na::core::Mesh2 &>(tri),
-            tri.star({na::core::Element::vertex(), na::core::Index::global(0)},
-                     na::core::Element::vertex()))
-      .draw(static_cast<const na::core::Mesh2 &>(tri),
-            tri.star({na::core::Element::vertex(), na::core::Index::global(50)},
-                     na::core::Element::vertex()))
-      .draw(
-          static_cast<const na::core::Mesh2 &>(tri),
-          tri.star({na::core::Element::vertex(), na::core::Index::global(100)},
-                   na::core::Element::vertex()))
-      // .draw(*tri)
-      .write("tri.svg");
+  // na::utils::io::SVG()
+  //     .disable(na::utils::io::draw_option_bits::indices |
+  //              na::utils::io::draw_option_bits::normals |
+  //              na::utils::io::draw_option_bits::faces |
+  //              na::utils::io::draw_option_bits::cells |
+  //              na::utils::io::draw_option_bits::vertices)
+  //     .draw(static_cast<const na::core::Mesh2 &>(tri))
+  //     .draw(static_cast<const na::core::Mesh2 &>(tri),
+  //           tri.star({na::core::Element::vertex(),
+  //           na::Index::global(0)},
+  //                    na::core::Element::vertex()))
+  //     .draw(static_cast<const na::core::Mesh2 &>(tri),
+  //           tri.star({na::core::Element::vertex(),
+  //           na::Index::global(50)},
+  //                    na::core::Element::vertex()))
+  //     .draw(
+  //         static_cast<const na::core::Mesh2 &>(tri),
+  //         tri.star({na::core::Element::vertex(),
+  //         na::Index::global(100)},
+  //                  na::core::Element::vertex()))
+  //     // .draw(*tri)
+  //     .write("tri.svg");
 
   return 0;
 }

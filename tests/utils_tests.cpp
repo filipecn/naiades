@@ -11,9 +11,9 @@ TEST_CASE("IndexSet", "[core]") {
     IndexSet set({10, 11, 12, 13, 14, 15, 16, 17, 18, 19});
     REQUIRE(set.size() == 10);
     for (h_size i = 0; i < 10; ++i) {
-      REQUIRE(set.contains(core::Index::local(i)));
-      REQUIRE(!set.contains(core::Index::global(i)));
-      REQUIRE(set.contains(core::Index::global(i + 10)));
+      REQUIRE(set.contains(Index::local(i)));
+      REQUIRE(!set.contains(Index::global(i)));
+      REQUIRE(set.contains(Index::global(i + 10)));
       REQUIRE(set[i] == i + 10);
     }
   }
@@ -22,12 +22,12 @@ TEST_CASE("IndexSet", "[core]") {
     IndexSet set(seq);
     REQUIRE(set.size() == 7);
     for (h_size i = 0; i < 7; ++i) {
-      REQUIRE(set.contains(core::Index::global(seq[i])));
+      REQUIRE(set.contains(Index::global(seq[i])));
       REQUIRE(set[i] == seq[i]);
     }
-    REQUIRE(!set.contains(core::Index::global(13)));
-    REQUIRE(!set.contains(core::Index::global(14)));
-    REQUIRE(!set.contains(core::Index::global(16)));
+    REQUIRE(!set.contains(Index::global(13)));
+    REQUIRE(!set.contains(Index::global(14)));
+    REQUIRE(!set.contains(Index::global(16)));
   }
   SECTION("iterator") {
     std::vector<h_size> seq{10, 11, 12, 15, 17, 18, 19};

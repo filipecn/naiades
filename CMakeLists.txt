@@ -12,7 +12,6 @@ project(
 cmake_path(SET NAIADES_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib)
 cmake_path(SET NAIADES_EXAMPLES_DIR ${CMAKE_CURRENT_LIST_DIR}/examples)
 
-# cmake print functions
 include(CMakePrintHelpers)
 
 # ##############################################################################
@@ -45,7 +44,7 @@ add_subdirectory(lib)
 # TESTS                                                                        #
 # ##############################################################################
 if (NAIADES_BUILD_TESTS)
- add_subdirectory(tests)
+  add_subdirectory(tests)
 endif (NAIADES_BUILD_TESTS)
 
 # ##############################################################################

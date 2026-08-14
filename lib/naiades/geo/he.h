@@ -45,6 +45,9 @@ struct EdgeKey {
     return a_ == rhs.a_ && b_ == rhs.b_;
   }
 
+  h_index a() const noexcept { return a_; }
+  h_index b() const noexcept { return b_; }
+
 private:
   friend struct std::hash<EdgeKey>;
   h_index a_{0};
@@ -99,6 +102,9 @@ public:
   /// \return The index of the newly created cell.
   /// \note This creates the faces for the new cell if necessary.
   h_index addCell(const std::vector<h_index> &oriented_vertex_indices);
+  /// Re-arrange indices so that boundary and interior indices are contiguous
+  /// and sequential.
+  void optimizeIndices();
 
   /// \return The twin half-edge index.
   h_index heTwin(h_index he_index) const;
@@ -150,48 +156,18 @@ public:
   /// \param index
   /// \param sub_element
   /// \return The lists of sub-elements of the given element instance.
-  std::vector<h_size> indices(const core::ElementIndex &iloc,
-                              core::Element sub_element) const override;
+  std::vector<h_size> elementIndices(const core::ElementIndex &iloc,
+                                     core::Element sub_element) const override;
 
-  std::vector<h_size> boundaryIndices(core::Element loc) const override;
   bool isBoundary(const core::ElementIndex &iloc) const override;
 
-  // avoid shadowing of other Topology star methods
-  using Topology::star;
-  /// The star neighbourhood of a given element.
-  /// \param boundary_loc Boundary elements included in the star.
-  /// \return List of neighbours of the given element.
-  std::vector<core::Neighbour>
-  star(const core::ElementIndex &iloc, core::Element star_loc,
-       std::optional<core::Element> boundary_loc) const override;
-  /// The ring neighbourhood of a given element.
-  /// \param eloc Center element index.
-  /// \param index Center index.
-  /// \param boundary_loc Boundary elements included in the ring.
-  /// \return List of neighbours of the given element.
-  std::vector<core::Neighbour>
-  k_ring(const core::ElementIndex &iloc, h_size k, core::Element ring_loc,
-         std::optional<core::Element> boundary_loc) const override;
-  /// The direct neighbourhood of elements for a given element.
-  /// \param eloc Center element index.
-  /// \param index Center index.
-  /// \param neighbour_loc neighbour element type.
-  /// \return List of pairs neighbour <index, distance> of the given element.
-  std::vector<core::Neighbour>
-  neighbours(const core::ElementIndex &eloc, h_size radius,
-             core::Element neighbour_loc,
-             std::optional<core::Element> boundary_loc) const override;
-  /// \brief The n topologically closest neighbours.
-  /// \param iloc Center element index.
-  /// \param n Neighbour count.
-  /// \param neighbour_loc neighbour element type.
-  /// \param boundary_loc Boundary elements included in the ring.
-  /// \return List of size up to n neighbours.
-  std::vector<core::Neighbour>
-  knn(const core::ElementIndex &iloc, h_size n, core::Element neighbour_loc,
-      std::optional<core::Element> boundary_loc) const override;
+  IndexSet indices(const core::Element &loc) const;
   h_size interiorNeighbour(const core::ElementIndex &boundary_element,
                            const core::Element &interior_loc) const override;
+  /// \brief Get the direct neighbourhood of elements for a given element.
+  std::vector<core::ElementIndex>
+  neighbours(const core::ElementIndex &c_loc,
+             std::optional<core::Element> b_loc) const;
 
 private:
   /// \brief Add a oriented face.
@@ -254,8 +230,12 @@ private:
   h_index boundary_start_he_;
 
   // (min(va, vb), max(va, vb)) -> half_edges even index
-  std::unordered_map<EdgeKey, h_index> edge_vertices_to_edge_index_map_;
+  std::unordered_map<EdgeKey, h_index> edge_key_indices_;
   h_index boundary_start_;
+  // these are enabled when indices are optimized
+  std::optional<h_size> boundary_cell_count_;
+  std::optional<h_size> boundary_vertex_count_;
+  std::optional<h_size> boundary_edge_count_;
 
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS
   friend struct hermes::DebugTraits<HE2>;
@@ -263,50 +243,6 @@ private:
 };
 
 } // namespace naiades::geo
-
-namespace naiades::numeric {
-
-class HE2RBFFD : public SpatialDiscretization {
-public:
-  struct Config {
-    Result<HE2RBFFD> build(geo::HE2::Ptr mesh) const;
-  };
-
-  /// \brief
-  const geo::HE2 &mesh() const;
-
-  /// Compute the derivative operator centered at the given element.
-  /// \param d Derivative direction.
-  /// \param index
-  /// \param sym
-  virtual DiscreteOperator
-  derivative(derivative_bits d, h_size index,
-             const core::DiscreteSymbol &sym) const override;
-  /// Compute the discrete Laplacian operator centered at the given element.
-  /// \param index
-  /// \param sym
-  virtual DiscreteOperator
-  laplacian(h_size index, const core::DiscreteSymbol &sym) const override;
-  /// Compute the discrete Laplacian operator centered at the given element.
-  /// Compute the discrete Divergence operator centered at the given element.
-  /// \tparam DiscretizationType Discretization type.
-  /// \param boundary
-  /// \param loc
-  /// \param index
-  /// \param staggered
-  virtual DiscreteOperator divergence(const core::Element &loc, h_size index,
-                                      const core::Element &vector_loc,
-                                      bool staggered) const override;
-
-private:
-  friend struct Config;
-
-#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
-  friend struct hermes::DebugTraits<HE2RBFFD>;
-#endif
-};
-
-} // namespace naiades::numeric
 
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS
 
@@ -341,19 +277,6 @@ template <> struct DebugTraits<naiades::geo::HE2> {
                hermes::cstr::join(data.outgoingHEs(vertex.global_index), ","));
     }
 
-    return m;
-  }
-};
-
-template <> struct DebugTraits<naiades::numeric::HE2RBFFD> {
-  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
-  static DebugMessage message(const naiades::numeric::HE2RBFFD &data) {
-    auto m = DebugMessage();
-    m.addTitle("HE2 - RBF - FD");
-    if (data.topology_)
-      m.add("mesh", data.mesh());
-    m.addMap("fields", data.fields_);
-    m.addMap("boundaries", data.boundaries_);
     return m;
   }
 };

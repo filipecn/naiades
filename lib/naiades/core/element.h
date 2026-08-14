@@ -27,14 +27,14 @@
 
 #pragma once
 
-#include <naiades/base/debug.h>
+#include <naiades/base/index_set.h>
 
 #include <hermes/base/flags.h>
 #include <hermes/core/types.h>
 
-#define NAIADES_ELEMENT_MASK(PRIMITIVE, ALIGNMENT, orientation)                \
+#define NAIADES_ELEMENT_MASK(PRIMITIVE, ALIGNMENT, orientation, spaces)        \
   (static_cast<u32>(PRIMITIVE) | (static_cast<u32>(ALIGNMENT) << 8) |          \
-   (static_cast<u32>(orientation) << 16))
+   (static_cast<u32>(orientation) << 16) | (static_cast<u32>(spaces) << 24))
 
 #define NAIADES_ELEMENT_MASK_SET_PRIMTIVE(M, P) (M | (static_cast<u32>(P)))
 
@@ -44,13 +44,25 @@
 #define NAIADES_ELEMENT_MASK_SET_ORIENTATION(M, D)                             \
   (M | (static_cast<u32>(D) << 16))
 
+#define NAIADES_ELEMENT_MASK_SET_SPACES(M, S) (M | (static_cast<u32>(S) << 24))
+
 #define NAIADES_ELEMENT_MASK_GET_PRIMITIVE(M) (M & 0xff)
 
 #define NAIADES_ELEMENT_MASK_GET_ALIGNMENT(M) ((M >> 8) & 0xff)
 
-#define NAIADES_ELEMENT_MASK_GET_ORIENTATION(M) (M >> 16)
+#define NAIADES_ELEMENT_MASK_GET_ORIENTATION(M) ((M >> 16) & 0xff)
+
+#define NAIADES_ELEMENT_MASK_GET_SPACES(M) (M >> 24)
 
 namespace naiades::core {
+
+enum class element_space_bits : u32 {
+  none = 0,
+  boundary = 1 << 0,
+  interior = 1 << 1,
+  custom = 1 << 2,
+  any = 0xff
+};
 
 enum class element_primitive_bits : u32 {
   none = 0,
@@ -99,6 +111,7 @@ enum class element_orientation_bits : u32 {
   any = 0xff,
 };
 
+using element_spaces = hermes::Flags<core::element_space_bits>;
 using element_primitives = hermes::Flags<core::element_primitive_bits>;
 using element_alignments = hermes::Flags<core::element_alignment_bits>;
 using element_orientations = hermes::Flags<core::element_orientation_bits>;
@@ -106,6 +119,15 @@ using element_orientations = hermes::Flags<core::element_orientation_bits>;
 } // namespace naiades::core
 
 namespace hermes {
+
+template <> struct FlagTraits<naiades::core::element_space_bits> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_bitmask = true;
+  static HERMES_CONST_OR_CONSTEXPR naiades::core::element_spaces all_flags =
+      naiades::core::element_space_bits::any |
+      naiades::core::element_space_bits::boundary |
+      naiades::core::element_space_bits::interior |
+      naiades::core::element_space_bits::custom;
+};
 
 template <> struct FlagTraits<naiades::core::element_primitive_bits> {
   static HERMES_CONST_OR_CONSTEXPR bool is_bitmask = true;
@@ -146,47 +168,6 @@ template <> struct FlagTraits<naiades::core::element_orientation_bits> {
 
 namespace naiades::core {
 
-enum class IndexSpace { GLOBAL, LOCAL, CUSTOM };
-
-/// The element index holds the unique id of an element within a given space.
-struct Index {
-  static Index local(h_size value) { return {value, IndexSpace::LOCAL}; }
-  static Index global(h_size value) { return {value, IndexSpace::GLOBAL}; }
-  static Index invalid() { return {s_invalid_value_, IndexSpace::LOCAL}; }
-
-  Index() : space_{IndexSpace::GLOBAL}, value_{s_invalid_value_} {}
-  Index(h_size value, IndexSpace ctx) : space_{ctx}, value_{value} {}
-  Index &operator=(h_size i) {
-    value_ = i;
-    return *this;
-  }
-
-  operator h_index() const { return value_; }
-
-  bool operator==(const Index &rhs) const {
-    return space_ == rhs.space_ && value_ == rhs.value_;
-  }
-
-  h_size operator*() const { return value_; };
-  bool isValid() const { return value_ != s_invalid_value_; }
-  bool isLocal() const { return space_ == IndexSpace::LOCAL; }
-  bool isGlobal() const { return space_ == IndexSpace::GLOBAL; }
-
-  IndexSpace space() const { return space_; }
-
-  Index &operator++() {
-    if (value_ != s_invalid_value_)
-      value_++;
-    return *this;
-  }
-
-private:
-  friend struct std::hash<Index>;
-  IndexSpace space_{IndexSpace::GLOBAL};
-  h_size value_;
-  static h_size s_invalid_value_;
-};
-
 class Element {
 public:
   static Element cell();
@@ -197,6 +178,22 @@ public:
   static Element vertex();
   static Element point();
 
+  static Element boundaryCell();
+  static Element boundaryFace();
+  static Element boundaryVertex();
+
+  static Element interiorCell();
+  static Element interiorFace();
+  static Element interiorVertex();
+
+  static Element horizontalFace();
+  static Element verticalFace();
+  static Element depthFace();
+
+  static Element xFace();
+  static Element yFace();
+  static Element zFace();
+
   ///      v --- V ---- v    v - VERTEX
   ///      |            |    C - CELL
   ///      U     C      U    V - [V|X|HORIZONTAL]_FACE
@@ -204,71 +201,108 @@ public:
   ///      v --- V ---- v
   enum Type : u32 {
     NONE = 0,
-    CELL = NAIADES_ELEMENT_MASK(element_primitive_bits::cell,
-                                element_alignment_bits::none,
-                                element_orientation_bits::none),
-    FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                element_alignment_bits::any,
-                                element_orientation_bits::any),
-    VERTEX = NAIADES_ELEMENT_MASK(element_primitive_bits::vertex,
-                                  element_alignment_bits::none,
-                                  element_orientation_bits::none),
-    POINT = NAIADES_ELEMENT_MASK(element_primitive_bits::point,
-                                 element_alignment_bits::none,
-                                 element_orientation_bits::none),
-    CUSTOM = NAIADES_ELEMENT_MASK(element_primitive_bits::custom,
-                                  element_alignment_bits::custom,
-                                  element_orientation_bits::custom),
+    CELL = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::cell, element_alignment_bits::none,
+        element_orientation_bits::none, element_space_bits::any),
+    FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::any,
+        element_orientation_bits::any, element_space_bits::any),
+    VERTEX = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::vertex, element_alignment_bits::none,
+        element_orientation_bits::none, element_space_bits::any),
+    POINT = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::point, element_alignment_bits::none,
+        element_orientation_bits::none, element_space_bits::any),
+    CUSTOM = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::custom, element_alignment_bits::custom,
+        element_orientation_bits::custom, element_space_bits::custom),
 
-    HORIZONTAL_FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                           element_alignment_bits::xz,
-                                           element_orientation_bits::any_y),
+    BOUNDARY_CELL = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::cell, element_alignment_bits::none,
+        element_orientation_bits::none, element_space_bits::boundary),
+    BOUNDARY_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::any,
+        element_orientation_bits::any, element_space_bits::boundary),
+    BOUNDARY_VERTEX = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::vertex, element_alignment_bits::none,
+        element_orientation_bits::none, element_space_bits::boundary),
+
+    INTERIOR_CELL = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::cell, element_alignment_bits::none,
+        element_orientation_bits::none, element_space_bits::interior),
+    INTERIOR_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::any,
+        element_orientation_bits::any, element_space_bits::interior),
+    INTERIOR_VERTEX = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::vertex, element_alignment_bits::none,
+        element_orientation_bits::none, element_space_bits::interior),
+
+    HORIZONTAL_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::xz,
+        element_orientation_bits::any_y, element_space_bits::any),
     V_FACE = HORIZONTAL_FACE,
     X_FACE = HORIZONTAL_FACE,
     XZ_FACE = HORIZONTAL_FACE,
-    UP_FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                   element_alignment_bits::xz,
-                                   element_orientation_bits::y),
-    DOWN_FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                     element_alignment_bits::xz,
-                                     element_orientation_bits::neg_y),
 
-    VERTICAL_FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                         element_alignment_bits::yz,
-                                         element_orientation_bits::any_x),
+    BOUNDARY_HORIZONTAL_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::xz,
+        element_orientation_bits::any_y, element_space_bits::boundary),
+    BOUNDARY_V_FACE = BOUNDARY_HORIZONTAL_FACE,
+    BOUNDARY_X_FACE = BOUNDARY_HORIZONTAL_FACE,
+    BOUNDARY_XZ_FACE = BOUNDARY_HORIZONTAL_FACE,
+
+    UP_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::xz,
+        element_orientation_bits::y, element_space_bits::any),
+    DOWN_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::xz,
+        element_orientation_bits::neg_y, element_space_bits::any),
+
+    VERTICAL_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::yz,
+        element_orientation_bits::any_x, element_space_bits::any),
     U_FACE = VERTICAL_FACE,
     Y_FACE = VERTICAL_FACE,
     YZ_FACE = VERTICAL_FACE,
-    LEFT_FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                     element_alignment_bits::yz,
-                                     element_orientation_bits::neg_x),
-    RIGHT_FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                      element_alignment_bits::yz,
-                                      element_orientation_bits::x),
 
-    DEPTH_FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                      element_alignment_bits::xy,
-                                      element_orientation_bits::any_z),
+    BOUNDARY_VERTICAL_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::yz,
+        element_orientation_bits::any_x, element_space_bits::boundary),
+    BOUNDARY_U_FACE = BOUNDARY_VERTICAL_FACE,
+    BOUNDARY_Y_FACE = BOUNDARY_VERTICAL_FACE,
+    BOUNDARY_YZ_FACE = BOUNDARY_VERTICAL_FACE,
+
+    LEFT_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::yz,
+        element_orientation_bits::neg_x, element_space_bits::any),
+    RIGHT_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::yz,
+        element_orientation_bits::x, element_space_bits::any),
+
+    DEPTH_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::xy,
+        element_orientation_bits::any_z, element_space_bits::any),
     W_FACE = DEPTH_FACE,
     Z_FACE = DEPTH_FACE,
     XY_FACE = DEPTH_FACE,
-    FRONT_FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                      element_alignment_bits::xy,
-                                      element_orientation_bits::z),
-    BACK_FACE = NAIADES_ELEMENT_MASK(element_primitive_bits::face,
-                                     element_alignment_bits::xy,
-                                     element_orientation_bits::neg_z),
+    FRONT_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::xy,
+        element_orientation_bits::z, element_space_bits::any),
+    BACK_FACE = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::face, element_alignment_bits::xy,
+        element_orientation_bits::neg_z, element_space_bits::any),
 
-    ANY = NAIADES_ELEMENT_MASK(element_primitive_bits::any,
-                               element_alignment_bits::any,
-                               element_orientation_bits::any),
+    ANY = NAIADES_ELEMENT_MASK(
+        element_primitive_bits::any, element_alignment_bits::any,
+        element_orientation_bits::any, element_space_bits::any),
   };
 
   Element() noexcept = default;
   Element(element_primitives prim,
           element_alignments a = element_alignment_bits::none,
-          element_orientations d = element_orientation_bits::none) noexcept
-      : mask_(NAIADES_ELEMENT_MASK(prim, a, d)) {}
+          element_orientations d = element_orientation_bits::none,
+          element_spaces s = element_space_bits::any) noexcept
+      : mask_(NAIADES_ELEMENT_MASK(prim, a, d, s)) {}
   Element(Type type) noexcept : mask_(static_cast<u32>(type)) {}
   Element(const Element &rhs) noexcept : mask_{rhs.mask_} {}
   Element(Element &&rhs) noexcept : mask_{rhs.mask_} {}
@@ -305,6 +339,9 @@ public:
     return NAIADES_ELEMENT_MASK_GET_ORIENTATION(mask_) ==
            static_cast<u32>(orientation);
   }
+  bool operator==(const element_spaces &spaces) const {
+    return NAIADES_ELEMENT_MASK_GET_SPACES(mask_) == static_cast<u32>(spaces);
+  }
   inline Element &addPrimitives(element_primitives prim) {
     auto mask_prim = primitives();
     mask_ = NAIADES_ELEMENT_MASK_SET_PRIMTIVE(mask_, mask_prim | prim);
@@ -315,9 +352,14 @@ public:
     mask_ = NAIADES_ELEMENT_MASK_SET_ALIGNMENT(mask_, mask_a | a);
     return *this;
   }
-  inline Element &addorientations(element_orientations d) {
+  inline Element &addOrientations(element_orientations d) {
     auto mask_d = orientations();
     mask_ = NAIADES_ELEMENT_MASK_SET_ORIENTATION(mask_, mask_d | d);
+    return *this;
+  }
+  inline Element &addSpaces(element_spaces s) {
+    auto mask_s = spaces();
+    mask_ = NAIADES_ELEMENT_MASK_SET_SPACES(mask_, mask_s | s);
     return *this;
   }
   inline Element &setPrimitives(element_primitives prim) {
@@ -326,15 +368,51 @@ public:
     return *this;
   }
   inline Element &setAlignments(element_alignments a) {
-    mask_ &= 0xff00ff;
+    mask_ &= 0xffff00ff;
     mask_ = NAIADES_ELEMENT_MASK_SET_ALIGNMENT(mask_, a);
     return *this;
   }
   inline Element &setOrientations(element_orientations d) {
-    mask_ &= 0x00ffff;
+    mask_ &= 0xff00ffff;
     mask_ = NAIADES_ELEMENT_MASK_SET_ORIENTATION(mask_, d);
     return *this;
   }
+  inline Element &setSpaces(element_spaces s) {
+    mask_ &= 0x00ffffff;
+    mask_ = NAIADES_ELEMENT_MASK_SET_SPACES(mask_, s);
+    return *this;
+  }
+  inline Element withAlignment(element_alignments a) const {
+    auto e = *this;
+    e.addAlignments(a);
+    return e;
+  }
+  inline Element withOrientation(element_orientations d) const {
+    auto e = *this;
+    e.addOrientations(d);
+    return e;
+  }
+  inline Element withAlignmentFrom(Type type) const {
+    auto type_alignments = NAIADES_ELEMENT_MASK_GET_ALIGNMENT(type);
+    Element e = *this;
+    e.mask_ &= 0xffff00ff;
+    e.mask_ = NAIADES_ELEMENT_MASK_SET_ALIGNMENT(e.mask_, type_alignments);
+    return e;
+  }
+  inline Element withOrientationFrom(Type type) const {
+    auto type_orientations = NAIADES_ELEMENT_MASK_GET_ORIENTATION(type);
+    Element e = *this;
+    e.mask_ &= 0xff00ffff;
+    e.mask_ = NAIADES_ELEMENT_MASK_SET_ORIENTATION(e.mask_, type_orientations);
+    return e;
+  }
+  inline Element withAnySpace() const {
+    auto e = *this;
+    e.mask_ &= 0x00ffffff;
+    e.mask_ = NAIADES_ELEMENT_MASK_SET_SPACES(e.mask_, element_space_bits::any);
+    return e;
+  }
+
   inline element_primitives primitives() const {
     return static_cast<element_primitives>(
         NAIADES_ELEMENT_MASK_GET_PRIMITIVE(mask_));
@@ -347,18 +425,26 @@ public:
     return static_cast<element_orientations>(
         NAIADES_ELEMENT_MASK_GET_ORIENTATION(mask_));
   }
+  inline element_spaces spaces() const {
+    return static_cast<element_spaces>(NAIADES_ELEMENT_MASK_GET_SPACES(mask_));
+  }
   inline bool is(element_primitives prim) const {
     auto p = NAIADES_ELEMENT_MASK_GET_PRIMITIVE(mask_);
     return (p & static_cast<u32>(prim)) == static_cast<u32>(prim);
   }
-  inline bool has(element_alignments a) const {
+  inline bool alignsTo(element_alignments a) const {
     auto _a = NAIADES_ELEMENT_MASK_GET_ALIGNMENT(mask_);
     return (_a & static_cast<u32>(a)) == static_cast<u32>(a);
   }
-  inline bool has(element_orientations d) const {
+  inline bool orientsTo(element_orientations d) const {
     auto _d = NAIADES_ELEMENT_MASK_GET_ORIENTATION(mask_);
     return (_d & static_cast<u32>(d)) == static_cast<u32>(d);
   }
+  inline bool in(element_spaces s) const {
+    auto _s = NAIADES_ELEMENT_MASK_GET_SPACES(mask_);
+    return (_s & static_cast<u32>(s)) == static_cast<u32>(s);
+  }
+  inline bool inAnySpace() const { return spaces() == element_space_bits::any; }
 
 private:
   u32 mask_{};
@@ -385,10 +471,12 @@ struct ElementIndex {
 #undef NAIADES_ELEMENT_MASK
 #undef NAIADES_ELEMENT_MASK_SET_PRIMTIVE
 #undef NAIADES_ELEMENT_MASK_SET_ALIGNMENT
-#undef NAIADES_ELEMENT_MASK_SET_orientation
+#undef NAIADES_ELEMENT_MASK_SET_ORIENTATION
+#undef NAIADES_ELEMENT_MASK_SET_SPACES
 #undef NAIADES_ELEMENT_MASK_GET_PRIMITIVE
 #undef NAIADES_ELEMENT_MASK_GET_ALIGNMENT
-#undef NAIADES_ELEMENT_MASK_GET_orientation
+#undef NAIADES_ELEMENT_MASK_GET_ORIENTATION
+#undef NAIADES_ELEMENT_MASK_GET_SPACES
 
 } // namespace naiades::core
 
@@ -411,15 +499,9 @@ template <> struct hash<naiades::core::element_orientations> {
   }
 };
 
-template <> struct hash<naiades::core::Index> {
-  inline size_t operator()(const naiades::core::Index &x) const {
-    return static_cast<h_index>(x);
-  }
-};
-
 template <> struct hash<naiades::core::ElementIndex> {
   inline size_t operator()(const naiades::core::ElementIndex &x) const {
-    std::size_t seed = std::hash<naiades::core::Index>{}(x.index);
+    std::size_t seed = std::hash<naiades::Index>{}(x.index);
     seed ^= std::hash<naiades::core::Element>{}(x.element) + 0x9e3779b9 +
             (seed << 6) + (seed >> 2);
     return seed;
@@ -441,29 +523,18 @@ namespace hermes {
   if (data.contain(TYPE::NAME))                                                \
     ss.emplace_back(#NAME);
 
-template <> struct DebugTraits<naiades::core::IndexSpace> {
+template <> struct DebugTraits<naiades::core::element_spaces> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
-  static DebugMessage message(const naiades::core::IndexSpace &data) {
-    auto m = DebugMessage();
-    switch (data) {
-      NAIADES_ENUM_TO_STRING_CASE(naiades::core::IndexSpace, GLOBAL)
-      NAIADES_ENUM_TO_STRING_CASE(naiades::core::IndexSpace, LOCAL)
-      NAIADES_ENUM_TO_STRING_CASE(naiades::core::IndexSpace, CUSTOM)
-    }
-    return m;
-  }
-};
-
-template <> struct DebugTraits<naiades::core::Index> {
-  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
-  static DebugMessage message(const naiades::core::Index &data) {
-    auto m = DebugMessage();
-    if (data.isValid()) {
-      m.addFmt("{}", *data);
-    } else {
-      m.addFmt("[invalid - ]", *data, to_string(data.space()));
-    }
-    return m;
+  static DebugMessage message(const naiades::core::element_spaces &data) {
+    using namespace naiades::core;
+    std::vector<std::string> ss;
+    NAIADES_ENUM_TO_STRING_APPEND(element_space_bits, any)
+    NAIADES_ENUM_TO_STRING_APPEND(element_space_bits, boundary)
+    NAIADES_ENUM_TO_STRING_APPEND(element_space_bits, interior)
+    NAIADES_ENUM_TO_STRING_APPEND(element_space_bits, custom)
+    if (data == element_space_bits::none)
+      ss.emplace_back("none");
+    return DebugMessage().addFmt("{}", hermes::cstr::join(ss, "|"));
   }
 };
 
@@ -607,6 +678,14 @@ template <> struct DebugTraits<naiades::core::Element::Type> {
       NAIADES_ENUM_TO_STRING_CASE(Element::Type, VERTEX)
       NAIADES_ENUM_TO_STRING_CASE(Element::Type, POINT)
       NAIADES_ENUM_TO_STRING_CASE(Element::Type, CUSTOM)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, BOUNDARY_CELL)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, BOUNDARY_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, BOUNDARY_VERTEX)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, INTERIOR_CELL)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, INTERIOR_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, INTERIOR_VERTEX)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, BOUNDARY_HORIZONTAL_FACE)
+      NAIADES_ENUM_TO_STRING_CASE(Element::Type, BOUNDARY_VERTICAL_FACE)
       NAIADES_ENUM_TO_STRING_CASE(Element::Type, XZ_FACE)
       NAIADES_ENUM_TO_STRING_CASE(Element::Type, YZ_FACE)
       NAIADES_ENUM_TO_STRING_CASE(Element::Type, XY_FACE)
@@ -624,10 +703,11 @@ template <> struct DebugTraits<naiades::core::Element::Type> {
 template <> struct DebugTraits<naiades::core::Element> {
   static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
   static DebugMessage message(const naiades::core::Element &data) {
-    return DebugMessage().addFmt("E({},{},{})",
+    return DebugMessage().addFmt("E({},{},{},{})",
                                  hermes::to_string(data.primitives()),
                                  hermes::to_string(data.alignments()),
-                                 hermes::to_string(data.orientations()));
+                                 hermes::to_string(data.orientations()),
+                                 hermes::to_string(data.spaces()));
   }
 };
 

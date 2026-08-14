@@ -51,11 +51,13 @@ h_size PointSet2::elementIndexOffset(core::Element loc) const {
 
 core::element_alignments
 PointSet2::elementAlignment(const core::ElementIndex &loci) const {
+  HERMES_UNUSED_VARIABLE(loci);
   return core::element_alignment_bits::any;
 }
 
 core::element_orientations
 PointSet2::elementOrientation(const core::ElementIndex &iloc) const {
+  HERMES_UNUSED_VARIABLE(iloc);
   return core::element_orientation_bits::any;
 }
 

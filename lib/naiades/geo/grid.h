@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include "naiades/core/element.h"
 #include <naiades/core/field.h>
 #include <naiades/core/mesh.h>
 #include <naiades/numeric/spatial_discretization.h>
@@ -78,9 +77,9 @@ namespace naiades::geo {
 ///   |       0           M-1                 0              M
 ///   ---x
 ///
-/// However the general index of a face is calculated from the concatenation
-/// the two grids above in order [x-faces, y-faces]. Thus flat indices of
-/// y-faces come after x-faces:
+/// However the general index of a face is calculated from concatenating
+/// the two grids above in order [x-faces, y-faces]. Thus the flat indices of
+/// y-faces come after x-faces indices:
 ///
 ///   - flat x-face index (i, j): j * M + i
 ///   - flat y-face index (i, j): M * (N + 1) + j * (M + 1) + i
@@ -106,6 +105,7 @@ public:
 
   struct Config : Setup<Config> {
     Result<Grid2> build() const;
+    Result<Grid2::Ptr> buildPtr() const;
   };
 
   ///
@@ -121,6 +121,8 @@ public:
   /// Grid offset in index space.
   hermes::geo::vec2 gridOffset(core::Element loc) const;
   /// Grid resolution
+  /// \note This functions ignores space bits.
+  /// \note General face resolution is undefined.
   hermes::size2 resolution(core::Element loc) const;
   /// Grid flat index from index
   h_size flatIndex(core::Element loc, const hermes::index2 &index) const;
@@ -167,49 +169,23 @@ public:
 
   //  topology interface
 
+  IndexSet indices(const core::Element &loc) const;
+
   /// \brief Get the list of indices of a given element instance.
   /// \param iloc element index
   /// \param sub_element
   /// \return The lists of sub-elements global indices of the given element
   ///         instance.
-  std::vector<h_size> indices(const core::ElementIndex &iloc,
-                              core::Element sub_element) const override;
-  std::vector<h_size> boundaryIndices(core::Element loc) const override;
+  std::vector<h_size> elementIndices(const core::ElementIndex &iloc,
+                                     core::Element sub_element) const override;
   bool isBoundary(const core::ElementIndex &iloc) const override;
-  /// The star neighbourhood of a given element.
-  /// \param boundary_loc Boundary elements included in the star.
-  /// \return List of neighbours of the given element.
-  std::vector<core::Neighbour>
-  star(const core::ElementIndex &iloc, core::Element star_loc,
-       std::optional<core::Element> boundary_loc) const override;
-  /// The ring neighbourhood of a given element.
-  /// \param iloc Center element index.
-  /// \param index Center index.
-  /// \param boundary_loc Boundary elements included in the ring.
-  /// \return List of neighbours of the given element.
-  std::vector<core::Neighbour>
-  k_ring(const core::ElementIndex &iloc, h_size k, core::Element ring_loc,
-         std::optional<core::Element> boundary_loc) const override;
-  /// The direct neighbourhood of elements for a given element.
-  /// \param iloc Center element index.
-  /// \param index Center index.
-  /// \param neighbour_loc neighbour element type.
-  /// \return List of pairs neighbour <index, distance> of the given element.
-  std::vector<core::Neighbour>
-  neighbours(const core::ElementIndex &iloc, h_size radius,
-             core::Element neighbour_loc,
-             std::optional<core::Element> boundary_loc) const override;
-  /// \brief The n topologically closest neighbours.
-  /// \param iloc Center element index.
-  /// \param n Neighbour count.
-  /// \param neighbour_loc neighbour element type.
-  /// \param boundary_loc Boundary elements included in the ring.
-  /// \return List of size up to n neighbours.
-  std::vector<core::Neighbour>
-  knn(const core::ElementIndex &iloc, h_size n, core::Element neighbour_loc,
-      std::optional<core::Element> boundary_loc) const override;
+  ///
   h_size interiorNeighbour(const core::ElementIndex &boundary_element,
                            const core::Element &interior_loc) const override;
+  ///
+  std::vector<core::ElementIndex>
+  neighbours(const core::ElementIndex &c_loc,
+             std::optional<core::Element> b_loc) const;
 
 private:
   /// Refines face indices (face -> aligned face types) and computes its global
@@ -286,52 +262,6 @@ Derived &Grid2::Setup<Derived>::setCellSize(const hermes::geo::vec2 &d) {
 
 } // namespace naiades::geo
 
-namespace naiades::numeric {
-
-class Grid2FD : public SpatialDiscretization {
-public:
-  struct Config : geo::Grid2::Setup<Config> {
-    Result<Grid2FD> build() const;
-  };
-
-  Grid2FD() = default;
-
-  /// \brief
-  const geo::Grid2 &mesh() const;
-
-  /// Compute the derivative operator centered at the given element.
-  /// \param d Derivative direction.
-  /// \param index
-  /// \param sym
-  virtual DiscreteOperator
-  derivative(derivative_bits d, h_size index,
-             const core::DiscreteSymbol &sym) const override;
-  /// Compute the discrete Laplacian operator centered at the given element.
-  /// \param index
-  /// \param sym
-  virtual DiscreteOperator
-  laplacian(h_size index, const core::DiscreteSymbol &sym) const override;
-  /// Compute the discrete Laplacian operator centered at the given element.
-  /// Compute the discrete Divergence operator centered at the given element.
-  /// \tparam DiscretizationType Discretization type.
-  /// \param boundary
-  /// \param loc
-  /// \param index
-  /// \param staggered
-  virtual DiscreteOperator divergence(const core::Element &loc, h_size index,
-                                      const core::Element &vector_loc,
-                                      bool staggered) const override;
-
-private:
-  friend struct Config;
-
-#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
-  friend struct hermes::DebugTraits<Grid2FD>;
-#endif
-};
-
-} // namespace naiades::numeric
-
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS
 
 namespace naiades {
@@ -344,9 +274,9 @@ std::string spatialFieldString(const geo::Grid2 &grid,
   s.appendLine(hermes::to_string(field.element()));
   for (i32 y = res.height - 1; y >= 0; --y) {
     for (i32 x = 0; x < static_cast<i32>(res.width); ++x) {
-      s.append(field.at(core::Index::global(
-                   grid.safeFlatIndex(field.element(), {x, y}))),
-               " ");
+      s.append(
+          field.at(Index::global(grid.safeFlatIndex(field.element(), {x, y}))),
+          " ");
     }
     s.append("\n");
   }
@@ -364,19 +294,6 @@ template <> struct DebugTraits<naiades::geo::Grid2> {
     m.add("bounds", data.bounds_);
     m.add("resolution", data.resolution_);
     m.add("cell size", data.cell_size_);
-    return m;
-  }
-};
-
-template <> struct DebugTraits<naiades::numeric::Grid2FD> {
-  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
-  static DebugMessage message(const naiades::numeric::Grid2FD &data) {
-    auto m = DebugMessage();
-    m.addTitle("Grid2 - FD");
-    if (data.topology_)
-      m.add("mesh", data.mesh());
-    m.addMap("fields", data.fields_);
-    m.addMap("boundaries", data.boundaries_);
     return m;
   }
 };

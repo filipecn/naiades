@@ -72,9 +72,11 @@ Result<HE2> convert2HE(const Grid2 &grid) {
   for (auto v : grid.centers(core::Element::vertex()))
     he.addVertex(v);
   for (auto c : grid.elements(core::Element::cell())) {
-    auto vertices = grid.indices(c.globalIndex(), core::Element::vertex());
+    auto vertices =
+        grid.elementIndices(c.globalIndex(), core::Element::vertex());
     he.addCell(vertices);
   }
+  he.optimizeIndices();
   return Result<HE2>(std::move(he));
 }
 

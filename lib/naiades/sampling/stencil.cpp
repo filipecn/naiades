@@ -101,7 +101,7 @@ Stencil Stencil::bilinear(const geo::Grid2 &grid, core::Element loc,
     stencil.add(v12, 1.f - y);
   } else {
     // all must be different
-    HERMES_ASSERT(v11 != v12 && v11 != v21 && v11 != v22);
+    HERMES_ASSERT((v11 != v12 && v11 != v21 && v11 != v22));
 
     // w11 = (x2 - x)(y2 - y) / (x2 - x1)(y2 - y1)
     // w12 = (x2 - x)(y - y1) / (x2 - x1)(y2 - y1)

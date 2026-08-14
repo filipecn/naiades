@@ -81,8 +81,9 @@ TEST_CASE("Element", "[core]") {
                     element_orientation_bits::any) == Element::Type::ANY);
     REQUIRE(Element(element_primitive_bits::face, element_alignment_bits::xz,
                     element_orientation_bits::any_y) == Element::Type::XZ_FACE);
-    REQUIRE(Element::Type::CELL == Element(element_primitive_bits::cell,
-                                           element_alignment_bits::none));
+    REQUIRE(Element::Type::CELL ==
+            Element(element_primitive_bits::cell, element_alignment_bits::none,
+                    element_orientation_bits::none, element_space_bits::any));
     REQUIRE(Element::Type::FACE == Element(element_primitive_bits::face,
                                            element_alignment_bits::any,
                                            element_orientation_bits::any));
@@ -92,7 +93,8 @@ TEST_CASE("Element", "[core]") {
                                             element_alignment_bits::none));
     REQUIRE(Element::Type::CUSTOM == Element(element_primitive_bits::custom,
                                              element_alignment_bits::custom,
-                                             element_orientation_bits::custom));
+                                             element_orientation_bits::custom,
+                                             element_space_bits::custom));
     REQUIRE(Element::Type::HORIZONTAL_FACE ==
             Element(element_primitive_bits::face, element_alignment_bits::xz,
                     element_orientation_bits::any_y));
@@ -160,14 +162,14 @@ TEST_CASE("Element", "[core]") {
     REQUIRE(!e.primitives().contain(element_primitive_bits::cell));
     REQUIRE(!e.is(element_primitive_bits::cell));
     REQUIRE(e.alignments().contain(element_alignment_bits::xz));
-    REQUIRE(e.has(element_alignment_bits::xz));
+    REQUIRE(e.alignsTo(element_alignment_bits::xz));
     REQUIRE(e.alignments().contain(element_alignment_bits::x));
-    REQUIRE(e.has(element_alignment_bits::x));
+    REQUIRE(e.alignsTo(element_alignment_bits::x));
     REQUIRE(e.alignments().contain(element_alignment_bits::z));
-    REQUIRE(e.has(element_alignment_bits::z));
+    REQUIRE(e.alignsTo(element_alignment_bits::z));
     REQUIRE(e.alignments().contain(element_alignment_bits::custom));
-    REQUIRE(e.has(element_alignment_bits::custom));
-    REQUIRE(!e.has(element_alignment_bits::y));
+    REQUIRE(e.alignsTo(element_alignment_bits::custom));
+    REQUIRE(!e.alignsTo(element_alignment_bits::y));
     REQUIRE(e.orientations().contain(element_orientation_bits::x));
     REQUIRE(e.orientations().contain(element_orientation_bits::z));
     REQUIRE(e.orientations().contain(element_orientation_bits::neg_x));
@@ -183,7 +185,7 @@ TEST_CASE("Element", "[core]") {
     REQUIRE(e.alignments().contain(element_alignment_bits::x));
     REQUIRE(e.alignments().contain(element_alignment_bits::z));
     REQUIRE(e.alignments().contain(element_alignment_bits::custom));
-    e.addorientations(element_orientation_bits::custom);
+    e.addOrientations(element_orientation_bits::custom);
     REQUIRE(e.orientations().contain(element_orientation_bits::custom));
     e.setPrimitives(element_primitive_bits::custom);
     REQUIRE(!e.primitives().contain(element_primitive_bits::vertex));

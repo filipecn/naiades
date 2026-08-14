@@ -53,7 +53,7 @@ namespace naiades::numeric {
 /// \note  Different boundary conditions can be applied on the boundary regions.
 ///
 /// Example:
-///   Consider three boundary regions -- [a, b, c] -- defined at the boundary
+///   Consider three regions -- [a, b, c] -- defined at the boundary
 ///   faces of the simulation domain.
 ///
 ///        a a a a a a
@@ -69,31 +69,30 @@ public:
   public:
     /// /param boundary_element_type
     /// /param indices
-    Region(const core::Element &boundary_element_type,
-           const std::vector<h_size> &indices);
+    Region(const core::Element &boundary_element_type, const IndexSet &indices);
 
     /// Set the boundary condition for this field.
     void setCondition(bc::BoundaryCondition::Ptr condition,
                       core::Element interior_field_loc);
     ///
-    bool contains(const core::Index &index) const;
+    bool contains(const Index &index) const;
     /// Build boundary stencils.
     NaResult resolve(core::Topology::Ptr topology);
     ///
-    const DiscreteOperator &stencil(const core::Index &index) const;
+    const DiscreteOperator &stencil(const Index &index) const;
     ///
     NaResult compute(core::FieldCRef<f32> interior_field,
                      core::FieldRef<f32> field) const;
     /// Set of boundary element indices of this region.
-    const utils::IndexSet &indices() const;
+    const IndexSet &indices() const;
 
   private:
     friend class Boundary;
 
-    utils::IndexSet index_set_;
+    IndexSet index_set_;
     bc::BoundaryCondition::Ptr condition_;
-    core::Element boundary_element_type_;
-    core::Element interior_element_type_;
+    core::Element boundary_loc_;
+    core::Element interior_loc_;
     std::vector<DiscreteOperator> stencils_;
 
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS
@@ -114,8 +113,7 @@ public:
   /// Defines a boundary region from the given boundary element index set.
   /// \param indices Boundary element indices.
   /// \param [out] The index of the newly created region.
-  Boundary &addRegion(const std::vector<h_size> &indices,
-                      h_size *region_index = nullptr);
+  Boundary &addRegion(const IndexSet &indices, h_size *region_index = nullptr);
   /// Set the boundary condition for region.
   /// \param region_index Index returned by addRegion.
   /// \param condition
@@ -135,7 +133,7 @@ public:
 
   const core::Element &boundaryElement() const;
   const core::Element &interiorElement() const;
-  const DiscreteOperator &stencil(const core::Index &index) const;
+  const DiscreteOperator &stencil(const Index &index) const;
   const std::vector<Region> regions() const;
 
 private:
@@ -148,7 +146,7 @@ private:
 #endif
 };
 
-} // namespace naiades::numeric::numeric
+} // namespace naiades::numeric
 
 #ifdef NAIADES_INCLUDE_DEBUG_TRAITS
 

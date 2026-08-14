@@ -30,23 +30,6 @@
 
 namespace naiades::numeric::solvers {
 
-void CG::buildSystem() {
-  h_size n = implicit_.size();
-
-  // Declare a sparse matrix type with double precision
-  A_ = Eigen::SparseMatrix<double>(n, n);
-
-  // Reserve space for 1 non-zero element per row
-  A_.reserve(Eigen::VectorXi::Constant(n, 1));
-
-  // Build matrix rows
-  for (auto dop : implicit_) {
-    for (auto item : dop.nodes())
-      A_.insert(dop.centerIndex(), item.first) = item.second;
-  }
-  A_.makeCompressed();
-}
-
 void CG::solveFor(core::FieldRef<real_t> &unknown_field,
                   const Scalar &rhs) const {
   h_size n = implicit_.size();
@@ -78,6 +61,39 @@ void CG::solveFor(core::FieldRef<real_t> &unknown_field,
   // You can also control the max iterations and tolerance if needed
   cg.setMaxIterations(100);
   cg.setTolerance(1e-6);
+
+  //
+  for (h_index i = 0; i < n; ++i)
+    unknown_field[i] = x[i];
+}
+
+void BiCGSTAB::solveFor(core::FieldRef<real_t> &unknown_field,
+                        const Scalar &rhs) const {
+  h_size n = implicit_.size();
+
+  // Declare vectors for the solution (x) and the right-hand side (b)
+  Eigen::VectorXd x(n), b(n);
+
+  for (h_index i = 0; i < n; ++i) {
+    b(i) = rhs[i];
+  }
+
+  Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
+
+  // 1. Compute the factorization/preconditioner
+  solver.compute(A_);
+
+  // 2. Solve the linear system
+  x = solver.solve(b);
+
+  // --- Output results and convergence information ---
+  HERMES_INFO("BiCGSTAB solver run:");
+  HERMES_INFO("#iterations: {}", solver.iterations());
+  HERMES_INFO("Estimated error: ", solver.error());
+
+  // You can also control the max iterations and tolerance if needed
+  solver.setMaxIterations(100);
+  solver.setTolerance(1e-6);
 
   //
   for (h_index i = 0; i < n; ++i)

@@ -32,7 +32,6 @@
 #include <naiades/core/element_set.h>
 #include <naiades/numeric/blas.h>
 
-#include <hermes/core/ref.h>
 #include <hermes/geometry/bounds.h>
 #include <hermes/geometry/normal.h>
 #include <hermes/geometry/point.h>
@@ -40,6 +39,10 @@
 #include <vector>
 
 namespace naiades::core {
+
+template <typename T>
+concept HasGeometry =
+    requires(T object, const ElementIndex &iloc) { object.center(iloc); };
 
 /// \brief Interface for discretization 2-dimensional geometries.
 /// A derived discretization geometry holds the geometry of a discretization
@@ -93,8 +96,24 @@ public:
   /// \return View for iterating over instances of the given element.
   element_view elements(const Element &loc) const;
 
+  /// \param loc Element type.
+  /// \param space Element space.
+  /// \note The element space defines the what elements are returned.
+  /// \note - If ElementSpace::INTERIOR is given, only interior elements are
+  /// returned.
+  /// \note - If ElementSpace::BOUNDARY is given, only boundary elements are
+  /// returned.
+  /// \note - If ElementSpace::GLOBAL is given, all elements are returned.
   /// \return center's x coordinate.
   numeric::Scalar x(const Element &loc) const;
+  /// \param loc Element type.
+  /// \param space Element space.
+  /// \note The element space defines the what elements are returned.
+  /// \note - If ElementSpace::INTERIOR is given, only interior elements are
+  /// returned.
+  /// \note - If ElementSpace::BOUNDARY is given, only boundary elements are
+  /// returned.
+  /// \note - If ElementSpace::GLOBAL is given, all elements are returned.
   /// \return center's y coordinate.
   numeric::Scalar y(const Element &loc) const;
 

@@ -55,7 +55,7 @@ void DiscreteOperator::addUnresolved(const core::ElementIndex &element,
 
 NaResult DiscreteOperator::resolve(const Boundary &boundary) {
   for (const auto &item : boundary_nodes_) {
-    *this += boundary.stencil(core::Index::global(item.first)) * item.second;
+    *this += boundary.stencil(Index::global(item.first)) * item.second;
   }
   return NaResult::noError();
 }

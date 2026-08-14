@@ -35,6 +35,11 @@
 
 namespace naiades::core {
 
+template <typename T>
+concept HasElementSet = requires(T t, const Element &loc) {
+  { t.elementCount(loc) } -> std::same_as<h_size>;
+};
+
 /// \brief Interface for discretization topologies.
 /// A derived topology holds the topology of a discretization that is commonly
 /// required by simulation algorithms. The discretization topology may have the

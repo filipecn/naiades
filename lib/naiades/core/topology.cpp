@@ -28,20 +28,50 @@
 
 namespace naiades::core {
 
-std::vector<std::vector<h_size>> Topology::indices(Element loc,
-                                                   Element sub_loc) const {
+NeighbourhoodCriteria NeighbourhoodCriteria::knn(h_index n) {
+  return {.max_topological_distance = 0,
+          .max_count = n,
+          .max_distance = -1.f,
+          .sort_by_distance = false};
+}
+
+NeighbourhoodCriteria NeighbourhoodCriteria::k_ring(h_index k) {
+  return {.max_topological_distance = k,
+          .max_count = 0,
+          .max_distance = -1.f,
+          .sort_by_distance = false};
+}
+
+NeighbourhoodCriteria &NeighbourhoodCriteria::withMaxCount(h_index _max_count) {
+  max_count = _max_count;
+  return *this;
+}
+
+NeighbourhoodCriteria &
+NeighbourhoodCriteria::withMaxDistance(f32 _max_distance) {
+  max_distance = _max_distance;
+  return *this;
+}
+
+NeighbourhoodCriteria &NeighbourhoodCriteria::withSortByDistance() {
+  sort_by_distance = true;
+  return *this;
+}
+
+std::vector<std::vector<h_size>> Topology::subElements(Element loc,
+                                                       Element sub_loc) const {
   std::vector<std::vector<h_size>> is;
   h_size n = elementCount(loc);
   for (h_index i = 0; i < n; ++i) {
-    is.emplace_back(indices(
+    is.emplace_back(elementIndices(
         ElementIndex::global(loc, i + elementIndexOffset(loc)), sub_loc));
   }
   return is;
 }
 
-std::vector<Neighbour> Topology::star(const ElementIndex &iloc,
-                                      Element boundary_loc) const {
-  return star(iloc, iloc.element, {boundary_loc});
-}
+// std::vector<Neighbour> Topology::star(const ElementIndex &iloc,
+//                                       Element boundary_loc) const {
+//   return star(iloc, iloc.element, {boundary_loc});
+// }
 
 } // namespace naiades::core

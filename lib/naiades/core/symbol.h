@@ -47,12 +47,14 @@ struct Symbol {
 
 struct DiscreteSymbol {
 
-  static DiscreteSymbol cell(const std::string &name,
-                             const Element &boundary_loc = Element::face()) {
+  static DiscreteSymbol
+  cell(const std::string &name,
+       const Element &boundary_loc = Element::boundaryFace()) {
     return DiscreteSymbol(name, Element::cell(), boundary_loc);
   }
   static DiscreteSymbol vertex(const std::string &name) {
-    return DiscreteSymbol(name, Element::vertex(), Element::vertex());
+    return DiscreteSymbol(name, Element::interiorVertex(),
+                          Element::boundaryVertex());
   }
   DiscreteSymbol() = default;
   DiscreteSymbol(const std::string &name, const Element &interior_field_loc,

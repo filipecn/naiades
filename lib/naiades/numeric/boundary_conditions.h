@@ -79,6 +79,7 @@ public:
   DiscreteOperator
   resolve(const core::ElementIndex &boundary_element,
           const core::ElementIndex &interior_element) const override {
+    HERMES_UNUSED_VARIABLE(boundary_element);
     DiscreteOperator op(*interior_element.index);
     op.add(*interior_element.index, 1.0);
     return op;

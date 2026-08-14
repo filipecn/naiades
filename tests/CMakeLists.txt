@@ -1,4 +1,4 @@
-add_executable(naiades_tests 
+add_executable(naiades_tests
   blas_tests.cpp
   core_tests.cpp
   geo_tests.cpp
@@ -11,8 +11,8 @@ target_link_options(naiades_tests INTERFACE --coverage)
 
 add_dependencies(naiades_tests Catch2 naiades)
 
-target_include_directories(naiades_tests PUBLIC 
-  ${CATCH2_INCLUDES} 
+target_include_directories(naiades_tests PUBLIC
+  ${CATCH2_INCLUDES}
   ${NAIADES_SOURCE_DIR}
   ${DEPS_INCLUDE_DIRS}
 )
@@ -24,7 +24,7 @@ if(NAIADES_INCLUDE_DEBUG_TRAITS)
   target_compile_definitions(naiades_tests PUBLIC HERMES_INCLUDE_DEBUG_TRAITS)
 endif(NAIADES_INCLUDE_DEBUG_TRAITS)
 
-target_link_libraries(naiades_tests PRIVATE 
+target_link_libraries(naiades_tests PRIVATE
   naiades
   hermes
   Catch2::Catch2WithMain
@@ -33,7 +33,7 @@ target_link_libraries(naiades_tests PRIVATE
 
 if (UNIX)
 
-  target_link_libraries(naiades_tests 
+  target_link_libraries(naiades_tests
     PRIVATE
     gcov
   )
@@ -53,6 +53,6 @@ endif (UNIX)
 
 list(APPEND CMAKE_MODULE_PATH ${CATCH2_EXTRAS})
 enable_testing()
-include(CTest) 
+include(CTest)
 include(Catch)
 catch_discover_tests(naiades_tests)

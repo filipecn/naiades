@@ -34,7 +34,9 @@
 namespace naiades::numeric {
 
 /// A scalar field is a multi-dimensional scalar that accepts most arithmetic
-/// operators and functions.
+/// operators and functions. The scalar field carries the index space of the
+/// field it is defined on. This means these indices should match the index
+/// space of a spatial discretization where it is defined.
 class Scalar {
 public:
   static Scalar zero(h_size size);
@@ -79,6 +81,10 @@ public:
 
 private:
   std::vector<real_t> data_;
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+  friend struct hermes::DebugTraits<Scalar>;
+#endif
 };
 
 Scalar operator+(const Scalar &lhs, const Scalar &rhs);
@@ -122,3 +128,18 @@ Scalar abs(const Scalar &field);
 // }
 
 } // namespace naiades::numeric
+
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+namespace hermes {
+template <> struct DebugTraits<naiades::numeric::Scalar> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::numeric::Scalar &data) {
+    auto m = DebugMessage();
+    m.addArray("values", data.data_);
+    return m;
+  }
+};
+} // namespace hermes
+
+#endif

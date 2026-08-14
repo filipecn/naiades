@@ -3,6 +3,7 @@
 # ##############################################################################
 set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/base/debug.h
+  ${NAIADES_SOURCE_DIR}/naiades/base/index_set.h
   ${NAIADES_SOURCE_DIR}/naiades/base/result.h
 
   ${NAIADES_SOURCE_DIR}/naiades/core/element.h
@@ -10,6 +11,7 @@ set(NAIADES_HEADERS
   ${NAIADES_SOURCE_DIR}/naiades/core/field.h
   ${NAIADES_SOURCE_DIR}/naiades/core/geometry.h
   ${NAIADES_SOURCE_DIR}/naiades/core/mesh.h
+  ${NAIADES_SOURCE_DIR}/naiades/core/neighbourhood.h
   ${NAIADES_SOURCE_DIR}/naiades/core/topology.h
 
   ${NAIADES_SOURCE_DIR}/naiades/geo/grid.h
@@ -42,6 +44,8 @@ set(NAIADES_HEADERS
 )
 
 set(NAIADES_SOURCES
+  ${NAIADES_SOURCE_DIR}/naiades/base/index_set.cpp
+
   ${NAIADES_SOURCE_DIR}/naiades/core/element.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/element_set.cpp
   ${NAIADES_SOURCE_DIR}/naiades/core/field.cpp

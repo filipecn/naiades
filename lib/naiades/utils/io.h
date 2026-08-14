@@ -37,9 +37,14 @@
 #include <hermes/geometry/transform.h>
 #include <hermes/numeric/interpolation.h>
 
+#include <filesystem>
+#include <source_location>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtemplate-id-cdtor"
 #include <simple_svg_1.0.0.hpp>
 
-#include <filesystem>
+#pragma GCC diagnostic pop
 
 namespace naiades::utils::colors {
 
@@ -146,6 +151,29 @@ template <> struct FlagTraits<naiades::utils::io::draw_option_bits> {
       naiades::utils::io::draw_option_bits::indices;
 };
 
+#ifdef NAIADES_INCLUDE_DEBUG_TRAITS
+
+template <> struct DebugTraits<naiades::utils::io::draw_options> {
+  static HERMES_CONST_OR_CONSTEXPR bool is_string_serializable = true;
+  static DebugMessage message(const naiades::utils::io::draw_options &data) {
+    DebugMessage m;
+    std::vector<std::string> values;
+#define CHECK_BIT(B)                                                           \
+  if (naiades::utils::io::draw_option_bits::B & data)                          \
+  values.push_back(#B)
+    CHECK_BIT(vertices);
+    CHECK_BIT(faces);
+    CHECK_BIT(cells);
+    CHECK_BIT(indices);
+    CHECK_BIT(normals);
+    CHECK_BIT(values);
+    return DebugMessage("{}", hermes::cstr::join(values, " | "));
+#undef CHECK_BIT
+  }
+};
+
+#endif
+
 } // namespace hermes
 
 namespace naiades::utils::io {
@@ -156,6 +184,7 @@ class SVG {
   }
   static svg::Point toSVG(const hermes::geo::point2 &p,
                           const hermes::geo::vec2 &svg_offset = {}) {
+    HERMES_UNUSED_VARIABLE(svg_offset);
     return svg::Point(p.x, p.y);
   }
 
@@ -184,6 +213,7 @@ public:
     std::shared_ptr<svg::Shape>
     shape(const hermes::geo::Transform2 &t,
           const hermes::geo::Transform2 &svg_transform) const override {
+      HERMES_UNUSED_VARIABLE(svg_transform);
       return std::shared_ptr<svg::Shape>(
           new svg::Circle(toSVG(t(center)), radius * 2, fill(), stroke()));
     }
@@ -249,6 +279,7 @@ public:
     std::shared_ptr<svg::Shape>
     shape(const hermes::geo::Transform2 &t,
           const hermes::geo::Transform2 &svg_transform) const override {
+      HERMES_UNUSED_VARIABLE(svg_transform);
       std::shared_ptr<svg::Shape> shape(new svg::Polygon(fill(), stroke()));
       svg::Polygon *border = reinterpret_cast<svg::Polygon *>(shape.get());
       for (const auto &position : vertices) {
@@ -269,6 +300,7 @@ public:
     std::shared_ptr<svg::Shape>
     shape(const hermes::geo::Transform2 &t,
           const hermes::geo::Transform2 &svg_transform) const override {
+      HERMES_UNUSED_VARIABLE(svg_transform);
       std::shared_ptr<svg::Shape> shape(new svg::Polyline(fill(), stroke()));
       svg::Polygon *border = reinterpret_cast<svg::Polygon *>(shape.get());
       for (const auto &position : vertices) {
@@ -291,6 +323,7 @@ public:
     std::shared_ptr<svg::Shape>
     shape(const hermes::geo::Transform2 &t,
           const hermes::geo::Transform2 &svg_transform) const override {
+      HERMES_UNUSED_VARIABLE(svg_transform);
       return std::shared_ptr<svg::Shape>(new svg::Text(
           toSVG(t(position) + offset), text.c_str(), fill(), font));
     }
@@ -323,35 +356,39 @@ public:
     point_size_ = size;
     return *this;
   }
-  SVG &draw(const core::Mesh2 &mesh) {
+  template <typename T>
+    requires core::HasGeometry<T> && core::HasTopology<T>
+  SVG &draw(const T *mesh) {
     // edges
-    for (const auto &face : mesh.elements(core::Element::face())) {
-      auto vertices = mesh.indices(face.globalIndex(), core::Element::vertex());
-      link(mesh.center(core::ElementIndex::global(core::Element::vertex(),
-                                                  vertices[0])),
-           mesh.center(core::ElementIndex::global(core::Element::vertex(),
-                                                  vertices[1])),
+    for (const auto &face : mesh->elements(core::Element::face())) {
+      auto vertices =
+          mesh->elementIndices(face.globalIndex(), core::Element::vertex());
+      link(mesh->center(core::ElementIndex::global(core::Element::vertex(),
+                                                   vertices[0])),
+           mesh->center(core::ElementIndex::global(core::Element::vertex(),
+                                                   vertices[1])),
            bg_color);
     }
     // for (const auto &cell_vertices :
-    //      mesh.indices(core::Element::cell(), core::Element::vertex())) {
+    //      mesh->indices(core::Element::cell(), core::Element::vertex())) {
     //   std::vector<hermes::geo::point2> positions;
     //   for (auto vertex_index : cell_vertices)
     //     positions.emplace_back(
-    //         mesh.center(core::Element::vertex(), vertex_index));
+    //         mesh->center(core::Element::vertex(), vertex_index));
     //   doc_ << cell(positions);
     // }
     // vertices
     if (draw_options_.contain(draw_option_bits::vertices))
-      for (const auto &vertex : mesh.elements(core::Element::vertex())) {
-        if (draw_options_.contain(draw_option_bits::indices))
+      for (const auto &vertex : mesh->elements(core::Element::vertex())) {
+        if (draw_options_.contain(draw_option_bits::indices)) {
           text(hermes::cstr::format("{}", vertex.local_index), vertex.center,
                bg_color);
+        }
         point(vertex.center, point_size_, bg_color);
       }
     // cells
     if (draw_options_.contain(draw_option_bits::cells))
-      for (const auto &cell : mesh.elements(core::Element::cell())) {
+      for (const auto &cell : mesh->elements(core::Element::cell())) {
         if (draw_options_.contain(draw_option_bits::indices))
           text(hermes::cstr::format("{}", cell.local_index), cell.center,
                z_color);
@@ -359,7 +396,7 @@ public:
       }
     // faces
     if (draw_options_.contain(draw_option_bits::faces))
-      for (const auto &face : mesh.elements(core::Element::face())) {
+      for (const auto &face : mesh->elements(core::Element::face())) {
         if (draw_options_.contain(draw_option_bits::indices))
           text(hermes::cstr::format("{}", face.local_index), face.center,
                x_color);
@@ -368,12 +405,12 @@ public:
         if (draw_options_.contain(draw_option_bits::normals))
           arrow(face.center,
                 vector_scale_ *
-                    hermes::geo::vec2(mesh.normal(face.globalIndex())),
+                    hermes::geo::vec2(mesh->normal(face.globalIndex())),
                 x_color);
       }
 
     // // u faces
-    // for (const auto &face : mesh.elements(core::Element::uFace())) {
+    // for (const auto &face : mesh->elements(core::Element::uFace())) {
     //   doc_ << text(
     //       hermes::cstr::format("{}({})", face.global_index,
     //       face.local_index), face.center, x_color);
@@ -382,12 +419,12 @@ public:
     //   // normal
     //   doc_ << arrow(face.center,
     //                 vector_scale_ *
-    //                     hermes::geo::vec2(mesh.normal(core::Element::uFace(),
+    //                     hermes::geo::vec2(mesh->normal(core::Element::uFace(),
     //                                                   face.global_index)),
     //                 x_color);
     // }
     // // v faces
-    // for (const auto &face : mesh.elements(core::Element::vFace())) {
+    // for (const auto &face : mesh->elements(core::Element::vFace())) {
     //   doc_ << text(
     //       hermes::cstr::format("{}({})", face.global_index,
     //       face.local_index), face.center, y_color);
@@ -396,7 +433,7 @@ public:
     //   // normal
     //   doc_ << arrow(face.center,
     //                 vector_scale_ *
-    //                     hermes::geo::vec2(mesh.normal(core::Element::vFace(),
+    //                     hermes::geo::vec2(mesh->normal(core::Element::vFace(),
     //                                                   face.global_index)),
     //                 y_color);
     // }
@@ -411,7 +448,7 @@ public:
       // cells
       h_index cell_index = 0;
       for (const auto &cell_vertices :
-           mesh.indices(core::Element::cell(), core::Element::vertex())) {
+           mesh.subElements(core::Element::cell(), core::Element::vertex())) {
         std::vector<hermes::geo::point2> positions;
         for (auto vertex_index : cell_vertices)
           positions.emplace_back(mesh.center(core::ElementIndex::global(
@@ -431,7 +468,7 @@ public:
     }
     return *this;
   }
-  SVG &draw(const core::Mesh2 &mesh, const core::Element &loc,
+  SVG &draw(const core::Mesh2 *mesh, const core::Element &loc,
             const numeric::Scalar &values) {
     auto palette = colors::palettes::batlow();
     // get min and max values
@@ -440,10 +477,10 @@ public:
     if (loc.is(core::element_primitive_bits::cell)) {
       // cells
       for (const auto &cell_vertices :
-           mesh.indices(core::Element::cell(), core::Element::vertex())) {
+           mesh->subElements(core::Element::cell(), core::Element::vertex())) {
         std::vector<hermes::geo::point2> positions;
         for (auto vertex_index : cell_vertices)
-          positions.emplace_back(mesh.center(core::ElementIndex::global(
+          positions.emplace_back(mesh->center(core::ElementIndex::global(
               core::Element::vertex(), vertex_index)));
         // compute color
         polygon(positions,
@@ -505,7 +542,7 @@ public:
             boundary.boundaryElement(), item.global_index));
         point(p, point_size_ * 1.5, {});
         const auto &stencil =
-            region.stencil(core::Index::local(item.local_set_index));
+            region.stencil(Index::local(item.local_set_index));
         draw(mesh, stencil,
              core::DiscreteSymbol("", boundary.interiorElement(),
                                   boundary.boundaryElement()));
@@ -528,6 +565,7 @@ public:
 
     auto drawHE = [&](const auto &face, h_index he,
                       const hermes::colors::RGB_Color &color) {
+      HERMES_UNUSED_VARIABLE(face);
       auto v = mesh.heVector(he);
       auto v_size = v.length();
       auto l = hermes::geo::normalize(v.left()) * v_size * 0.02f;
@@ -585,6 +623,7 @@ public:
     return *this;
   }
   SVG &draw(const geo::PointSet2 &ps) {
+    HERMES_UNUSED_VARIABLE(ps);
     HERMES_NOT_IMPLEMENTED;
     // for (const auto &p : ps)
     //   point(p, point_size_, bg_color);
@@ -597,8 +636,10 @@ public:
     for (h_index i = 0; i < stencil.size(); ++i) {
       point(stencil[i], point_size_, y_color);
       if (i == 0)
-        text(hermes::cstr::format("({},{})", stencil[i].x, stencil[i].y),
+        text(hermes::cstr::format("({},{:.2})", stencil[i].x, stencil[i].y),
              stencil[i], z_color);
+      else
+        text(hermes::cstr::format("({})", i), stencil[i], z_color);
     }
     return *this;
   }
@@ -734,15 +775,68 @@ public:
       244 / 255.0f, 240 / 255.0f, 11 / 255.0f};
 
 private:
-  draw_options draw_options_{draw_option_bits::all};
+  draw_options draw_options_{draw_option_bits::vertices |
+                             draw_option_bits::faces | draw_option_bits::cells |
+                             draw_option_bits::indices};
 
   std::vector<Command> commands_;
 
   f32 margin_percent_{0.1f};
   f32 vector_scale_{0.01f};
-  f32 point_size_{15.f};
+  f32 point_size_{0.001f};
   h_index text_size_{11};
   // palette
 };
 
+class PlotManager {
+public:
+  PlotManager(const PlotManager &) = delete;
+  PlotManager(PlotManager &&) = delete;
+  PlotManager &operator=(const PlotManager &) = delete;
+  PlotManager &operator=(PlotManager &&) = delete;
+  ~PlotManager() = default;
+
+  static PlotManager &instance() {
+    static PlotManager plot_manager;
+    return plot_manager;
+  }
+
+  static void plot(const std::string &name,
+                   const std::function<void(SVG &)> &func) {
+    auto &plot_manager = PlotManager::instance();
+    auto plot_count = plot_manager.registerPlot(name);
+    SVG svg;
+    func(svg);
+    svg.write(name + "_" + std::to_string(plot_count) + ".svg");
+  }
+
+private:
+  h_size registerPlot(const std::string &name) { return plot_counts[name]++; }
+
+  PlotManager() = default;
+  /// plot name -> plot count
+  std::unordered_map<std::string, h_size> plot_counts;
+};
+
 } // namespace naiades::utils::io
+
+#ifndef NAIADES_PLOT
+#define NAIADES_PLOT(COMMAND)                                                  \
+  ::naiades::utils::io::PlotManager::plot(                                     \
+      std::filesystem::path{std::source_location::current().file_name()}       \
+              .stem()                                                          \
+              .string() +                                                      \
+          std::to_string(std::source_location::current().line()),              \
+      [&](::naiades::utils::io::SVG &svg) { svg.COMMAND; });
+#endif
+
+#ifndef NAIADES_PLOT_IF
+#define NAIADES_PLOT_IF(A, COMMAND)                                            \
+  if (A)                                                                       \
+    naiades::utils::io::PlotManager::plot(                                     \
+        std::filesystem::path{std::source_location::current().file_name()}     \
+                .stem()                                                        \
+                .string() +                                                    \
+            std::to_string(std::source_location::current().line()),            \
+        [&](::naiades::utils::io::SVG &svg) { svg.COMMAND; });
+#endif

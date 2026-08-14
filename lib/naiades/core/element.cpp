@@ -28,8 +28,6 @@
 
 namespace naiades::core {
 
-h_size Index::s_invalid_value_ = 1 << 30;
-
 ElementIndex::ElementIndex()
     : element{Element::Type::ANY}, index{Index::invalid()} {}
 
@@ -65,5 +63,45 @@ Element Element::wFace() { return Element(Element::Type::W_FACE); }
 Element Element::vertex() { return Element(Element::Type::VERTEX); }
 
 Element Element::point() { return Element(Element::Type::POINT); }
+
+Element Element::boundaryCell() {
+  return Element(Element::Type::BOUNDARY_CELL);
+}
+
+Element Element::boundaryFace() {
+  return Element(Element::Type::BOUNDARY_FACE);
+}
+
+Element Element::boundaryVertex() {
+  return Element(Element::Type::BOUNDARY_VERTEX);
+}
+
+Element Element::interiorCell() {
+  return Element(Element::Type::INTERIOR_CELL);
+}
+
+Element Element::interiorFace() {
+  return Element(Element::Type::INTERIOR_FACE);
+}
+
+Element Element::interiorVertex() {
+  return Element(Element::Type::INTERIOR_VERTEX);
+}
+
+Element Element::horizontalFace() {
+  return Element(Element::Type::HORIZONTAL_FACE);
+}
+
+Element Element::verticalFace() {
+  return Element(Element::Type::VERTICAL_FACE);
+}
+
+Element Element::depthFace() { return Element(Element::Type::DEPTH_FACE); }
+
+Element Element::xFace() { return Element(Element::Type::X_FACE); }
+
+Element Element::yFace() { return Element(Element::Type::Y_FACE); }
+
+Element Element::zFace() { return Element(Element::Type::Z_FACE); }
 
 } // namespace naiades::core

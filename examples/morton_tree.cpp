@@ -13,8 +13,9 @@ int main() {
 
   auto mt = *na::spatial::MortonTree2::fromMaxLevel(4);
   HERMES_LOG_VARIABLE(mt);
-  h_index call = 0;
+  // h_index call = 0;
   mt.refine([&](const auto &leaf) -> bool {
+    HERMES_UNUSED_VARIABLE(leaf);
     // Define an even, uniform distribution between 1 and 100 inclusive
     std::uniform_int_distribution<int> distrib(1, 100);
 

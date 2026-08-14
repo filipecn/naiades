@@ -25,6 +25,7 @@
 /// \date   2025-06-07
 /// \brief  Naiades return object.
 
+#include <hermes/core/ref.h>
 #include <hermes/core/result.h>
 
 #include <sstream>
@@ -35,6 +36,13 @@
 
 struct NaResult;
 namespace naiades {
+
+template <typename T>
+concept HasPtr = requires {
+  typename T::Ptr;
+  requires std::same_as<typename T::Ptr, hermes::Ref<T>>;
+};
+
 template <typename T> using Result = hermes::Result<T, NaResult>;
 } // namespace naiades
 

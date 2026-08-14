@@ -101,13 +101,11 @@ f32 matlab_heat_data[] = {
     0.f,       0.42745f,  0.22745f, 0.f,        0.40784f,  0.21569f};
 
 ColorPalette palettes::matlabHeatMap() {
-  return std::move(ColorPalette(matlab_heat_data, sizeof(matlab_heat_data) /
-                                                      (sizeof(float) * 3)));
+  return ColorPalette(matlab_heat_data,
+                      sizeof(matlab_heat_data) / (sizeof(float) * 3));
 }
 
-ColorPalette palettes::batlow() {
-  return std::move(ColorPalette(batlow_data, 99));
-}
+ColorPalette palettes::batlow() { return ColorPalette(batlow_data, 99); }
 
 ColorPalette::ColorPalette(const u32 *c, size_t n) {
   for (size_t i = 0; i < n; ++i)

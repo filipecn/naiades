@@ -30,19 +30,42 @@
 #include <naiades/base/result.h>
 #include <naiades/core/element.h>
 #include <naiades/core/element_set.h>
+#include <naiades/utils/utils.h>
 
 #include <hermes/core/ref.h>
 #include <hermes/geometry/point.h>
 
+#include <concepts>
 #include <optional>
 #include <vector>
 
 namespace naiades::core {
 
+template <typename T>
+concept HasTopology = requires(T t, Element element, const ElementIndex &iloc,
+                               std::optional<Element> b_loc) {
+  { t.neighbours(iloc, b_loc) } -> std::same_as<std::vector<ElementIndex>>;
+  { t.indices(iloc.element) } -> std::same_as<IndexSet>;
+};
+
 /// \brief Discretization neighbour.
 struct Neighbour {
   ElementIndex element_index;
   real_t distance;
+};
+
+struct NeighbourhoodCriteria {
+  static NeighbourhoodCriteria knn(h_index n);
+  static NeighbourhoodCriteria k_ring(h_index k);
+
+  NeighbourhoodCriteria &withMaxCount(h_index max_count);
+  NeighbourhoodCriteria &withMaxDistance(f32 max_distance);
+  NeighbourhoodCriteria &withSortByDistance();
+
+  h_index max_topological_distance{1};
+  h_index max_count{0};
+  real_t max_distance{-1.f};
+  bool sort_by_distance{false};
 };
 
 /// \brief Interface for discretization neighbourhoods.
@@ -60,68 +83,24 @@ public:
   /// \param element
   /// \param sub_element
   /// \return The lists of sub-elements of all elements.
-  virtual std::vector<std::vector<h_size>> indices(Element element,
-                                                   Element sub_element) const;
+  virtual std::vector<std::vector<h_size>>
+  subElements(Element element, Element sub_element) const;
   /// \brief Get the list of indices of a given element instance.
   /// \param element
   /// \param index
   /// \param sub_element
   /// \return The lists of sub-elements of the given element instance.
-  virtual std::vector<h_size> indices(const ElementIndex &iloc,
-                                      Element sub_element) const = 0;
+  virtual std::vector<h_size> elementIndices(const ElementIndex &iloc,
+                                             Element sub_element) const = 0;
 
   // boundary
 
-  /// Get the indices of an element type  at the boundary.
-  /// \note This returns a copy of the indices.
-  /// \param loc Element.
-  /// \return A Boundary object with the indices and groups of the boundary
-  ///         elements.
-  virtual std::vector<h_size> boundaryIndices(Element loc) const = 0;
   /// \param iloc Element location index.
   /// \return True if this is the index of a boundary element.
   virtual bool isBoundary(const ElementIndex &iloc) const = 0;
 
   // neighbourhood
 
-  /// \brief The star neighbourhood of a given element.
-  /// The star consists of elements directly connected to a central element.
-  /// \param iloc Center element index.
-  /// \param star_loc Star elements location.
-  /// \param boundary_loc Boundary elements included in the star.
-  /// \return List of neighbours of the given element.
-  virtual std::vector<Neighbour>
-  star(const ElementIndex &iloc, Element star_loc,
-       std::optional<Element> boundary_loc) const = 0;
-  std::vector<Neighbour> star(const ElementIndex &iloc,
-                              Element boundary_loc) const;
-  /// The k-ring consists of the set of concentric elements
-  /// surrounding the central element.
-  /// \param iloc Center element index.
-  /// \param k ring topological radius.
-  /// \param boundary_loc Boundary elements included in the ring.
-  /// \return List of neighbours of the given element.
-  virtual std::vector<Neighbour>
-  k_ring(const ElementIndex &iloc, h_size k, Element ring_loc,
-         std::optional<Element> boundary_loc) const = 0;
-  /// \brief The list of elements within the given topological distance.
-  /// \param iloc Center element index.
-  /// \param t_radius Topological distance.
-  /// \param neighbour_loc neighbour element type.
-  /// \param boundary_loc Boundary elements included in the ring.
-  /// \return List of pairs neighbour <index, distance> of the given element.
-  virtual std::vector<Neighbour>
-  neighbours(const ElementIndex &iloc, h_size t_radius, Element neighbour_loc,
-             std::optional<Element> boundary_loc) const = 0;
-  /// \brief The k nearest neighbours.
-  /// \param iloc Center element index.
-  /// \param k Neighbour count.
-  /// \param neighbour_loc neighbour element type.
-  /// \param boundary_loc Boundary elements included in the ring.
-  /// \return List of size up to n neighbours.
-  virtual std::vector<Neighbour>
-  knn(const ElementIndex &iloc, h_size k, Element neighbour_loc,
-      std::optional<Element> boundary_loc) const = 0;
   /// \param boundary_element
   /// \param interior_loc
   virtual h_size interiorNeighbour(const ElementIndex &boundary_element,

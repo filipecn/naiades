@@ -92,13 +92,42 @@ void LinearSystemSolver<Derived>::solve(
   solveFor(unknown_field, rhs);
 }
 
-class CG : public LinearSystemSolver<CG> {
+template <typename Derived>
+class EigenSolver : public LinearSystemSolver<Derived> {
+public:
+protected:
+  void buildSystem() override {
+    h_size n = this->implicit_.size();
+
+    // Declare a sparse matrix type with double precision
+    A_ = Eigen::SparseMatrix<double>(n, n);
+
+    // Reserve space for 1 non-zero element per row
+    A_.reserve(Eigen::VectorXi::Constant(n, 1));
+
+    HERMES_CRITICAL("{}", hermes::to_string(this->implicit_));
+    // Build matrix rows
+    for (auto dop : this->implicit_) {
+      for (auto item : dop.nodes())
+        A_.insert(dop.centerIndex(), item.first) = item.second;
+    }
+    A_.makeCompressed();
+  }
+  Eigen::SparseMatrix<double> A_;
+};
+
+class CG : public EigenSolver<CG> {
 public:
 private:
-  void buildSystem() override;
   void solveFor(core::FieldRef<real_t> &unknown_field,
                 const Scalar &rhs) const override;
-  Eigen::SparseMatrix<double> A_;
+};
+
+class BiCGSTAB : public EigenSolver<BiCGSTAB> {
+public:
+private:
+  void solveFor(core::FieldRef<real_t> &unknown_field,
+                const Scalar &rhs) const override;
 };
 
 } // namespace naiades::numeric::solvers
