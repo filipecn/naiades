@@ -18,7 +18,6 @@ function(build_example EXAMPLE_NAME)
   target_link_libraries(${EXAMPLE_NAME} PRIVATE
   DEPS
   naiades
-  gcov
   )
 
 endfunction(build_example)
